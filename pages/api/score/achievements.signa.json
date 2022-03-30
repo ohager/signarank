@@ -1,0 +1,247 @@
+[
+  {
+    "name": "The Enthusiast",
+    "points": 100,
+    "slug": "the-enthusiast",
+    "goals": [
+      {
+        "name": "Send SIGNA to 100 wallets",
+        "category": "social",
+        "slug": "send-100-signa",
+        "points": 60,
+        "steps": [
+          {
+            "name": "Send SIGNA to >= 25 unique addresses",
+            "points": 10,
+            "type": "transaction_to_address_count",
+            "params": {
+              "count": 25
+            }
+          },
+          {
+            "name": "Send SIGNA to >= 50 unique addresses",
+            "points": 10,
+            "type": "transaction_to_address_count",
+            "params": {
+              "count": 50
+            }
+          },
+          {
+            "name": "Send SIGNA to >= 75 unique addresses",
+            "points": 10,
+            "type": "transaction_to_address_count",
+            "params": {
+              "count": 75
+            }
+          },
+          {
+            "name": "Send SIGNA to >= 100 unique addresses",
+            "points": 10,
+            "type": "transaction_to_address_count",
+            "params": {
+              "count": 100
+            }
+          }
+        ]
+      },
+      {
+        "name": "Receive SIGNA from 100 wallets",
+        "slug": "receive-100-signa",
+        "category": "social",
+        "points": 60,
+        "steps": [
+          {
+            "name": "Receive SIGNA from >= 25 unique addresses",
+            "points": 10,
+            "type": "transaction_from_address_count",
+            "params": {
+              "count": 25
+            }
+          },
+          {
+            "name": "Receive SIGNA from >= 50 unique addresses",
+            "points": 10,
+            "type": "transaction_from_address_count",
+            "params": {
+              "count": 50
+            }
+          },
+          {
+            "name": "Receive SIGNA from >= 75 unique addresses",
+            "points": 10,
+            "type": "transaction_from_address_count",
+            "params": {
+              "count": 75
+            }
+          },
+          {
+            "name": "Receive SIGNA from >= 100 unique addresses",
+            "points": 10,
+            "type": "transaction_from_address_count",
+            "params": {
+              "count": 100
+            }
+          }
+        ]
+      },
+      {
+        "name": "Send 1,000,000 SIGNA in a single transaction",
+        "category": "finance",
+        "slug": "send-1m-signa-single",
+        "points": 60,
+        "steps": [
+          {
+            "name": "Send >= 250,000 SIGNA in a single transaction",
+            "points": 10,
+            "type": "send_signa_amount",
+            "params": {
+              "amount": 25
+            }
+          },
+          {
+            "name": "Send >= 500,000 SIGNA in a single transaction",
+            "points": 10,
+            "type": "send_signa_amount",
+            "params": {
+              "amount": 50
+            }
+          },
+          {
+            "name": "Send >= 750,000 ETH in a single transaction",
+            "points": 10,
+            "type": "send_signa_amount",
+            "params": {
+              "amount": 75
+            }
+          },
+          {
+            "name": "Send >= 1,000,000 ETH in a single transaction",
+            "points": 10,
+            "type": "send_signa_amount",
+            "params": {
+              "amount": 100
+            }
+          }
+        ]
+      },
+      {
+        "name": "Own 25 different tokens",
+        "slug": "own-25-tokens",
+        "category": "collecting",
+        "points": 60,
+        "steps": [
+          {
+            "name": "Own >= 5 tokens",
+            "points": 10,
+            "type": "own_token_count",
+            "params": {
+              "count": 5
+            }
+          },
+          {
+            "name": "Own >= 10 tokens",
+            "points": 10,
+            "type": "own_token_count",
+            "params": {
+              "count": 10
+            }
+          },
+          {
+            "name": "Own >= 25 tokens",
+            "points": 10,
+            "type": "own_token_count",
+            "params": {
+              "count": 25
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "The Collector",
+    "slug": "the-collector",
+    "points": 3000,
+    "goals": [
+      {
+        "name": "Alias Collector",
+        "slug": "alias-collector",
+        "category": "technology",
+        "points": 50,
+        "steps": [
+          {
+            "name": "Own >= 1 alias",
+            "points": 20,
+            "type": "own_token_by_address",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Own >= 10 aliases",
+            "points": 20,
+            "type": "own_token_by_address",
+            "params": {
+              "count": 10
+            }
+          },
+          {
+            "name": "Own >= 50 aliases",
+            "points": 20,
+            "type": "own_token_by_address",
+            "params": {
+              "count": 50
+            }
+          },
+          {
+            "name": "Own >= 100 aliases",
+            "points": 20,
+            "type": "own_token_by_address",
+            "params": {
+              "count": 100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "The Technologist",
+    "slug": "the-technologist",
+    "points": 3000,
+    "goals": [
+      {
+        "name": "Proof-of-Commitment Miner",
+        "slug": "pocplus-miner",
+        "category": "technology",
+        "points": 200,
+        "steps": [
+          {
+            "name": "Mine >= 1 Block",
+            "points": 50,
+            "type": "mine_blocks_count",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Mine >= 50 Blocks",
+            "points": 50,
+            "type": "mine_blocks_count",
+            "params": {
+              "count": 50
+            }
+          },
+          {
+            "name": "Mine >= 100 Blocks",
+            "points": 50,
+            "type": "mine_blocks_count",
+            "params": {
+              "count": 100
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
