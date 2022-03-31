@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import React from 'react';
 import styles from '../styles/Header.module.scss';
+import {ConnectButton} from '@components/ConnectButton';
 
 const Header = () => {
+
   return (
   <div className={`${styles.header} header`}>
     <h1><Link href="/"><a>SIGNArank</a></Link> <span className={styles.pill}>Season 1</span></h1>
@@ -15,7 +17,7 @@ const Header = () => {
       </li>
     </ul>
     <div className={styles.btn}>
-      {/*<ConnectButtonOuter /> */}
+      <ConnectButton />
     </div>
   </div>
   )

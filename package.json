@@ -16,6 +16,7 @@
   "dependencies": {
     "@hapi/boom": "^9.1.4",
     "@prisma/client": "^3.11.1",
+    "@reduxjs/toolkit": "^1.8.0",
     "@signumjs/core": "^1.0.0-rc.17",
     "@signumjs/util": "^1.0.0-rc.17",
     "@signumjs/wallets": "^1.0.0-rc.17",
@@ -23,6 +24,7 @@
     "chart.js": "^3.7.1",
     "next": "12.1.2",
     "react": "17.0.2",
+    "react-redux": "^7.2.6",
     "react-chartjs-2": "^4.0.0",
     "react-dom": "17.0.2",
     "react-query": "^3.34.7",

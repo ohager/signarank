@@ -1,0 +1,16 @@
+.textfield {
+  background-color: #fefefe;
+  color: #6503A6;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-family: 'Rubik', sans-serif;
+  text-transform: uppercase;
+  border: 1px #6503A6;
+  font-size: 14px;
+  width: 100%;
+  filter: brightness(1.0);
+  &:hover {
+    filter: brightness(1.2);
+    transition: filter 100ms ease-in-out;
+  }
+}

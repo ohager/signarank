@@ -1,0 +1,16 @@
+.button {
+  background-color: #D9048E;
+  color: white;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-family: 'Rubik', sans-serif;
+  text-transform: uppercase;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  filter: brightness(1.0);
+  &:hover {
+    filter: brightness(1.2);
+    transition: filter 100ms ease-in-out;
+  }
+}
