@@ -1,4 +1,4 @@
-import achievements from './achievements.signa.json';
+import achievements from '@lib/achievements.signa.json';
 import {PrismaClient} from '@prisma/client';
 import {Address, LedgerClientFactory} from '@signumjs/core';
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
@@ -39,8 +39,8 @@ const toStringArray = (csv: any = ""): Array<string> => csv.split(",");
 
 
 const ledger = LedgerClientFactory.createClient({
-    nodeHost: process.env.SIGNUM_DEFAULT_NODE || "",
-    reliableNodeHosts: toStringArray(process.env.SIGNUM_RELIABLE_NODES)
+    nodeHost: process.env.NEXT_PUBLIC_SIGNUM_DEFAULT_NODE || "",
+    reliableNodeHosts: toStringArray(process.env.NEXT_PUBLIC_SIGNUM_RELIABLE_NODES)
 })
 
 export async function calculateScore(accountId: string) {

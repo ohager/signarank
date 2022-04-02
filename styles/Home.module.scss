@@ -49,6 +49,12 @@
   span {
     padding-left:30px;
   }
+
+  .entry {
+    display: inline-flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
 }
 
 

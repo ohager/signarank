@@ -3,12 +3,13 @@
 
 :root {
   --main-color1: #59022B;
-  --main-color2: #D90479;
-  --main-color3: #D9048E;
-  --main-color4: #BC04BF;
-  --main-color5: #6503A6;
+  --main-color2: #00FF88;
+  --main-color3: #0099ff;
+  --main-color4: #0066ff;
+  --main-color5: #021851;
   --white: #fff;
   --black: #000;
+  --red: #ff4444
 }
 
 html,
@@ -26,16 +27,20 @@ body {
       background-position:0 100%;
   }
   to{
-      background-position:-1437px 100%;
+      background-position:-1920px 100%;
   }
 }
 
 
 body {
-  background:url('../public/bg2.png') 0 100% repeat-x;
+  background:url('../public/layered-steps-haikei.png') 0 100% repeat-x;
   background-size:auto;
   height:auto;
-  animation: slide 100s linear infinite;
+  animation: slide 120s linear infinite;
+}
+
+.bg-layer {
+  //backdrop-filter: blur(100px);
 }
 
 a {

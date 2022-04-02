@@ -7,7 +7,13 @@ const Header = () => {
 
   return (
   <div className={`${styles.header} header`}>
-    <h1><Link href="/"><a>SIGNArank</a></Link> <span className={styles.pill}>Season 1</span></h1>
+    <h1>
+      <span className={styles.logo} >
+        <img src='/signum-logo.svg' height={32} alt='Signum Logo'/>
+        <Link href="/"><a>&nbsp;SIGNArank</a></Link>
+      </span>
+      <span className={styles.pill}>Season 1</span>
+    </h1>
     <ul>
       <li>
         <Link href="/"><a>Home</a></Link>

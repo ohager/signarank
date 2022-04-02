@@ -1,10 +1,10 @@
 import Page from '../components/Page'
+import {memo} from 'react';
 import prisma from '../lib/prisma'
-import {User} from '../lib/User.interface'
+import {User} from '@lib/User.interface'
 import styles from '../styles/Home.module.scss'
 import {ConnectButton} from '@components/ConnectButton';
 import {Address} from '@signumjs/core';
-import {useCallback} from 'react';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
 
 export async function getServerSideProps() {
@@ -60,21 +60,21 @@ const Home = ({leaderboard, latestScores}: HomeProps) => {
                     <div className={styles.leaderboard}>
                         <h2>Leaderboard</h2>
                         <ol>
-                            {leaders.map((user: User, i: number) => {
-                                const displayName = Address.fromNumericId(user.address, prefix).getReedSolomonAddress()
-                                return <li key={i}><a
-                                    href={`/address/${user.address}`}>{displayName}</a><span>{user.score}</span></li>
-                            })}
+                            {leaders.map((user: User, i: number) => (
+                                <li key={i}>
+                                    <Entry address={user.address} score={user.score}/>
+                                </li>
+                            ))}
                         </ol>
                     </div>
                     <div className={styles.leaderboard}>
                         <h2>Latest Scores</h2>
                         <ol>
-                            {latestUsers.map((user: User, i: number) => {
-                                const displayName = Address.fromNumericId(user.address, prefix).getReedSolomonAddress()
-                                return <li key={i}><a
-                                    href={`/address/${user.address}`}>{displayName}</a><span>{user.score}</span></li>
-                            })}
+                            {latestUsers.map((user: User, i: number) => (
+                                <li key={i}>
+                                    <Entry address={user.address} score={user.score}/>
+                                </li>
+                            ))}
                         </ol>
                     </div>
                 </div>
@@ -82,5 +82,20 @@ const Home = ({leaderboard, latestScores}: HomeProps) => {
         </Page>
     )
 }
-
 export default Home
+
+interface EntryProps {
+    address: string
+    score: number
+}
+
+const Entry = memo<EntryProps>(({address, score}) => {
+    const prefix = useAddressPrefix()
+    const displayName = Address.fromNumericId(address, prefix).getReedSolomonAddress()
+    return (
+        <span className={styles.entry}>
+            <a href={`/address/${address}`}>{displayName}</a><span>{score}</span>
+        </span>
+    )
+})
+

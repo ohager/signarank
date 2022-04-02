@@ -4,8 +4,9 @@ import {QueryClient, QueryClientProvider} from 'react-query'
 import {Provider as ReduxProvider} from 'react-redux';
 import {store} from '@states/store';
 import {AppContextProvider} from '@components/contexts/AppContext';
-import { WalletHandler } from '@components/WalletHandler';
+import {WalletHandler} from '@components/WalletHandler';
 import {ScoreHandler} from '@components/ScoreHandler';
+import {NodeBootstrapper} from '@components/NodeBootstrapper';
 
 const queryClient = new QueryClient();
 
@@ -15,8 +16,11 @@ function App({Component, pageProps}: AppProps) {
             <QueryClientProvider client={queryClient}>
                 <ReduxProvider store={store}>
                     <WalletHandler/>
-                    <ScoreHandler />
-                    <Component {...pageProps} />
+                    <ScoreHandler/>
+                    <NodeBootstrapper/>
+                    <div className='bg-layer'>
+                        <Component {...pageProps} />
+                    </div>
                 </ReduxProvider>
             </QueryClientProvider>
         </AppContextProvider>
