@@ -125,14 +125,22 @@
         ]
       },
       {
-        "name": "Own 25 different tokens",
-        "slug": "own-25-tokens",
+        "name": "Own 10 different tokens",
+        "slug": "own-tokens",
         "category": "collecting",
         "points": 60,
         "steps": [
           {
-            "name": "Own >= 5 tokens",
+            "name": "Own >= 1 token",
             "points": 10,
+            "type": "own_token_count",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Own >= 5 tokens",
+            "points": 5,
             "type": "own_token_count",
             "params": {
               "count": 5
@@ -144,14 +152,6 @@
             "type": "own_token_count",
             "params": {
               "count": 10
-            }
-          },
-          {
-            "name": "Own >= 25 tokens",
-            "points": 10,
-            "type": "own_token_count",
-            "params": {
-              "count": 25
             }
           }
         ]
@@ -211,7 +211,7 @@
     "points": 3000,
     "goals": [
       {
-        "name": "Proof-of-Commitment Miner",
+        "name": "Mined Blocks",
         "slug": "pocplus-miner",
         "category": "technology",
         "points": 200,
@@ -238,6 +238,71 @@
             "type": "mine_blocks_count",
             "params": {
               "count": 100
+            }
+          }
+        ]
+      },
+      {
+        "name": "Commitment",
+        "slug": "pocplus-commitment",
+        "category": "technology",
+        "points": 200,
+        "steps": [
+          {
+            "name": "Commitment >= 1%",
+            "points": 25,
+            "type": "commitment_count",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Commitment >= 25%",
+            "points": 50,
+            "type": "commitment_count",
+            "params": {
+              "count": 25
+            }
+          },
+          {
+            "name": "Commitment >= 50%",
+            "points": 50,
+            "type": "commitment_count",
+            "params": {
+              "count": 50
+            }
+          },
+          {
+            "name": "Commitment >= 75%",
+            "points": 50,
+            "type": "commitment_count",
+            "params": {
+              "count": 75
+            }
+          },
+          {
+            "name": "Commitment >= 95%",
+            "points": 50,
+            "type": "commitment_count",
+            "params": {
+              "count": 95
+            }
+          }
+        ]
+      },
+      {
+        "name": "Node Operator (SNR)",
+        "slug": "node-snr",
+        "category": "technology",
+        "points": 100,
+        "steps": [
+          {
+            "name": "Rewarded",
+            "points": 100,
+            "type": "snr-rewarded",
+            "params": {
+              "count": 1,
+              "sender": "5638419241790983339"
             }
           }
         ]

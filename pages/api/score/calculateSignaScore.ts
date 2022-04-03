@@ -3,6 +3,7 @@ import {PrismaClient} from '@prisma/client';
 import {Address, LedgerClientFactory} from '@signumjs/core';
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
 import {ExceptionInactiveAccount} from './exceptionInactiveAccount';
+import {Amount} from '@signumjs/util';
 
 
 const prisma = new PrismaClient()
@@ -37,6 +38,11 @@ function assertValidAccountAddress(address: string): string {
 
 const toStringArray = (csv: any = ""): Array<string> => csv.split(",");
 
+const runOnlyOnce = (i: number, fn: () => void) => {
+    if (i === 0) {
+        fn()
+    }
+}
 
 const ledger = LedgerClientFactory.createClient({
     nodeHost: process.env.NEXT_PUBLIC_SIGNUM_DEFAULT_NODE || "",
@@ -69,10 +75,17 @@ export async function calculateScore(accountId: string) {
 
 
     if (!cached || process.env.DEVELOPMENT) {
-        const {transactions} = await ledger.account.getAccountTransactions({
-            accountId,
-            includeIndirect: true
-        })
+        const [transactionList, blockList, account] = await Promise.all([
+            ledger.account.getAccountTransactions({accountId, includeIndirect: true}),
+            ledger.account.getAccountBlocks({accountId, includeTransactions: false}),
+            ledger.account.getAccount({accountId, includeCommittedAmount: true})
+        ])
+
+        const tokenCount = account.assetBalances.length;
+        const balance = Amount.fromPlanck(account.balanceNQT)
+        const transactions = transactionList.transactions
+        const blocksMined = blockList.blocks.length
+        const commitmentPercentage = Amount.fromPlanck(account.committedBalanceNQT).getRaw().div(balance.getRaw()).times(100)
 
         const markStepCompleted = (j: any = '', k: any = '', l: any = '') => {
             progress.push(`${j}${k}${l}`);
@@ -101,7 +114,7 @@ export async function calculateScore(accountId: string) {
                         totalPointsForThisAchievement += goal.points;
                         if (goal.steps && !isComplete(j, k)) {
                             for (let l = 0; l < goal.steps.length; l++) {
-                                let addresses = [];
+                                let address = [];
                                 let step = goal.steps[l];
 
                                 totalPointsForThisAchievement += step.points;
@@ -112,9 +125,9 @@ export async function calculateScore(accountId: string) {
                                         case 'transaction_to_address_count':
 
                                             // @ts-ignore
-                                            addresses = step.params.address || accountId;
+                                            address = step.params.address || accountId;
 
-                                            if (transactions[i].recipient !== accountId) {
+                                            if (transactions[i].recipient !== address) {
                                                 if (!sentTransactions[j]) {
                                                     sentTransactions[j] = [] as Array<Array<number>>;
                                                 }
@@ -135,31 +148,30 @@ export async function calculateScore(accountId: string) {
                                             }
                                             break;
 
-                                        // case 'transaction_from_address_count':
-                                        //
-                                        //     // @ts-ignore
-                                        //     addresses = convertToLowerCase(step.params.address || accountId);
-                                        //     if (addresses.indexOf(convertToLowerCase(transactions[i].from)) > -1) {
-                                        //         if (!receivedTransactions[j]) {
-                                        //             receivedTransactions[j] = [] as Array<Array<number>>;
-                                        //         }
-                                        //         if (!receivedTransactions[j][k]) {
-                                        //             receivedTransactions[j][k] = [];
-                                        //         }
-                                        //         if (!receivedTransactions[j][k][l]) {
-                                        //             receivedTransactions[j][k][l] = 0;
-                                        //         }
-                                        //         receivedTransactions[j][k][l]++;
-                                        //
-                                        //         // @ts-ignore
-                                        //         if (receivedTransactions[j][k][l] === step.params.count) {
-                                        //             // console.log('step completed: transaction_from_address_count',  step.name, step.points,goal.name, achievement.name)
-                                        //             markStepCompleted(j, k, l);
-                                        //             // if step is completed, include step points in score
-                                        //             score += step.points;
-                                        //         }
-                                        //     }
-                                        //     break;
+                                        case 'transaction_from_address_count':
+                                            // @ts-ignore
+                                            address = step.params.address || accountId;
+                                            if (transactions[i].recipient === address) {
+                                                if (!receivedTransactions[j]) {
+                                                    receivedTransactions[j] = [] as Array<Array<number>>;
+                                                }
+                                                if (!receivedTransactions[j][k]) {
+                                                    receivedTransactions[j][k] = [];
+                                                }
+                                                if (!receivedTransactions[j][k][l]) {
+                                                    receivedTransactions[j][k][l] = 0;
+                                                }
+                                                receivedTransactions[j][k][l]++;
+
+                                                // @ts-ignore
+                                                if (receivedTransactions[j][k][l] === step.params.count) {
+                                                    // console.log('step completed: transaction_from_address_count',  step.name, step.points,goal.name, achievement.name)
+                                                    markStepCompleted(j, k, l);
+                                                    // if step is completed, include step points in score
+                                                    score += step.points;
+                                                }
+                                            }
+                                            break;
                                         //
                                         // case 'send_eth_amount':
                                         //     const amountSent = parseFloat(transactions[i].value) / Math.pow(10, 18);
@@ -172,17 +184,17 @@ export async function calculateScore(accountId: string) {
                                         //     }
                                         //     break;
                                         //
-                                        // case 'own_token_count':
-                                        //     // We only want to tally this once since we are inside THE LOOP
-                                        //     if (i === 0) {
-                                        //         // @ts-ignore
-                                        //         if (tokens && tokens.length >= step.params.count) {
-                                        //             // console.log('step completed: own_token_count', step.name, step.points, goal.name, achievement.name)
-                                        //             markStepCompleted(j, k, l);
-                                        //             // if step is completed, include step points in score
-                                        //             score += step.points;
-                                        //         }
-                                        //     }
+                                        case 'own_token_count':
+                                            // We only want to tally this once since we are inside THE LOOP
+                                            runOnlyOnce(i, () => {
+                                                // @ts-ignore
+                                                if (tokenCount >= step.params.count) {
+                                                    // console.log('step completed: own_token_count', step.name, step.points, goal.name, achievement.name)
+                                                    markStepCompleted(j, k, l);
+                                                    // if step is completed, include step points in score
+                                                    score += step.points;
+                                                }
+                                            })
                                         //
                                         //     break;
                                         // case 'own_poap_count':
@@ -199,19 +211,39 @@ export async function calculateScore(accountId: string) {
                                         //
                                         //     break;
                                         //
-                                        // case 'mine_blocks_count':
-                                        //     // We only want to tally this once since we are inside THE LOOP
-                                        //     if (i === 0) {
-                                        //         // @ts-ignore
-                                        //         if (blocksMined && blocksMined.length >= step.params.count) {
-                                        //             // console.log('step completed: mine_blocks_count', step.name, step.points, goal.name, achievement.name)
-                                        //             markStepCompleted(j, k, l);
-                                        //             // if step is completed, include step points in score
-                                        //             score += step.points;
-                                        //         }
-                                        //     }
-                                        //
-                                        //     break;
+                                        case 'mine_blocks_count':
+                                            // We only want to tally this once since we are inside THE LOOP
+                                            runOnlyOnce(i, () => {
+                                                // @ts-ignore
+                                                if (blocksMined && blocksMined.length >= step.params.count) {
+                                                    // console.log('step completed: mine_blocks_count', step.name, step.points, goal.name, achievement.name)
+                                                    markStepCompleted(j, k, l);
+                                                    // if step is completed, include step points in score
+                                                    score += step.points;
+                                                }
+                                            })
+                                            break;
+                                        case 'commitment_count':
+                                            // We only want to tally this once since we are inside THE LOOP
+                                            runOnlyOnce(i, () => {
+                                                // @ts-ignore
+                                                if (commitmentPercentage >= step.params.count) {
+                                                    // console.log('step completed: mine_blocks_count', step.name, step.points, goal.name, achievement.name)
+                                                    markStepCompleted(j, k, l);
+                                                    // if step is completed, include step points in score
+                                                    score += step.points;
+                                                }
+                                            })
+                                            break;
+                                        case 'snr-rewarded':
+                                            // @ts-ignore
+                                            if (transactions[i].sender === step.params.sender) {
+                                                // console.log('step completed: mine_blocks_count', step.name, step.points, goal.name, achievement.name)
+                                                markStepCompleted(j, k, l);
+                                                // if step is completed, include step points in score
+                                                score += step.points;
+                                            }
+                                            break;
                                         //
                                         // case 'spend_gas_amount':
                                         //     // @ts-ignore
@@ -368,4 +400,4 @@ export async function calculateScore(accountId: string) {
             name
         }
     }
-};
+}

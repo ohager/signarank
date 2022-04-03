@@ -16,11 +16,12 @@ function App({Component, pageProps}: AppProps) {
             <QueryClientProvider client={queryClient}>
                 <ReduxProvider store={store}>
                     <WalletHandler/>
-                    <ScoreHandler/>
                     <NodeBootstrapper/>
-                    <div className='bg-layer'>
-                        <Component {...pageProps} />
-                    </div>
+                    <ScoreHandler>
+                        <div className='bg-layer'>
+                            <Component {...pageProps} />
+                        </div>
+                    </ScoreHandler>
                 </ReduxProvider>
             </QueryClientProvider>
         </AppContextProvider>

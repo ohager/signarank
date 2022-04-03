@@ -14,7 +14,7 @@ export async function getServerSideProps(context: NextPageContext) {
     return getServerProps(context);
 }
 
-const Goal = ({score, rank, progress, name, address}: AddressProps) => {
+const Goal = ({score, rank, progress, address}: AddressProps) => {
 
     const router = useRouter()
     const {achievementSlug, goalSlug} = router.query;
@@ -25,6 +25,8 @@ const Goal = ({score, rank, progress, name, address}: AddressProps) => {
     })
 
     const achievement = achievements[achievementIndex];
+
+    console.log('Goal', goalSlug,  achievementIndex)
 
     const goalIndex = achievement.goals.findIndex((potentialMatch) => {
         return potentialMatch.slug === goalSlug as string;
@@ -37,10 +39,6 @@ const Goal = ({score, rank, progress, name, address}: AddressProps) => {
         });
         return results && results.length ? results.length : 0;
     }, [progress]);
-
-    if (!name?.length) {
-        name = undefined
-    }
 
     return <Page title={`${displayAddress} - SIGNArank`}>
         <div className="content">

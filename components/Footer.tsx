@@ -62,8 +62,8 @@ function Footer() {
                     <h1>SIGNARank</h1>
                     <p>A blockchain adventure.</p>
                     <div className={styles.powered}>
-                        <img src='./powered.svg' height={32} alt="Powered by Signum"/>
-                        <img src='./signumjs.svg' height={33} alt="SignumJS" style={{position: 'relative', top: '3px'}}/>
+                        <img src='/powered.svg' height={32} alt="Powered by Signum"/>
+                        <img src='/signumjs.svg' height={33} alt="SignumJS" style={{position: 'relative', top: '3px'}}/>
                     </div>
                 </div>
                 <div className={styles.links}>
