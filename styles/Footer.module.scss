@@ -8,7 +8,13 @@
   position: relative;
 }
 
-.topRow, .secondRow {
+.topRow{
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.secondRow {
   display:grid;
   grid-template-columns: 50% 50%;
   grid-template-rows: auto;
@@ -45,14 +51,14 @@
   padding-top:60px;
 }
 
-.links, .social {
+.links {
   justify-self: end;
 }
 
 .social ul {
-  margin:0;
-  padding:0;
-  text-align:right;
+  margin-block: unset;
+  padding: unset;
+  text-align: center;
 }
 
 .social li {
@@ -95,8 +101,8 @@
   text-align:center;
   width:100%;
   font-weight:lighter;
-  font-size:10px;
-  opacity:.5
+  font-size:12px;
+  opacity:.75
 }
 
 

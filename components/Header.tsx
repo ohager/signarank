@@ -11,8 +11,8 @@ const Header = () => {
       <span className={styles.logo} >
         <img src='/signum-logo.svg' height={32} alt='Signum Logo'/>
         <Link href="/"><a>&nbsp;SIGNArank</a></Link>
+        <span className={styles.pill}>Season 1</span>
       </span>
-      <span className={styles.pill}>Season 1</span>
     </h1>
     <ul>
       <li>

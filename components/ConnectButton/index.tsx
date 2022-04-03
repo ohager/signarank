@@ -16,7 +16,7 @@ interface Props {
 export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
     const [address, setAddress] = useState('')
     const [isFetching, setIsFetching] = useState(false)
-    const [error, setError] = useState('error')
+    const [error, setError] = useState('')
     const connectedAccount = useAppSelector(selectConnectedAccount)
     const ledger  = useSignumLedger()
     const dispatch = useAppDispatch()
