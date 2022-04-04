@@ -1,10 +1,6 @@
-import Router, { useRouter } from 'next/router'
-import Web3 from 'web3';
+import { useRouter } from 'next/router'
 import { useEffect } from 'react';
 import { NextPageContext } from 'next';
-import Head from 'next/head';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
 import Page from '../../components/Page';
 
 export async function getServerSideProps(context: NextPageContext) {
