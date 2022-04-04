@@ -81,10 +81,10 @@ export async function calculateScore(accountId: string) {
             ledger.account.getAccount({accountId, includeCommittedAmount: true})
         ])
 
-        const tokenCount = account.assetBalances.length;
+        const tokenCount = account.assetBalances ? account.assetBalances.length : 0
         const balance = Amount.fromPlanck(account.balanceNQT)
         const transactions = transactionList.transactions
-        const blocksMined = blockList.blocks.length
+        const blocksMined = blockList.blocks ? blockList.blocks.length : 0
         const commitmentPercentage = Amount.fromPlanck(account.committedBalanceNQT).getRaw().div(balance.getRaw()).times(100)
 
         const markStepCompleted = (j: any = '', k: any = '', l: any = '') => {

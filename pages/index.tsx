@@ -42,7 +42,6 @@ interface HomeProps {
 }
 
 const Home = ({leaderboard, latestScores}: HomeProps) => {
-    const prefix = useAddressPrefix()
     const leaders = JSON.parse(leaderboard)
     const latestUsers = JSON.parse(latestScores)
 
