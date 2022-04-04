@@ -1,4 +1,4 @@
-import {AppContext, AppContextType} from '@components/contexts/AppContext';
+import {AppContext} from '@components/contexts/AppContext';
 import {useContext} from 'react';
 import {AddressPrefix} from '@signumjs/core';
 

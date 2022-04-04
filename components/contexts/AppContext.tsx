@@ -25,6 +25,8 @@ const config: AppContextType = {
   },
 };
 
+console.debug('Config', JSON.stringify(config))
+
 export const AppContext = createContext<AppContextType>(config);
 
 export const AppContextProvider: FC = ({ children }) => {
