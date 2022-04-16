@@ -215,7 +215,7 @@ export async function calculateScore(accountId: string) {
                                             // We only want to tally this once since we are inside THE LOOP
                                             runOnlyOnce(i, () => {
                                                 // @ts-ignore
-                                                if (blocksMined && blocksMined.length >= step.params.count) {
+                                                if (blocksMined >= step.params.count) {
                                                     // console.log('step completed: mine_blocks_count', step.name, step.points, goal.name, achievement.name)
                                                     markStepCompleted(j, k, l);
                                                     // if step is completed, include step points in score
