@@ -99,8 +99,8 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
 
     const categories = [
         'social',
-        // 'finance',
-        // 'collecting',
+        'finance',
+        'collecting',
         'technology'];
 
     const categoryData = categories.map((category, i) => {

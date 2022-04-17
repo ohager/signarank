@@ -1,12 +1,12 @@
 [
   {
     "name": "The Enthusiast",
-    "points": 100,
+    "points": 500,
     "slug": "the-enthusiast",
     "goals": [
       {
         "name": "Send SIGNA to 100 wallets",
-        "category": "social",
+        "category": "finance",
         "slug": "send-100-signa",
         "points": 60,
         "steps": [
@@ -47,7 +47,7 @@
       {
         "name": "Receive SIGNA from 100 wallets",
         "slug": "receive-100-signa",
-        "category": "social",
+        "category": "finance",
         "points": 60,
         "steps": [
           {
@@ -85,41 +85,41 @@
         ]
       },
       {
-        "name": "Send 1,000,000 SIGNA in a single transaction",
+        "name": "Send 500,000 SIGNA in a single transaction",
         "category": "finance",
-        "slug": "send-1m-signa-single",
+        "slug": "send-500k-signa-single",
         "points": 60,
         "steps": [
           {
-            "name": "Send >= 250,000 SIGNA in a single transaction",
+            "name": "Send >= 50,000 SIGNA in a single transaction",
             "points": 10,
             "type": "send_signa_amount",
             "params": {
-              "amount": 25
+              "amount": 50000
             }
           },
           {
-            "name": "Send >= 500,000 SIGNA in a single transaction",
+            "name": "Send >= 100,000 SIGNA in a single transaction",
             "points": 10,
             "type": "send_signa_amount",
             "params": {
-              "amount": 50
+              "amount": 1000000
             }
           },
           {
-            "name": "Send >= 750,000 ETH in a single transaction",
+            "name": "Send >= 250,000 ETH in a single transaction",
             "points": 10,
             "type": "send_signa_amount",
             "params": {
-              "amount": 75
+              "amount": 250000
             }
           },
           {
-            "name": "Send >= 1,000,000 ETH in a single transaction",
+            "name": "Send >= 500,000 ETH in a single transaction",
             "points": 10,
             "type": "send_signa_amount",
             "params": {
-              "amount": 100
+              "amount": 500000
             }
           }
         ]
@@ -159,20 +159,191 @@
     ]
   },
   {
+    "name": "The Socializer",
+    "points": 500,
+    "slug": "the-socializer",
+    "goals": [
+      {
+        "name": "Send 100 Multiouts",
+        "category": "social",
+        "slug": "send-100-multiouts",
+        "points": 50,
+        "steps": [
+          {
+            "name": ">= 5 Multiout payments",
+            "points": 10,
+            "type": "multiout_payments_count",
+            "params": {
+              "count": 5
+            }
+          },
+          {
+            "name": ">= 25 Multiout payments",
+            "points": 10,
+            "type": "multiout_payments_count",
+            "params": {
+              "count": 25
+            }
+          },
+          {
+            "name": ">= 50 Multiout payments",
+            "points": 10,
+            "type": "multiout_payments_count",
+            "params": {
+              "count": 50
+            }
+          },
+          {
+            "name": ">= 100 Multiout payments",
+            "points": 10,
+            "type": "multiout_payments_count",
+            "params": {
+              "count": 100
+            }
+          }
+        ]
+      },
+      {
+        "name": "Receive 50 Text Messages",
+        "slug": "receive-50-messages",
+        "category": "social",
+        "points": 60,
+        "steps": [
+          {
+            "name": "Receive 1 Text Message",
+            "points": 10,
+            "type": "receive_message_count",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Receive 10 Text Message",
+            "points": 10,
+            "type": "receive_message_count",
+            "params": {
+              "count": 10
+            }
+          },
+          {
+            "name": "Receive 25 Text Message",
+            "points": 10,
+            "type": "receive_message_count",
+            "params": {
+              "count": 25
+            }
+          },
+          {
+            "name": "Receive 50 Text Message",
+            "points": 10,
+            "type": "receive_message_count",
+            "params": {
+              "count": 50
+            }
+          }
+        ]
+      },
+      {
+        "name": "Send 50 Text Messages",
+        "slug": "send-50-messages",
+        "category": "social",
+        "points": 60,
+        "steps": [
+          {
+            "name": "Send 1 Text Message",
+            "points": 10,
+            "type": "send_message_count",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Send 10 Text Message",
+            "points": 10,
+            "type": "send_message_count",
+            "params": {
+              "count": 10
+            }
+          },
+          {
+            "name": "Send 25 Text Message",
+            "points": 10,
+            "type": "send_message_count",
+            "params": {
+              "count": 25
+            }
+          },
+          {
+            "name": "Send 50 Text Message",
+            "points": 10,
+            "type": "send_message_count",
+            "params": {
+              "count": 50
+            }
+          }
+        ]
+      },
+      {
+        "name": "Donated to SNA",
+        "slug": "sna-donation",
+        "category": "finance",
+        "points": 100,
+        "steps": [
+          {
+            "name": "Donated 1000 SIGNA",
+            "points": 50,
+            "type": "donated_to_sna",
+            "params": {
+              "amount": 1000,
+              "receiver": "8952122635653861124"
+            }
+          },
+          {
+            "name": "Donated 5000 SIGNA",
+            "points": 50,
+            "type": "donated_to_sna",
+            "params": {
+              "amount": 5000,
+              "receiver": "8952122635653861124"
+            }
+          },
+          {
+            "name": "Donated 10000 SIGNA",
+            "points": 50,
+            "type": "donated_to_sna",
+            "params": {
+              "amount": 10000,
+              "receiver": "8952122635653861124"
+            }
+          },
+          {
+            "name": "Donated 50000 SIGNA",
+            "points": 50,
+            "type": "donated_to_sna",
+            "params": {
+              "amount": 50000,
+              "receiver": "8952122635653861124"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "name": "The Collector",
     "slug": "the-collector",
-    "points": 3000,
+    "points": 500,
     "goals": [
       {
         "name": "Alias Collector",
         "slug": "alias-collector",
-        "category": "technology",
+        "category": "collecting",
         "points": 50,
         "steps": [
           {
             "name": "Own >= 1 alias",
             "points": 20,
-            "type": "own_token_by_address",
+            "type": "own_alias",
             "params": {
               "count": 1
             }
@@ -180,23 +351,63 @@
           {
             "name": "Own >= 10 aliases",
             "points": 20,
-            "type": "own_token_by_address",
+            "type": "own_alias",
             "params": {
               "count": 10
             }
           },
           {
+            "name": "Own >= 20 aliases",
+            "points": 20,
+            "type": "own_alias",
+            "params": {
+              "count": 20
+            }
+          },
+          {
             "name": "Own >= 50 aliases",
             "points": 20,
-            "type": "own_token_by_address",
+            "type": "own_alias",
+            "params": {
+              "count": 50
+            }
+          }
+        ]
+      },
+      {
+        "name": "Owns 100 Signum Art NFTs",
+        "slug": "signum-art-collector",
+        "category": "collecting",
+        "points": 50,
+        "steps": [
+          {
+            "name": "Own >= 1 NFT",
+            "points": 20,
+            "type": "own_signum_art_nft",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Own >= 10 NFTs",
+            "points": 20,
+            "type": "own_signum_art_nft",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Own >= 50 NFTs",
+            "points": 20,
+            "type": "own_signum_art_nft",
             "params": {
               "count": 50
             }
           },
           {
-            "name": "Own >= 100 aliases",
+            "name": "Own >= 100 NFTs",
             "points": 20,
-            "type": "own_token_by_address",
+            "type": "own_signum_art_nft",
             "params": {
               "count": 100
             }
@@ -208,7 +419,7 @@
   {
     "name": "The Technologist",
     "slug": "the-technologist",
-    "points": 3000,
+    "points": 500,
     "goals": [
       {
         "name": "Mined Blocks",
@@ -245,7 +456,7 @@
       {
         "name": "Commitment",
         "slug": "pocplus-commitment",
-        "category": "technology",
+        "category": "finance",
         "points": 200,
         "steps": [
           {
@@ -253,7 +464,7 @@
             "points": 25,
             "type": "commitment_count",
             "params": {
-              "count": 1
+              "percent": 1
             }
           },
           {
@@ -261,7 +472,7 @@
             "points": 50,
             "type": "commitment_count",
             "params": {
-              "count": 25
+              "percent": 25
             }
           },
           {
@@ -269,7 +480,7 @@
             "points": 50,
             "type": "commitment_count",
             "params": {
-              "count": 50
+              "percent": 50
             }
           },
           {
@@ -277,7 +488,7 @@
             "points": 50,
             "type": "commitment_count",
             "params": {
-              "count": 75
+              "percent": 75
             }
           },
           {
@@ -285,7 +496,7 @@
             "points": 50,
             "type": "commitment_count",
             "params": {
-              "count": 95
+              "percent": 95
             }
           }
         ]
@@ -293,16 +504,56 @@
       {
         "name": "Node Operator (SNR)",
         "slug": "node-snr",
-        "category": "technology",
+        "category": "social",
         "points": 100,
         "steps": [
           {
             "name": "Rewarded",
             "points": 100,
-            "type": "snr-rewarded",
+            "type": "snr_rewarded",
             "params": {
               "count": 1,
               "sender": "5638419241790983339"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Published 10 distinct Smart Contracts",
+        "slug": "smart-contract-creator",
+        "category": "technology",
+        "points": 100,
+        "steps": [
+          {
+            "name": "Create >= 1 Smart Contract",
+            "points": 25,
+            "type": "create_contract",
+            "params": {
+              "count": 1
+            }
+          },
+          {
+            "name": "Create >= 2 Smart Contracts",
+            "points": 25,
+            "type": "create_contract",
+            "params": {
+              "count": 2
+            }
+          },
+          {
+            "name": "Create >= 5 Smart Contracts",
+            "points": 25,
+            "type": "create_contract",
+            "params": {
+              "count": 5
+            }
+          },
+          {
+            "name": "Create >= 10 Smart Contract",
+            "points": 25,
+            "type": "create_contract",
+            "params": {
+              "count": 10
             }
           }
         ]
