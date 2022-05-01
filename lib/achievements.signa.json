@@ -375,7 +375,7 @@
         ]
       },
       {
-        "name": "Owns 100 Signum Art NFTs",
+        "name": "Owns 50 Signum Art NFTs",
         "slug": "signum-art-collector",
         "category": "collecting",
         "points": 50,
@@ -389,11 +389,19 @@
             }
           },
           {
-            "name": "Own >= 10 NFTs",
+            "name": "Own >= 5 NFTs",
             "points": 20,
             "type": "own_signum_art_nft",
             "params": {
-              "count": 1
+              "count": 5
+            }
+          },
+          {
+            "name": "Own >= 20 NFTs",
+            "points": 20,
+            "type": "own_signum_art_nft",
+            "params": {
+              "count": 20
             }
           },
           {
@@ -402,14 +410,6 @@
             "type": "own_signum_art_nft",
             "params": {
               "count": 50
-            }
-          },
-          {
-            "name": "Own >= 100 NFTs",
-            "points": 20,
-            "type": "own_signum_art_nft",
-            "params": {
-              "count": 100
             }
           }
         ]

@@ -1,5 +1,5 @@
 import Page from '../components/Page'
-import {memo} from 'react';
+import {memo, useEffect} from 'react';
 import prisma from '../lib/prisma'
 import {User} from '@lib/User.interface'
 import styles from '../styles/Home.module.scss'
@@ -10,7 +10,7 @@ import {useAddressPrefix} from '@hooks/useAddressPrefix';
 export async function getServerSideProps() {
 
     const leaderboard = await prisma.address.findMany({
-        take: 4,
+        take: 10,
         where: {
             active: true
         },
@@ -19,7 +19,7 @@ export async function getServerSideProps() {
         }
     });
     const latestScores = await prisma.address.findMany({
-        take: 4,
+        take: 10,
         where: {
             active: true
         },
@@ -44,6 +44,18 @@ interface HomeProps {
 const Home = ({leaderboard, latestScores}: HomeProps) => {
     const leaders = JSON.parse(leaderboard)
     const latestUsers = JSON.parse(latestScores)
+
+    useEffect(() => {
+
+        const uniqueAccounts =  new Set<string>()
+        leaders.concat(latestUsers).forEach( ({address} : any) => {
+            address && uniqueAccounts.add(address)
+        })
+
+        const promises = Array.from(uniqueAccounts).map( (address: string) => fetch(`api/score/${address}`))
+        Promise.all(promises).then().catch(console.error)
+
+    }, [])
 
     return (
         <Page title="SIGNArank - An achievement system built on the Signum blockchain">

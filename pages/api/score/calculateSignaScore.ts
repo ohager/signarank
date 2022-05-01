@@ -10,6 +10,7 @@ import {
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
 import {ExceptionInactiveAccount} from './exceptionInactiveAccount';
 import {Amount} from '@signumjs/util';
+import {NftService} from './nftService';
 
 const prisma = new PrismaClient()
 
@@ -56,6 +57,12 @@ const ledger = LedgerClientFactory.createClient({
     reliableNodeHosts: toStringArray(process.env.NEXT_PUBLIC_SIGNUM_RELIABLE_NODES)
 })
 
+const nftService = new NftService({
+        hostUrl: process.env.NEXT_SERVER_NFT_SERVICE_API_HOST || "",
+        apiKey: process.env.NEXT_SERVER_NFT_SERVICE_API_KEY || ""
+    }
+)
+
 export async function calculateScore(accountId: string) {
     let score = 0, rank = 0;
     let totalPointsPossible = 0;
@@ -83,13 +90,14 @@ export async function calculateScore(accountId: string) {
 
 
     if (!cached || process.env.DEVELOPMENT) {
-        const [transactionList, blockList, account, accountAliases] = await Promise.all([
+
+        const [transactionList, blockList, account, accountAliases, nftCount] = await Promise.all([
             ledger.account.getAccountTransactions({accountId, includeIndirect: true}),
             ledger.account.getAccountBlocks({accountId, includeTransactions: false}),
             ledger.account.getAccount({accountId, includeCommittedAmount: true}),
-            ledger.account.getAliases(accountId)
+            ledger.account.getAliases(accountId),
+            nftService.getNftCountPerAccount(accountId)
         ])
-
 
 
         const aliasCount = accountAliases.aliases ? accountAliases.aliases.length : 0
@@ -195,6 +203,16 @@ export async function calculateScore(accountId: string) {
                                             runOnlyOnce(i, () => {
                                                 // @ts-ignore
                                                 if (tokenCount >= step.params.count) {
+                                                    markStepCompleted(j, k, l);
+                                                    score += step.points;
+                                                }
+                                            })
+                                            break;
+                                        case 'own_signum_art_nft':
+                                            // We only want to tally this once since we are inside THE LOOP
+                                            runOnlyOnce(i, () => {
+                                                // @ts-ignore
+                                                if (nftCount >= step.params.count) {
                                                     markStepCompleted(j, k, l);
                                                     score += step.points;
                                                 }

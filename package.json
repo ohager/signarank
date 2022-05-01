@@ -17,6 +17,7 @@
     "@hapi/boom": "^9.1.4",
     "@prisma/client": "^3.11.1",
     "@reduxjs/toolkit": "^1.8.0",
+    "@signumjs/http": "^1.0.0-rc.17",
     "@signumjs/core": "^1.0.0-rc.17",
     "@signumjs/util": "^1.0.0-rc.17",
     "@signumjs/wallets": "^1.0.0-rc.17",
