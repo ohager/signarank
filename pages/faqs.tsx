@@ -1,7 +1,7 @@
 import Page from '../components/Page';
 
 const Faqs = ({  }) => {
-  return <Page title="ETHRank - FAQs">
+  return <Page title="SignaRank - FAQs">
     <div className="content">
       <div>
         <h3>Frequently Asked Questions</h3>

@@ -11,12 +11,7 @@ import {Radar} from 'react-chartjs-2';
 import Page from '../../components/Page';
 import {calculateScore} from '../api/score/calculateSignaScore';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
-
-const singleQueryString = (q: string | string[] | undefined): string => {
-    if (typeof (q) === 'string') return q
-    if (Array.isArray(q) && q.length > 0) return q[0]
-    return ""
-}
+import {singleQueryString} from '@lib/singleQueryString';
 
 export async function getServerSideProps(context: NextPageContext) {
     const {address} = context.query;
@@ -114,9 +109,7 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
     const data = {
         labels: categories.map(category => category.toUpperCase()),
         datasets: [{
-            data: categoryData.map((data) => {
-                return data.percentCompleted * 100
-            }),
+            data: categoryData.map(({percentCompleted}) => percentCompleted * 100),
             fill: true,
             backgroundColor: '#D9048E',
             borderColor: '#ffffff',

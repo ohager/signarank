@@ -26,7 +26,7 @@ async function fetchCachedAddress(accountId: string) {
 
     const Minutes = 60 * 1000
     const CacheExpiresAfter = 30 * Minutes
-    const cacheHit = cacheAddress && cacheAddress.updatedAt > new Date(new Date().getTime() - CacheExpiresAfter) && !process.env.DEVELOPMENT
+    const cacheHit = cacheAddress && cacheAddress.updatedAt > new Date(Date.now() - CacheExpiresAfter) && !process.env.DEVELOPMENT
 
     return {
         cacheAddress,

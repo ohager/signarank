@@ -1,33 +1,14 @@
 import Page from '../components/Page'
-import {memo, useEffect} from 'react';
-import {prisma} from '@lib/prisma'
+import {memo, useEffect, useState} from 'react';
 import {User} from '@lib/User.interface'
 import styles from '../styles/Home.module.scss'
 import {ConnectButton} from '@components/ConnectButton';
 import {Address} from '@signumjs/core';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
+import {fetchLeaderboard} from './api/leaderboard/fetchLeaderboard';
 
 export async function getServerSideProps() {
-
-    const leaderboard = await prisma.address.findMany({
-        take: 10,
-        where: {
-            active: true
-        },
-        orderBy: {
-            score: 'desc'
-        }
-    });
-    const latestScores = await prisma.address.findMany({
-        take: 10,
-        where: {
-            active: true
-        },
-        orderBy: {
-            createdAt: 'desc'
-        }
-    });
-
+    const {leaderboard, latestScores} = await fetchLeaderboard()
     return {
         props: {
             leaderboard: JSON.stringify(leaderboard),
@@ -36,24 +17,34 @@ export async function getServerSideProps() {
     }
 }
 
+function updateLeaderboardAccounts(leaders: any[], latest: any[]) {
+    const uniqueAccounts = new Set<string>()
+    leaders.concat(latest).forEach(({address}: any) => {
+        address && uniqueAccounts.add(address)
+    })
+    const promises = Array.from(uniqueAccounts).map((address: string) => fetch(`api/score/${address}`))
+    return Promise.all(promises)
+}
+
 interface HomeProps {
     leaderboard: string,
     latestScores: string
 }
 
 const Home = ({leaderboard, latestScores}: HomeProps) => {
-    const leaders = JSON.parse(leaderboard)
-    const latestUsers = JSON.parse(latestScores)
+    const [leaders, setLeaders] = useState(JSON.parse(leaderboard))
+    const [latestUsers, setLatestUsers] = useState(JSON.parse(latestScores))
 
     useEffect(() => {
 
-        const uniqueAccounts =  new Set<string>()
-        leaders.concat(latestUsers).forEach( ({address} : any) => {
-            address && uniqueAccounts.add(address)
-        })
-
-        const promises = Array.from(uniqueAccounts).map( (address: string) => fetch(`api/score/${address}`))
-        Promise.all(promises).then().catch(console.error)
+        updateLeaderboardAccounts(leaders, latestUsers)
+            .then(() => fetch('/api/leaderboard'))
+            .then((response) => response.json())
+            .then((result) => {
+                setLatestUsers(result.latestScores)
+                setLeaders(result.leaderboard)
+            })
+            .catch(console.error)
 
     }, [])
 

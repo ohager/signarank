@@ -1,7 +1,7 @@
 import Page from '../components/Page';
 
 const Privacy = ({ }) => {
-  return <Page title="ETHRank - Privacy Policy">
+  return <Page title="SignaRank - Privacy Policy">
     <div className="content">
       <div>
         <h3>Privacy Policy</h3>

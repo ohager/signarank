@@ -107,7 +107,7 @@
             }
           },
           {
-            "name": "Send >= 250,000 ETH in a single transaction",
+            "name": "Send >= 250,000 SIGNA in a single transaction",
             "points": 10,
             "type": "send_signa_amount",
             "params": {
@@ -115,7 +115,7 @@
             }
           },
           {
-            "name": "Send >= 500,000 ETH in a single transaction",
+            "name": "Send >= 500,000 SIGNA in a single transaction",
             "points": 10,
             "type": "send_signa_amount",
             "params": {

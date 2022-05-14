@@ -1,7 +1,7 @@
 import Page from '../components/Page';
 
 const Error = ({ }) => {
-  return <Page title="ETHRank - Error">
+  return <Page title="SignaRank - Error">
     <div className="content">
       <div>
         <h1>Error</h1>
