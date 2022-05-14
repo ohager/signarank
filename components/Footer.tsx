@@ -62,8 +62,9 @@ function Footer() {
                     <h1>SIGNARank</h1>
                     <p>A blockchain adventure.</p>
                     <div className={styles.powered}>
-                        <img src='/powered.svg' height={32} alt="Powered by Signum"/>
-                        <img src='/signumjs.svg' height={33} alt="SignumJS" style={{position: 'relative', top: '3px'}}/>
+                        <a href="https://github.com/signum-network/signum-xt-wallet" rel="noreferrer noopener" target="_blank"><img src='/signum-xt-logo.svg' className={styles.xtwallet} alt="Signum XT Wallet"/></a>
+                        <a href="https://signum.network" rel="noreferrer noopener" target="_blank"><img src='/powered.svg' height={32} alt="Powered by Signum"/></a>
+                        <a href="https://signum-network.gitbook.io/signumjs" rel="noreferrer noopener" target="_blank"><img src='/signumjs.svg' height={33} alt="SignumJS" style={{position: 'relative', top: '3px'}}/></a>
                     </div>
                 </div>
                 <div className={styles.links}>

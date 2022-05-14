@@ -31,7 +31,7 @@ export const ScoreHandler: React.FC = ({children}) => {
 
     return (
         <>
-            {children};
+            {children}
         </>
     )
 }
