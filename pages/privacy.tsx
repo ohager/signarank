@@ -14,7 +14,7 @@ const Privacy = ({ }) => {
         <p><strong>Information We Collect</strong></p>
         <p>As a Visitor, you can browse our Website to find out more about our Website. You are not required to provide us with any personal information as a Visitor.</p>
 
-        <p>We currently do not collect any personal information about Visitors of our Website.</p>
+        <p><strong><em>We currently do not collect any personal information about Visitors of our Website.</em></strong></p>
 
         <p><strong>Automatically Collected Information</strong></p>
 
@@ -31,7 +31,7 @@ const Privacy = ({ }) => {
 
         <ul>
           <li>
-            <p><strong>To create a score and rank based on your public blockchain activity.</strong><br />We use your public address to compile a score using publically-available transaction and other information related to your public address.</p>
+            <p><strong>To create a score and rank based on your public blockchain activity.</strong><br />We use your public address to compile a score using publicly-available transaction and other information related to your public address.</p>
           </li>
           <li>
             <p><strong>To customizing our Website for your experience.</strong><br />We may use the information information you provide to us along with any computer information we receive to customize our Website.</p>
