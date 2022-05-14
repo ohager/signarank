@@ -1,8 +1,8 @@
-import { useAppDispatch, useAppSelector } from "@states/hooks";
-import { actions, actions as appActions } from "@states/appState";
+import { useAppDispatch} from "@states/hooks";
+import { actions as appActions } from "@states/appState";
 import { useEffect, useRef } from "react";
 import {
-    GenericExtensionWallet,
+    GenericExtensionWallet, InvalidNetworkError,
     WalletConnection,
 } from "@signumjs/wallets";
 import {useAppContext} from '@hooks/useAppContext';
@@ -20,13 +20,11 @@ export const WalletHandler = () => {
             Wallet.Extension = new GenericExtensionWallet();
         }
 
-        // function onNetworkChange(args: any) {
-        //     if (args.networkName === Ledger.Network) {
-        //         dispatch(appActions.setNodeHost(args.networkHost));
-        //         return;
-        //     }
-        //     showWarning(t("xtWalletNetworkChangedWarning"));
-        // }
+        function onNetworkChange(args: any) {
+            if (args.networkName !== Ledger.Network) {
+                dispatch(appActions.setWalletError(`Wrong Network detected. Expected: ${Ledger.Network}`));
+            }
+        }
 
         function onAccountChange(args: any) {
             dispatch(appActions.setConnectedAccount(args.accountPublicKey));
@@ -47,13 +45,16 @@ export const WalletHandler = () => {
                 dispatch(appActions.setConnectedAccount(connection.publicKey));
 
                 listenerRef.current = connection.listen({
-                    // onNetworkChanged: onNetworkChange,
+                    onNetworkChanged: onNetworkChange,
                     onAccountChanged: onAccountChange,
                     onPermissionRemoved: onPermissionOrAccountRemoval,
                     onAccountRemoved: onPermissionOrAccountRemoval,
                 });
                 connectionRef.current = connection;
             } catch (e) {
+                if(e instanceof InvalidNetworkError){
+                    dispatch(appActions.setWalletError(`Wrong Network detected. Expected: ${Ledger.Network}`));
+                }
                 console.error(e);
             }
         }

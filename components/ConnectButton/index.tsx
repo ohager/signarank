@@ -4,7 +4,7 @@ import styles from './connectButton.module.scss';
 import {AddressInput} from '@components/AddressInput';
 import {useCallback, useMemo, useState} from 'react';
 import {useAppDispatch, useAppSelector} from '@states/hooks';
-import {selectConnectedAccount, actions} from '@states/appState';
+import {selectConnectedAccount, actions, selectWalletError} from '@states/appState';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {Address} from '@signumjs/core';
 import {useSignumLedger} from '@hooks/useSignumLedger';
@@ -18,6 +18,7 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
     const [isFetching, setIsFetching] = useState(false)
     const [error, setError] = useState('')
     const connectedAccount = useAppSelector(selectConnectedAccount)
+    const walletError = useAppSelector(selectWalletError)
     const ledger  = useSignumLedger()
     const dispatch = useAppDispatch()
     const prefix = useAddressPrefix()
@@ -78,6 +79,7 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
         : (
             <div className={styles.connectButtonWrapper}>
                 <Button onClick={requestWalletConnection} label="Connect Wallet"/>
+                {walletError && <div className={styles.walletError}>{walletError}</div> }
                 {
                     withAddressInput && (
                         <div>

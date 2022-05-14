@@ -3,11 +3,13 @@ import {createSlice, PayloadAction} from "@reduxjs/toolkit";
 export interface AppState {
     connectedAccount: string | null;
     nodeHost: string;
+    walletError: string;
 }
 
 const initialState: AppState = {
     connectedAccount: null,
     nodeHost: "",
+    walletError: ""
 }
 
 export const appSlice = createSlice({
@@ -19,6 +21,9 @@ export const appSlice = createSlice({
         },
         setNodeHost: (state, action: PayloadAction<string>) => {
             state.nodeHost = action.payload;
+        },
+        setWalletError: (state, action: PayloadAction<string>) => {
+            state.walletError = action.payload;
         }
     },
 });
