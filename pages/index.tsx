@@ -1,6 +1,6 @@
 import Page from '../components/Page'
 import {memo, useEffect} from 'react';
-import prisma from '../lib/prisma'
+import {prisma} from '@lib/prisma'
 import {User} from '@lib/User.interface'
 import styles from '../styles/Home.module.scss'
 import {ConnectButton} from '@components/ConnectButton';

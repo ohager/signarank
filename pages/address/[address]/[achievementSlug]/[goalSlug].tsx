@@ -26,8 +26,6 @@ const Goal = ({score, rank, progress, address}: AddressProps) => {
 
     const achievement = achievements[achievementIndex];
 
-    console.log('Goal', goalSlug,  achievementIndex)
-
     const goalIndex = achievement.goals.findIndex((potentialMatch) => {
         return potentialMatch.slug === goalSlug as string;
     })

@@ -342,7 +342,7 @@
         "steps": [
           {
             "name": "Own >= 1 alias",
-            "points": 20,
+            "points": 10,
             "type": "own_alias",
             "params": {
               "count": 1
@@ -350,7 +350,7 @@
           },
           {
             "name": "Own >= 10 aliases",
-            "points": 20,
+            "points": 10,
             "type": "own_alias",
             "params": {
               "count": 10
@@ -358,7 +358,7 @@
           },
           {
             "name": "Own >= 20 aliases",
-            "points": 20,
+            "points": 10,
             "type": "own_alias",
             "params": {
               "count": 20
@@ -366,7 +366,7 @@
           },
           {
             "name": "Own >= 50 aliases",
-            "points": 20,
+            "points": 10,
             "type": "own_alias",
             "params": {
               "count": 50
@@ -378,11 +378,11 @@
         "name": "Owns 50 Signum Art NFTs",
         "slug": "signum-art-collector",
         "category": "collecting",
-        "points": 50,
+        "points": 100,
         "steps": [
           {
             "name": "Own >= 1 NFT",
-            "points": 20,
+            "points": 25,
             "type": "own_signum_art_nft",
             "params": {
               "count": 1
@@ -390,7 +390,7 @@
           },
           {
             "name": "Own >= 5 NFTs",
-            "points": 20,
+            "points": 25,
             "type": "own_signum_art_nft",
             "params": {
               "count": 5
@@ -398,7 +398,7 @@
           },
           {
             "name": "Own >= 20 NFTs",
-            "points": 20,
+            "points": 25,
             "type": "own_signum_art_nft",
             "params": {
               "count": 20
@@ -406,7 +406,7 @@
           },
           {
             "name": "Own >= 50 NFTs",
-            "points": 20,
+            "points": 25,
             "type": "own_signum_art_nft",
             "params": {
               "count": 50
@@ -505,7 +505,7 @@
         "name": "Node Operator (SNR)",
         "slug": "node-snr",
         "category": "social",
-        "points": 100,
+        "points": 200,
         "steps": [
           {
             "name": "Rewarded",
@@ -519,29 +519,13 @@
         ]
       },
       {
-        "name": "Published 10 distinct Smart Contracts",
+        "name": "Published 50 distinct Smart Contracts",
         "slug": "smart-contract-creator",
         "category": "technology",
         "points": 100,
         "steps": [
           {
-            "name": "Create >= 1 Smart Contract",
-            "points": 25,
-            "type": "create_contract",
-            "params": {
-              "count": 1
-            }
-          },
-          {
-            "name": "Create >= 2 Smart Contracts",
-            "points": 25,
-            "type": "create_contract",
-            "params": {
-              "count": 2
-            }
-          },
-          {
-            "name": "Create >= 5 Smart Contracts",
+            "name": "Create >= 5 Smart Contract",
             "points": 25,
             "type": "create_contract",
             "params": {
@@ -549,11 +533,27 @@
             }
           },
           {
-            "name": "Create >= 10 Smart Contract",
+            "name": "Create >= 10 Smart Contracts",
             "points": 25,
             "type": "create_contract",
             "params": {
               "count": 10
+            }
+          },
+          {
+            "name": "Create >= 25 Smart Contracts",
+            "points": 25,
+            "type": "create_contract",
+            "params": {
+              "count": 25
+            }
+          },
+          {
+            "name": "Create >= 50 Smart Contract",
+            "points": 25,
+            "type": "create_contract",
+            "params": {
+              "count": 50
             }
           }
         ]
