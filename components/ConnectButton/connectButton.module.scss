@@ -35,3 +35,16 @@
     font-weight: bold;
 }
 
+.disconnectButton {
+    border: none;
+    background: transparent;
+    color: #0066ff;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    font-weight: bold;
+}
+
+.disconnectButton:hover {
+    color: #0099ff;
+}

@@ -23,6 +23,13 @@
     opacity:.5;
 }
 
+.eligible {
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 24px;
+    flex-display: row;
+}
+
 .achievement {
     cursor:pointer;
     border:1px solid var(--main-color3);
@@ -43,9 +50,7 @@
     text-align:center;
     align-items: center;
     width: 90%;
-    margin: auto;
-    text-align: center;
-    margin-bottom:40px;
+    margin: auto auto 40px;
     position: relative;
     overflow:hidden;
     height:40px;

@@ -2,8 +2,13 @@ import Link from 'next/link';
 import React from 'react';
 import styles from '../styles/Header.module.scss';
 import {ConnectButton} from '@components/ConnectButton';
+import {useAppSelector} from '@states/hooks';
+import {selectConnectedAccount, selectIsEligibleForBadges} from '@states/appState';
+import {useConnectedAccount} from '@hooks/useConnectedAccount';
 
 const Header = () => {
+  const showBadges = useAppSelector(selectIsEligibleForBadges)
+  const account = useConnectedAccount()
 
   return (
   <div className={`${styles.header} header`}>
@@ -21,6 +26,11 @@ const Header = () => {
       <li>
         <Link href="/leaderboard"><a>Leaderboard</a></Link>
       </li>
+      { showBadges && account &&
+        <li>
+          <Link href={`/badges/${account.getNumericId()}`}><a>Badges</a></Link>
+        </li>
+      }
     </ul>
     <div className={styles.btn}>
       <ConnectButton />

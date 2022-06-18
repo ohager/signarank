@@ -4,12 +4,14 @@ export interface AppState {
     connectedAccount: string | null;
     nodeHost: string;
     walletError: string;
+    isEligibleForBadges: boolean;
 }
 
 const initialState: AppState = {
     connectedAccount: null,
     nodeHost: "",
-    walletError: ""
+    walletError: "",
+    isEligibleForBadges: false,
 }
 
 export const appSlice = createSlice({
@@ -24,6 +26,9 @@ export const appSlice = createSlice({
         },
         setWalletError: (state, action: PayloadAction<string>) => {
             state.walletError = action.payload;
+        },
+        setIsEligibleForBadges : (state, action: PayloadAction<boolean>) => {
+            state.isEligibleForBadges = action.payload
         }
     },
 });

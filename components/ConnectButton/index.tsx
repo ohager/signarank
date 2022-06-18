@@ -1,8 +1,8 @@
 import {Button} from '@components/Button';
-import {requestWalletConnection} from '@lib/requestWalletConnection';
+import {requestWalletConnection, requestWalletDisconnection} from '@lib/requestWalletConnection';
 import styles from './connectButton.module.scss';
 import {AddressInput} from '@components/AddressInput';
-import {useCallback, useMemo, useState} from 'react';
+import {FC, useCallback, useMemo, useState} from 'react';
 import {useAppDispatch, useAppSelector} from '@states/hooks';
 import {selectConnectedAccount, actions, selectWalletError} from '@states/appState';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
@@ -13,7 +13,7 @@ interface Props {
     withAddressInput?: boolean
 }
 
-export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
+export const ConnectButton: FC<Props> = ({withAddressInput = false}) => {
     const [address, setAddress] = useState('')
     const [isFetching, setIsFetching] = useState(false)
     const [error, setError] = useState('')
@@ -28,6 +28,11 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
         setAddress(e.target.value)
     }
 
+    const onDisconnect = () => {
+        requestWalletDisconnection()
+        dispatch(actions.setIsEligibleForBadges(false))
+    }
+
     const fetchAccountsPublicKey = useCallback(async () => {
 
         let publicKey = null;
@@ -39,7 +44,7 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
                 accountId
             })
 
-            if(pk && !pk.startsWith('000000000000000')){
+            if(pk && !pk.startsWith('0000000000000000000')){
                 publicKey = pk
             }
         }catch(e){
@@ -73,6 +78,7 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
             <div className={styles.accountWrapper}>
                 <div>You are connected with</div>
                 <div className={styles.address}>{connectedAddress}</div>
+                <button className={styles.disconnectButton} onClick={onDisconnect}>Disconnect</button>
             </div>
         )
 

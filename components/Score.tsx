@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import styles from '../styles/Score.module.scss';
 
 interface ScoreProps {
@@ -22,12 +21,9 @@ const Score = ({
         {rank === 2 && '🥈'}
         {rank === 3 && '🥉'}
       </h3>
-      <h5>ΞRank</h5>
+      <h5>Rank</h5>
     </div>
   </div>
 )
-Score.propTypes = {
-  score: PropTypes.number.isRequired,
-  rank: PropTypes.number.isRequired
-};
+
 export default Score;

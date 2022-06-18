@@ -12,6 +12,9 @@ import Page from '../../components/Page';
 import {calculateScore} from '../api/score/calculateSignaScore';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {singleQueryString} from '@lib/singleQueryString';
+import {useAppDispatch} from '@states/hooks';
+import {actions} from '@states/appState';
+import {useConnectedAccount} from '@hooks/useConnectedAccount';
 
 export async function getServerSideProps(context: NextPageContext) {
     const {address} = context.query;
@@ -30,6 +33,8 @@ export interface AddressProps {
 const Address = ({address, score, rank, progress, error, name}: AddressProps) => {
     const router = useRouter()
     const displayAddress = useReedSolomonAddress(address)
+    const connectedAccount = useConnectedAccount()
+    const dispatch = useAppDispatch()
 
     useEffect(() => {
         if (error) {
@@ -47,7 +52,6 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
         } else return 0;
     };
 
-    // TODO: calculate using points rather than percentage completed, normalize against one another maybe
     const getPercentCategoryCompleted = function (category: string) {
         const percentCompleted = achievements
             .map((achievement, i) => {
@@ -106,6 +110,14 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
         }
     });
 
+    const isEligibleForBadges = connectedAccount?.getNumericId() === address && categoryData.some(cat => cat.percentCompleted > 0)
+
+
+    useEffect(() => {
+        dispatch(actions.setIsEligibleForBadges(isEligibleForBadges))
+    }, [isEligibleForBadges])
+
+
     const data = {
         labels: categories.map(category => category.toUpperCase()),
         datasets: [{
@@ -160,8 +172,14 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
                 <h2 className="gradient-box gradient-bottom-only">{name || displayAddress}</h2>
             </div>
             <Score score={score} rank={rank}/>
-
-            <div>
+            {isEligibleForBadges &&
+              <div className="gradient-box">
+                <span className={styles.eligible}>
+                <h2>🎉</h2><p> Congratulations, you are eligible to mint achievements badges!</p>
+                </span>
+              </div>
+            }
+            <div style={{marginTop: '4rem'}}>
                 <h3>Achievements</h3>
                 <div className={`${styles.cellParent} ${styles.achivements}`}>
                     {achievements.map((achievement, i) => {
