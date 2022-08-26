@@ -6,8 +6,13 @@ import {ConnectButton} from '@components/ConnectButton';
 import {Address} from '@signumjs/core';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {fetchLeaderboard} from './api/leaderboard/fetchLeaderboard';
+import {NextPageContext} from 'next';
+import {addCacheHeader} from '@lib/addCacheHeader';
 
-export async function getServerSideProps() {
+export async function getServerSideProps({ res }: NextPageContext) {
+
+    res && addCacheHeader(res, 12*60)
+
     const {leaderboard, latestScores} = await fetchLeaderboard()
     return {
         props: {
@@ -38,7 +43,7 @@ const Home = ({leaderboard, latestScores}: HomeProps) => {
     useEffect(() => {
 
         updateLeaderboardAccounts(leaders, latestUsers)
-            .then(() => fetch('/api/leaderboard'))
+            .then(() => fetch('/api/leaderboard', ))
             .then((response) => response.json())
             .then((result) => {
                 setLatestUsers(result.latestScores)

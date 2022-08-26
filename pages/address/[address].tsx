@@ -12,9 +12,11 @@ import Page from '../../components/Page';
 import {calculateScore} from '../api/score/calculateSignaScore';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {singleQueryString} from '@lib/singleQueryString';
+import {addCacheHeader} from '@lib/addCacheHeader';
 
-export async function getServerSideProps(context: NextPageContext) {
-    const {address} = context.query;
+export async function getServerSideProps({query, res}: NextPageContext) {
+    const {address} = query;
+    res && addCacheHeader(res, 60)
     return calculateScore(singleQueryString(address));
 }
 

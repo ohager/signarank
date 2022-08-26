@@ -4,9 +4,13 @@ import {User} from '@lib/User.interface';
 import Page from '../components/Page';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {Address} from '@signumjs/core';
+import {addCacheHeader} from '@lib/addCacheHeader';
+import {NextPageContext} from 'next';
 
 
-export async function getServerSideProps() {
+export async function getServerSideProps({res}: NextPageContext) {
+
+    res && addCacheHeader(res, 12*60)
 
     const leaderboard = await prisma.address.findMany({
         take: 100,
