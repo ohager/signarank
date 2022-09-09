@@ -16,7 +16,7 @@ import {addCacheHeader} from '@lib/addCacheHeader';
 
 export async function getServerSideProps({query, res}: NextPageContext) {
     const {address} = query;
-    res && addCacheHeader(res, 60)
+    res && addCacheHeader(res, 24 * 60)
     return calculateScore(singleQueryString(address));
 }
 

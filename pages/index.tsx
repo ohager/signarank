@@ -11,7 +11,7 @@ import {addCacheHeader} from '@lib/addCacheHeader';
 
 export async function getServerSideProps({ res }: NextPageContext) {
 
-    res && addCacheHeader(res, 12*60)
+    res && addCacheHeader(res, 24*60)
 
     const {leaderboard, latestScores} = await fetchLeaderboard()
     return {

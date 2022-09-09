@@ -5,8 +5,6 @@ import {HttpError} from '@signumjs/http';
 import {badGateway, boomify} from '@hapi/boom';
 import {addCacheHeader} from '@lib/addCacheHeader';
 
-const CacheTime = 12 * 60 * 60
-
 export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
@@ -17,7 +15,7 @@ export default async function handler(
         const {score, rank} = props;
         res.setHeader('Access-Control-Allow-Origin', '*')
         res.setHeader('Access-Control-Allow-Methods', 'GET')
-        addCacheHeader(res, 12*60)
+        addCacheHeader(res, 24*60)
         res.status(200).json({score, rank})
     } catch (e: any) {
         if (e instanceof HttpError) {
