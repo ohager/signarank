@@ -13,6 +13,7 @@ import {calculateScore} from '../api/score/calculateSignaScore';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {singleQueryString} from '@lib/singleQueryString';
 import {addCacheHeader} from '@lib/addCacheHeader';
+import * as process from 'process';
 
 export async function getServerSideProps({query, res}: NextPageContext) {
     const {address} = query;
@@ -154,12 +155,13 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
             }
         }
     };
-
+    const addressExplorerUrl = `${process.env.NEXT_PUBLIC_SIGNUM_EXPLORER}/address/${address}`
 
     return <Page title={`${displayAddress} - SIGNARank`}>
         <div className="content">
             <div className={styles.address}>
                 <h2 className="gradient-box gradient-bottom-only">{name || displayAddress}</h2>
+                <a className="explorer-link" href={addressExplorerUrl} target="_blank" rel="noreferrer noopener">🌐</a>
             </div>
             <Score score={score} rank={rank}/>
 

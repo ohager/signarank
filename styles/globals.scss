@@ -65,14 +65,14 @@ h1, h2, h3, h4, h5 {
 }
 
 .content {
-  max-width: 800px;
+  max-width: 900px;
   min-height:200px;
   margin:0 auto;
   padding:50px 20px 0;
   text-align: left;
   .connect {
     height:100px;
-    .btn { 
+    .btn {
       background:linear-gradient(to right, var(--main-color2),  var(--main-color3), var(--main-color4));
       color:white;
       padding:15px 25px;
@@ -156,4 +156,13 @@ pre {
   background: var(--main-color2) !important;
   height: 2px !important;
   z-index: 2000 !important;
+}
+
+a.explorer-link {
+  border-bottom: none;
+  font-size: 16px;
+  transition: all 100ms ease-in-out;
+}
+a.explorer-link:hover {
+  font-size: 18px;
 }

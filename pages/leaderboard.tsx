@@ -6,6 +6,7 @@ import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {Address} from '@signumjs/core';
 import {addCacheHeader} from '@lib/addCacheHeader';
 import {NextPageContext} from 'next';
+import process from 'process';
 
 
 export async function getServerSideProps({res}: NextPageContext) {
@@ -37,7 +38,6 @@ interface LeaderboardParams {
 const Leaderboard = ({leaderboard}: LeaderboardParams) => {
     const prefix = useAddressPrefix()
     const leaders = JSON.parse(leaderboard);
-
     return <Page title="SIGNArank - Leaderboard">
         <div className="content">
             <div>
@@ -45,8 +45,12 @@ const Leaderboard = ({leaderboard}: LeaderboardParams) => {
                 <ol className={`${styles.cellParent} ${styles.achivements}`}>
                     {leaders.map((user: User, i: number) => {
                         const displayName = Address.create(user.address, prefix).getReedSolomonAddress();
+                        const addressExplorerUrl = `${process.env.NEXT_PUBLIC_SIGNUM_EXPLORER}/address/${user.address}`
                         return <li key={i} className={`${styles.user} user`}>
-                            <h4><a href={`/address/${user.address}`}>{displayName}</a></h4>
+                            <h4>
+                                <a className="explorer-link" href={addressExplorerUrl} target="_blank" rel="noreferrer noopener">🌐 </a>
+                                <a href={`/address/${user.address}`}>{displayName}</a>
+                            </h4>
                             <span>{user.score}</span>
                         </li>
                     })}

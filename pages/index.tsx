@@ -8,6 +8,8 @@ import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {fetchLeaderboard} from './api/leaderboard/fetchLeaderboard';
 import {NextPageContext} from 'next';
 import {addCacheHeader} from '@lib/addCacheHeader';
+import process from 'process';
+import Link from 'next/link';
 
 export async function getServerSideProps({ res }: NextPageContext) {
 
@@ -99,10 +101,14 @@ interface EntryProps {
 const Entry = memo<EntryProps>(({address, score}) => {
     const prefix = useAddressPrefix()
     const displayName = Address.fromNumericId(address, prefix).getReedSolomonAddress()
+    const addressExplorerUrl = `${process.env.NEXT_PUBLIC_SIGNUM_EXPLORER}/address/${address}`
     return (
+        <>
         <span className={styles.entry}>
+            <a title="Open in Explorer" className="explorer-link" style={{marginRight: "0.2rem"}} href={addressExplorerUrl} target="_blank" rel="noreferrer noopener">🌐 </a>
             <a href={`/address/${address}`}>{displayName}</a><span>{score}</span>
         </span>
+        </>
     )
 })
 
