@@ -91,7 +91,7 @@ export async function calculateScore(accountId: string) {
         if (!cached || process.env.DEVELOPMENT) {
 
             const [transactionList, blockList, account, accountAliases, contracts, nftCount] = await Promise.all([
-                ledger.account.getAccountTransactions({accountId, includeIndirect: true}),
+                ledger.account.getAccountTransactions({accountId, includeIndirect: false}),
                 ledger.account.getAccountBlocks({accountId, includeTransactions: false}),
                 ledger.account.getAccount({accountId, includeCommittedAmount: true}),
                 ledger.alias.getAliases({accountId}),
