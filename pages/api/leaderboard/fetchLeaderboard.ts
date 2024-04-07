@@ -24,7 +24,7 @@ export async function fetchLeaderboard() {
             active: true
         },
         orderBy: {
-            createdAt: 'desc'
+            updatedAt: 'desc'
         }
     });
 
