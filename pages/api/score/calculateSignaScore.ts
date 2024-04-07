@@ -94,7 +94,7 @@ export async function calculateScore(accountId: string) {
                 ledger.account.getAccountTransactions({accountId, includeIndirect: true}),
                 ledger.account.getAccountBlocks({accountId, includeTransactions: false}),
                 ledger.account.getAccount({accountId, includeCommittedAmount: true}),
-                ledger.account.getAliases(accountId),
+                ledger.alias.getAliases({accountId}),
                 ledger.contract.getContractsByAccount({accountId}),
                 nftService.getNftCountPerAccount(accountId)
             ])

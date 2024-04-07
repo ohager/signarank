@@ -22,7 +22,7 @@ const Score = ({
         {rank === 2 && '🥈'}
         {rank === 3 && '🥉'}
       </h3>
-      <h5>ΞRank</h5>
+      <h5>Rank</h5>
     </div>
   </div>
 )
