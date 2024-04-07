@@ -2,15 +2,15 @@ import achievements from '@lib/achievements.signa.json';
 import {prisma} from '@lib/prisma';
 
 import {
-    Address,
+    Address, Ledger,
     LedgerClientFactory,
-    TransactionArbitrarySubtype,
+    TransactionArbitrarySubtype, TransactionList,
     TransactionPaymentSubtype,
     TransactionType
 } from '@signumjs/core';
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
 import {ExceptionInactiveAccount} from './exceptionInactiveAccount';
-import {Amount} from '@signumjs/util';
+import {Amount, ChainTime} from '@signumjs/util';
 import {NftService} from './nftService';
 
 async function fetchCachedAddress(accountId: string) {
@@ -51,7 +51,12 @@ const runOnlyOnce = (i: number, fn: () => void) => {
     }
 }
 
-const ledger = LedgerClientFactory.createClient({
+function isMinimumVersion38(version: string){
+    const [major, minor] = version.replace("v", "").split(".");
+    return Number(major) >= 3 && Number(minor) >= 8;
+}
+
+    const ledger = LedgerClientFactory.createClient({
     nodeHost: process.env.NEXT_PUBLIC_SIGNUM_DEFAULT_NODE || "",
     reliableNodeHosts: toStringArray(process.env.NEXT_PUBLIC_SIGNUM_RELIABLE_NODES)
 })
@@ -61,6 +66,40 @@ const nftService = new NftService({
         apiKey: process.env.NEXT_SERVER_NFT_SERVICE_API_KEY || ""
     }
 )
+
+async function hasDonatedToSNA(ledger:Ledger, accountId: string){
+    const SNAAccount = "8952122635653861124"
+    const txs = await ledger.service.query<TransactionList>('getAccountTransactions', {
+        sender: accountId,
+        recipient: SNAAccount,
+        includeIndirect: false,
+        bidirectional: false,
+    })
+    return txs.transactions.reduce( (sum, tx) => {
+        try{
+            const amount = Amount.fromPlanck(tx.amountNQT);
+            sum.add(amount);
+        }catch(e){
+            // nothing
+        }
+        return sum;
+    }, Amount.Zero() )
+}
+
+// FIXME: multiout not performant
+// async function isNodeOperator(ledger:Ledger, accountId: string){
+//     const SNRAccount = "5638419241790983339"
+//     const Day =  24 * 3600 * 1000
+//     const txs = await ledger.service.query<TransactionList>('getAccountTransactions',
+//         {
+//             sender: SNRAccount,
+//             recipient: accountId,
+//             includeIndirect: true,
+//         })
+//     return txs.transactions.some( (tx) => {
+//         return Date.now() - ChainTime.fromChainTimestamp(tx.timestamp).getDate().getTime() < 7 * Day
+//     } )
+// }
 
 export async function calculateScore(accountId: string) {
     let score = 0, rank = 0;
@@ -90,15 +129,30 @@ export async function calculateScore(accountId: string) {
 
         if (!cached || process.env.DEVELOPMENT) {
 
-            const [transactionList, blockList, account, accountAliases, contracts, nftCount] = await Promise.all([
+
+
+            const [transactionList, blockList, account, accountAliases, contracts, nftCount, blockchainStatus] = await Promise.all([
                 ledger.account.getAccountTransactions({accountId, includeIndirect: false}),
                 ledger.account.getAccountBlocks({accountId, includeTransactions: false}),
                 ledger.account.getAccount({accountId, includeCommittedAmount: true}),
                 ledger.alias.getAliases({accountId}),
                 ledger.contract.getContractsByAccount({accountId}),
-                nftService.getNftCountPerAccount(accountId)
+                nftService.getNftCountPerAccount(accountId),
+                ledger.network.getBlockchainStatus()
             ])
 
+            const isAtLeastVersion38 = isMinimumVersion38(blockchainStatus.version);
+            let donatedAmount = Amount.Zero();
+            // FIXME: SNR is not working correctly due to slow indirect inclusion
+            let isNodeOperatorSNR = false;
+            if(isAtLeastVersion38){
+                const [_donatedAmount,] = await Promise.all([
+                    hasDonatedToSNA(ledger, accountId),
+                    // isNodeOperator(ledger, accountId),
+                ])
+                donatedAmount = _donatedAmount;
+                // isNodeOperatorSNR = _hasBeenRewarded;
+            }
 
             const aliasCount = accountAliases.aliases ? accountAliases.aliases.length : 0
             const tokenCount = account.assetBalances ? account.assetBalances.length : 0
@@ -255,14 +309,17 @@ export async function calculateScore(accountId: string) {
                                                 })
                                                 break;
                                             case 'snr_rewarded':
-                                                // @ts-ignore
-                                                if (transactions[i].sender === step.params.sender) {
-                                                    markStepCompleted(j, k, l);
-                                                    score += step.points;
-                                                }
+                                                // FIXME: AT THE MOMENT NOT FEASIBLE - 07.04.2024
+                                                runOnlyOnce(i, () => {
+                                                    if (isNodeOperatorSNR) {
+                                                        markStepCompleted(j, k, l);
+                                                        score += step.points;
+                                                    }
+                                                })
                                                 break;
                                             case 'multiout_payments_count':
 
+                                                // FIXME: AT THE MOMENT NOT FEASIBLE - 07.04.2024
                                                 // @ts-ignore
                                                 address = step.params.address || accountId;
                                                 if (transactions[i].sender === address &&
@@ -339,7 +396,7 @@ export async function calculateScore(accountId: string) {
                                                 break;
                                             case 'donated_to_sna':
                                                 // @ts-ignore
-                                                if (transactions[i].recipient === step.params.receiver && (transactions[i].amountNQT / 1E8) >= step.params.amount) {
+                                                if (donatedAmount.greaterOrEqual(Amount.fromSigna(step.params.amount))) {
                                                     markStepCompleted(j, k, l);
                                                     score += step.points;
                                                 }
