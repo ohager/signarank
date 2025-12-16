@@ -16,7 +16,6 @@ import {prisma} from '@lib/prisma';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import * as process from 'process';
 
-// ISR: Pre-generate top 100 addresses and regenerate on-demand for others
 export const getStaticPaths: GetStaticPaths = async () => {
     return {
         paths: [],
