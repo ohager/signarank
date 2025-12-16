@@ -4,15 +4,13 @@ import {User} from '@lib/User.interface';
 import Page from '../components/Page';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {Address} from '@signumjs/core';
-import {addCacheHeader} from '@lib/addCacheHeader';
-import {NextPageContext} from 'next';
+import {GetStaticProps} from 'next';
+import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import process from 'process';
 
 
-export async function getServerSideProps({res}: NextPageContext) {
-
-    res && addCacheHeader(res, 24*60)
-
+// ISR: Statically generate leaderboard and regenerate every 30 minutes
+export const getStaticProps: GetStaticProps = async () => {
     const leaderboard = await prisma.address.findMany({
         take: 100,
         where: {
@@ -26,8 +24,9 @@ export async function getServerSideProps({res}: NextPageContext) {
     return {
         props: {
             leaderboard: JSON.stringify(leaderboard)
-        }
-    }
+        },
+        revalidate: ISR_REVALIDATE_SECONDS  // Matches database cache TTL (configurable via CACHE_TTL_SECONDS env var)
+    };
 }
 
 // TODO type it

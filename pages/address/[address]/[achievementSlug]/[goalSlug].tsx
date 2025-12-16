@@ -2,17 +2,35 @@ import {useRouter} from 'next/router'
 import styles from '@styles/Address.module.scss'
 import goalStyles from '@styles/Goal.module.scss'
 import achievements from '@lib/achievements.signa.json';
-import {AddressProps, getServerSideProps as getServerProps} from "../../[address]"
+import {AddressProps} from "../../[address]"
 import ProgressBar from '@components/ProgressBar';
 import Score from '@components/Score';
-import {NextPageContext} from 'next';
+import {GetStaticProps, GetStaticPaths} from 'next';
 import Page from '@components/Page';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {useCallback} from 'react';
+import {calculateScore} from '../../../api/score/calculateSignaScore';
+import {singleQueryString} from '@lib/singleQueryString';
+import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 
-export async function getServerSideProps(context: NextPageContext) {
-    return getServerProps(context);
-}
+// Generate on-demand with ISR (fallback: blocking)
+// Pre-generating all address+achievement+goal combinations would be too many paths
+export const getStaticPaths: GetStaticPaths = async () => {
+    return {
+        paths: [], // Generate on-demand
+        fallback: 'blocking'
+    };
+};
+
+export const getStaticProps: GetStaticProps = async ({params}) => {
+    const address = singleQueryString(params?.address);
+    const result = await calculateScore(address);
+
+    return {
+        props: result.props,
+        revalidate: ISR_REVALIDATE_SECONDS
+    };
+};
 
 const Goal = ({score, rank, progress, address}: AddressProps) => {
 

@@ -6,22 +6,22 @@ import {ConnectButton} from '@components/ConnectButton';
 import {Address} from '@signumjs/core';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {fetchLeaderboard} from './api/leaderboard/fetchLeaderboard';
-import {NextPageContext} from 'next';
-import {addCacheHeader} from '@lib/addCacheHeader';
+import {GetStaticProps} from 'next';
+import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import process from 'process';
 import Link from 'next/link';
 
-export async function getServerSideProps({ res }: NextPageContext) {
+// ISR: Statically generate homepage and regenerate every 30 minutes
+export const getStaticProps: GetStaticProps = async () => {
+    const {leaderboard, latestScores} = await fetchLeaderboard();
 
-    res && addCacheHeader(res, 24*60)
-
-    const {leaderboard, latestScores} = await fetchLeaderboard()
     return {
         props: {
             leaderboard: JSON.stringify(leaderboard),
             latestScores: JSON.stringify(latestScores),
-        }
-    }
+        },
+        revalidate: ISR_REVALIDATE_SECONDS  // Matches database cache TTL (configurable via CACHE_TTL_SECONDS env var)
+    };
 }
 
 function updateLeaderboardAccounts(leaders: any[], latest: any[]) {

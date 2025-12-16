@@ -1,12 +1,23 @@
 import { useRouter } from 'next/router'
 import { useEffect } from 'react';
-import { NextPageContext } from 'next';
+import { GetStaticProps, GetStaticPaths } from 'next';
 import Page from '../../components/Page';
+import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 
-export async function getServerSideProps(context: NextPageContext) {
-  const { unstoppableName } = context.query;
+// Generate on-demand with ISR (fallback: blocking)
+export const getStaticPaths: GetStaticPaths = async () => {
+  return {
+    paths: [], // Generate on-demand
+    fallback: 'blocking'
+  };
+};
 
-  if (typeof unstoppableName !== 'string') return;
+export const getStaticProps: GetStaticProps = async ({params}) => {
+  const unstoppableName = params?.unstoppableName;
+
+  if (typeof unstoppableName !== 'string') {
+    return { notFound: true };
+  }
 
   const { address, error } = await lookupUnstoppableName(unstoppableName);
 
@@ -15,7 +26,8 @@ export async function getServerSideProps(context: NextPageContext) {
       address,
       unstoppableName,
       error,
-    }
+    },
+    revalidate: ISR_REVALIDATE_SECONDS
   }
 }
 
