@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "init": "npm run db:generate",
+    "postinstall": "npm run init",
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev --name",
     "db:generate": "dotenv -e .env.local -- prisma generate"
