@@ -1,5 +1,6 @@
 import achievements from '@lib/achievements.signa.json';
 import {prisma} from '@lib/prisma';
+import {CACHE_TTL_MS, IS_DEVELOPMENT} from '@lib/cacheConfig';
 
 import {
     Address, Ledger,
@@ -24,9 +25,10 @@ async function fetchCachedAddress(accountId: string) {
         throw new ExceptionInactiveAccount(accountId)
     }
 
-    const Minutes = 60 * 1000
-    const CacheExpiresAfter = 30 * Minutes
-    const cacheHit = cacheAddress && cacheAddress.updatedAt > new Date(Date.now() - CacheExpiresAfter) && !process.env.DEVELOPMENT
+    // Check if cache is still valid (within TTL and not in development mode)
+    const cacheHit = cacheAddress &&
+                     cacheAddress.updatedAt > new Date(Date.now() - CACHE_TTL_MS) &&
+                     !IS_DEVELOPMENT;
 
     return {
         cacheAddress,
@@ -61,11 +63,13 @@ function isMinimumVersion38(version: string){
     reliableNodeHosts: toStringArray(process.env.NEXT_PUBLIC_SIGNUM_RELIABLE_NODES)
 })
 
-const nftService = new NftService({
-        hostUrl: process.env.NEXT_SERVER_NFT_SERVICE_API_HOST || "",
-        apiKey: process.env.NEXT_SERVER_NFT_SERVICE_API_KEY || ""
-    }
-)
+// NFT Service is optional - only instantiate if API credentials are configured
+const nftService = (process.env.NEXT_SERVER_NFT_SERVICE_API_HOST && process.env.NEXT_SERVER_NFT_SERVICE_API_KEY)
+    ? new NftService({
+        hostUrl: process.env.NEXT_SERVER_NFT_SERVICE_API_HOST,
+        apiKey: process.env.NEXT_SERVER_NFT_SERVICE_API_KEY
+    })
+    : null;
 
 async function hasDonatedToSNA(ledger:Ledger, accountId: string){
     const SNAAccount = "8952122635653861124"
@@ -131,13 +135,18 @@ export async function calculateScore(accountId: string) {
 
 
 
+            // Fetch NFT count only if NFT service is configured
+            const nftCountPromise = nftService
+                ? nftService.getNftCountPerAccount(accountId)
+                : Promise.resolve(0);
+
             const [transactionList, blockList, account, accountAliases, contracts, nftCount, blockchainStatus] = await Promise.all([
                 ledger.account.getAccountTransactions({accountId, includeIndirect: false}),
                 ledger.account.getAccountBlocks({accountId, includeTransactions: false}),
                 ledger.account.getAccount({accountId, includeCommittedAmount: true}),
                 ledger.alias.getAliases({accountId}),
                 ledger.contract.getContractsByAccount({accountId}),
-                nftService.getNftCountPerAccount(accountId),
+                nftCountPromise,
                 ledger.network.getBlockchainStatus()
             ])
 
@@ -452,7 +461,7 @@ export async function calculateScore(accountId: string) {
             }
 
 
-            // update the cache
+            // update the cache and calculate rank in a transaction
             const upsertObj = {
                 address: accountId.toLowerCase(),
                 score,
@@ -461,25 +470,49 @@ export async function calculateScore(accountId: string) {
                 description: '',
                 progress: JSON.stringify(progress)
             };
-            await prisma.address.upsert({
+
+            // Use transaction to atomically upsert address and calculate rank
+            await prisma.$transaction(async (tx) => {
+                // Upsert the address with new score
+                await tx.address.upsert({
+                    where: {
+                        // @ts-ignore
+                        address: accountId.toLowerCase()
+                    },
+                    update: upsertObj,
+                    create: upsertObj
+                });
+
+                // Calculate rank immediately using indexed query
+                // COUNT(*) WHERE score > current_score gives us addresses better than us
+                const rankResult = await tx.$queryRaw<Array<{ranking: bigint}>>`
+                    SELECT COUNT(*) + 1 as ranking
+                    FROM "Address"
+                    WHERE score > ${score}
+                `;
+                rank = Number(rankResult[0].ranking);
+
+                // Update the ranking column for future reads
+                await tx.address.update({
+                    where: {
+                        // @ts-ignore
+                        address: accountId.toLowerCase()
+                    },
+                    data: { ranking: rank }
+                });
+            });
+
+        } else {
+            // If not recalculating (cache hit), fetch rank from database
+            const cachedAddress = await prisma.address.findUnique({
                 where: {
                     // @ts-ignore
                     address: accountId.toLowerCase()
                 },
-                update: upsertObj,
-                create: upsertObj
+                select: { ranking: true }
             });
-
+            rank = cachedAddress?.ranking || 0;
         }
-
-        const higherRankedAddresses = await prisma.address.count({
-            where: {
-                score: {
-                    gte: score,
-                },
-            },
-        });
-        rank = higherRankedAddresses || 0;
         return {
             props: {
                 address: accountId,

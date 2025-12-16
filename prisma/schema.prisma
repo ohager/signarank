@@ -15,6 +15,7 @@ model Address {
   id          Int      @id @default(autoincrement())
   address     String   @unique @db.VarChar(255)
   score       Int
+  ranking     Int      @default(0)
   progress    String   @db.Text
   name        String   @db.VarChar(255)
   imageUrl    String   @db.Text
@@ -22,4 +23,10 @@ model Address {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([score])
+  @@index([ranking])
+  @@index([active])
+  @@index([updatedAt])
+  @@index([active, score])
 }

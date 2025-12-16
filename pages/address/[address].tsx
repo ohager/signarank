@@ -5,20 +5,32 @@ import Link from 'next/link';
 import ProgressBar from '../../components/ProgressBar';
 import Score from '../../components/Score';
 import {useEffect} from 'react';
-import {NextPageContext} from 'next';
+import {GetStaticProps, GetStaticPaths} from 'next';
 import 'chart.js/auto';
 import {Radar} from 'react-chartjs-2';
 import Page from '../../components/Page';
 import {calculateScore} from '../api/score/calculateSignaScore';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {singleQueryString} from '@lib/singleQueryString';
-import {addCacheHeader} from '@lib/addCacheHeader';
+import {prisma} from '@lib/prisma';
+import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import * as process from 'process';
 
-export async function getServerSideProps({query, res}: NextPageContext) {
-    const {address} = query;
-    res && addCacheHeader(res, 24 * 60)
-    return calculateScore(singleQueryString(address));
+export const getStaticPaths: GetStaticPaths = async () => {
+    return {
+        paths: [],
+        fallback: 'blocking'
+    };
+};
+
+export const getStaticProps: GetStaticProps = async ({params}) => {
+    const address = singleQueryString(params?.address);
+    const result = await calculateScore(address);
+
+    return {
+        props: result.props,
+        revalidate: ISR_REVALIDATE_SECONDS  // Matches database cache TTL (configurable via CACHE_TTL_SECONDS env var)
+    };
 }
 
 export interface AddressProps {

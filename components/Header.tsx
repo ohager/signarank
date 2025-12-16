@@ -3,6 +3,8 @@ import React from 'react';
 import styles from '../styles/Header.module.scss';
 import {ConnectButton} from '@components/ConnectButton';
 
+const isTestnet = process.env.NEXT_PUBLIC_SIGNUM_NETWORK === "Signum-TESTNET"
+
 const Header = () => {
 
   return (
@@ -12,6 +14,7 @@ const Header = () => {
         <img src='/signum-logo.svg' height={32} alt='Signum Logo'/>
         <Link href="/"><a>&nbsp;SIGNArank</a></Link>
         <span className={styles.pill}>Season 1</span>
+          {isTestnet && <span className={styles.pill} style={{backgroundColor: 'red'}}>TESTNET</span>}
       </span>
     </h1>
     <ul>

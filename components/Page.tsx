@@ -3,7 +3,6 @@ import {ReactNode} from 'react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 import styles from '../styles/Home.module.scss'
-import {isClientSide} from '@lib/isClientSide';
 
 // add to this every new season
 export const seasons = [
