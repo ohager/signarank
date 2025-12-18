@@ -21,6 +21,8 @@
 
 // helper
 #define MAP_SET_FLAG 1024
+#define TRANSFER_NFT_METHOD_HASH 7174296962751784077
+#define NFT_FEES_PLANCK 32000000
 
 // Maps
 #define MAP_DAMAGE_MULTIPLIER 1
@@ -215,7 +217,8 @@ void runAttackerRound() {
     }
 
     // 2. Calculate Damage
-    long totalDamage = applyTokenModifiers(calculateSignaDamage());
+//     long totalDamage = applyTokenModifiers(calculateSignaDamage());
+    long totalDamage = calculateSignaDamage();
 
     // 3. Apply Debuff
     long debuffStacks = getMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender);
@@ -246,8 +249,8 @@ void runAttackerRound() {
         msg[] = "Insufficient XP Tokens!";
         sendMessage(msg, getCreator());
     }
-    sendQuantity(currentTx.sender, xpTokenId, effectiveDamage);
-    sendQuantity(currentTx.sender, hpTokenId, effectiveDamage);
+    sendQuantity(effectiveDamage, xpTokenId, currentTx.sender);
+    sendQuantity(effectiveDamage, hpTokenId, currentTx.sender);
 
     // 7. Send Messages for important events
 
@@ -326,15 +329,17 @@ inline void refundPowerUpsWithPenalty() {
     // Refund all EXCEPT the chosen one
     for (long j = 0; j < count; j++) {
         if (j != keepIndex) {
-            sendQuantity(currentTx.sender, assets[j], quantities[j]);
+            sendQuantity(quantities[j], assets[j], currentTx.sender);
         }
         // else: kept as penalty
     }
 }
 
 inline long calculateSignaDamage() {
-    long amount = getAmount(currentTx.txId);
-    return (amount * baseDamageRatio) / 100;
+     //  1. long signa =getAmount(currentTx.txId) / 1_0000_0000;
+     //  2. (signa * baseDamageRatio) / 100;
+     // optimized:
+    return (getAmount(currentTx.txId) * baseDamageRatio) / 100_0000_0000;
 }
 
 long applyDebuff(long damage, long stacks) {
@@ -461,7 +466,7 @@ void handleDefeat() {
     sendAmount(firstBloodBonus, firstBloodAccount);
 
     // Distribute Rewards
-    totalSigna = totalSigna - (finalBlowBonus + firstBloodBonus);
+    totalSigna = totalSigna - (finalBlowBonus + firstBloodBonus - 5000_0000); // keep 0.5 SIGNA
 
     // Calculate shares
     long attackerShare = (totalSigna * rewardDistribution.attackers) / 100;
@@ -482,9 +487,12 @@ void handleDefeat() {
 
     // Send NFT if configured
     if (rewardNftId != 0) {
-        // TODO: define message to be sent to NFT contract -> transfer ownership
         long message[4];
-        sendAmountAndMessage(5_0000_000, message, rewardNftId);
+        message[0] = TRANSFER_NFT_METHOD_HASH;
+        message[1] = finalBlowAccount;
+        message[2] = 0;
+        message[3] = 0;
+        sendAmountAndMessage(NFT_FEES_PLANCK, message, rewardNftId);
     }
 }
 
