@@ -1,0 +1,645 @@
+#program name Construct
+#program description This is the base contract to spawn Constructs
+#program activationAmount 200000000
+#pragma optimizationLevel 3
+#pragma verboseAssembly false
+#pragma maxAuxVars 3
+#pragma version 2.3.0
+
+// Magic codes for methods
+#define SETACTIVE 1
+#define SETBREACHLIMIT 2
+#define SETDAMAGEMULTIPLIER 3
+#define SETDAMAGEADDITION 4
+#define SETREWARDNFT 5
+#define SETREWARDDISTRIBUTION 6
+#define SETBONI 7
+#define SETDEBUFF 8
+#define SETREGENERATION 9
+#define HEAL 10
+
+
+// Maps
+#define MAP_DAMAGE_MULTIPLIER 1
+#define MAP_DAMAGE_ADDITION 11
+#define MAP_DAMAGE_TOKEN_LIMIT 12
+#define MAP_ATTACKERS_LAST_ATTACK 2
+#define MAP_ATTACKERS_DEBUFF 21
+#define MAP_TOKEN_DECIMALS_INFO 3
+
+// parameters - starts at index 4 - initializable
+// required
+long name; // max 8 characters
+long xpTokenId; // need to receive the amount of maxHp in XP Token.
+long maxHp;
+
+// optional
+long baseDamageRatio;
+long breachLimit;
+long firstBloodBonus;
+long finalBlowBonus;
+long coolDownInBlocks;
+long isActive;
+long rewardNftId;
+
+// Structs
+struct REWARDDISTRIBUTION {
+    long attackers;
+    long burn;
+    long treasury;
+} rewardDistribution;
+
+struct DEBUFF {
+    long chance;
+    long damageReduction;
+    long maxStack;
+} debuff;
+
+struct REGENERATION {
+    long blockInterval;
+    long hitpoints;
+    long lastRegenerationBlock;
+} regeneration;
+
+
+// derived/calculated state - not intended for initialization
+long isDefeated;
+long firstBloodAccount;
+long finalBlowAccount;
+long hpTokenId;
+
+// basic tx iteration struct
+struct TX {
+    long txId;
+    long sender;
+    long height;
+    long assetIds[4];
+    long message[4];
+} currentTx;
+
+init();
+
+void init(){
+
+    hpTokenId = issueAsset(name, "", 0);
+    mintAsset(maxHp, hpTokenId);
+
+    // set defaults
+    if(baseDamageRatio <= 0){
+        baseDamageRatio = 10; // dmg(x) = x SIGNA * (10/100)
+    }
+    if(breachLimit <= 0){
+        breachLimit = 20; // percentage: max damage is 20% initial HP
+    }
+    if(firstBloodBonus <= 0){
+        firstBloodBonus = 1000_0000_0000;
+    }
+
+    if(finalBlowBonus <= 0) {
+        finalBlowBonus = 5000_0000_0000;
+    }
+
+    if(coolDownInBlocks <= 0) {
+        coolDownInBlocks = 15;
+    }
+
+    if(rewardDistribution.attackers <= 0){
+        rewardDistribution.attackers = 85;
+        rewardDistribution.burn = 10;
+        rewardDistribution.treasury = 5;
+    }
+    // debuff is optional... all zero is fine
+
+    isActive = 1;
+    isDefeated = 0;
+}
+
+void main() {
+
+    currentTx.height =  getCurrentBlockheight();
+
+    while ((currentTx.txId = getNextTx()) != 0) {
+        currentTx.sender = getSender(currentTx.txId);
+        readMessage(currentTx.txId, 0, currentTx.message);
+        readAssets(currentTx.txId, currentTx.assetIds);
+
+        if(currentTx.sender != getCreator() && isActive==1 && isDefeated==0){
+            runAttackerRound();
+        }
+        else {
+            switch(currentTx.message[0]) {
+                case SETACTIVE:
+                    setActive(currentTx.message[1]);
+                break;
+                case SETBREACHLIMIT:
+                    setBreachLimit(currentTx.message[1]);
+                break;
+                case SETDAMAGEMULTIPLIER:
+                    setDamageMultiplier(currentTx.message[1], currentTx.message[2], currentTx.message[3], currentTx.message[4]);
+                break;
+                case SETDAMAGEADDITION:
+                    setDamageAddition(currentTx.message[1], currentTx.message[2], currentTx.message[3], currentTx.message[4]);
+                break;
+                case SETREWARDNFT:
+                    setRewardNft(currentTx.message[1]);
+                break;
+                case SETREWARDDISTRIBUTION:
+                    setRewardDistribution(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
+                break;
+                case SETBONI:
+                    setBoni(currentTx.message[1], currentTx.message[2]);
+                break;
+                case SETDEBUFF:
+                    setDebuff(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
+                break;
+                case SETREGENERATION:
+                    setRegeneration(currentTx.message[1], currentTx.message[2]);
+                break;
+                case HEAL:
+                    heal(currentTx.message[1]);
+                break;
+            }
+        }
+    }
+    regenerate();
+}
+
+void regenerate() {
+    if(regeneration.blockInterval == 0 || regeneration.hitpoints == 0) { return; }
+
+    if(regeneration.lastRegenerationBlock == 0){
+        regeneration.lastRegenerationBlock = currentTx.height;
+        return;
+    }
+
+    long elapsedBlocks = currentTx.height - regeneration.lastRegenerationBlock;
+
+    // Calculate regen proportional to time (fractional cycles)
+    long hitpointsToRegenerate = (elapsedBlocks * regeneration.hitpoints) / regeneration.blockInterval;
+
+    if(hitpointsToRegenerate > 0){
+        long currentHp = getCurrentHitpoints();
+        if(currentHp < maxHp){
+            long actualRegen = hitpointsToRegenerate;
+            if(currentHp + actualRegen > maxHp){
+                actualRegen = maxHp - currentHp;
+            }
+            mintAsset(actualRegen, hpTokenId);
+        }
+    }
+
+    // Always update
+    regeneration.lastRegenerationBlock = currentTx.height;
+}
+
+
+void runAttackerRound() {
+    long breachLimitHit = 0;
+
+    // 1. Check Cooldown
+    if (!checkCooldown()) {
+        return;
+    }
+
+    // 2. Calculate Damage
+    long totalDamage = applyTokenModifiers(calculateSignaDamage());
+
+    // 3. Apply Debuff
+    long debuffStacks = getMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender);
+    if (debuffStacks > 0) {
+        totalDamage = applyDebuff(totalDamage, debuffStacks);
+        // Reduce stack
+        setMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender, debuffStacks - 1);
+    }
+
+    // 4. Apply Breach Limit
+    long preBreachDamage = totalDamage;
+    long effectiveDamage = applyBreachLimit(totalDamage);
+    if (effectiveDamage < preBreachDamage) {
+        breachLimitHit = 1;
+    }
+
+    // 6. Check if defeated
+    long currentHP = getCurrentHitpoints();
+    if (effectiveDamage >= currentHP) {
+        isDefeated = 1;
+        effectiveDamage = currentHP; // we cannot do more damage
+    }
+
+    // 6. Send XP Tokens to Attacker
+    if(getAssetBalance(xpTokenId) < effectiveDamage){
+        // send warning to creator
+        long msg[4];
+        msg[] = "Insufficient XP Tokens!";
+        sendMessage(msg, getCreator());
+    }
+    sendQuantity(currentTx.sender, xpTokenId, effectiveDamage);
+    sendQuantity(currentTx.sender, hpTokenId, effectiveDamage);
+
+    // 7. Send Messages for important events
+
+    // First Blood?
+    if (firstBloodAccount == 0) {
+        firstBloodAccount = currentTx.sender;
+        sendMsgFirstBlood(firstBloodAccount);
+    }
+
+    // Breach Limit Hit?
+    if (breachLimitHit) {
+        sendMsgBreachLimit(currentTx.sender);
+    }
+
+    // Counter Attack?
+    if (shouldCounterAttack()) {
+        executeCounterAttack(); // Sends counter attack message
+    }
+
+    // 8. Update Last Attack Block
+    setMapValue(MAP_ATTACKERS_LAST_ATTACK, currentTx.sender, currentTx.height);
+
+    if(isDefeated){
+        handleDefeat();
+    }
+}
+
+long checkCooldown() {
+    long lastAttack = getMapValue(MAP_ATTACKERS_LAST_ATTACK, currentTx.sender);
+    if (lastAttack > 0 && (currentTx.height - lastAttack) < coolDownInBlocks) {
+        sendMsgCooldown(currentTx.sender);
+        // Still in cooldown! Refund 90%, burn 10%
+        long signaAmount = getAmount(currentTx.txId);
+        long refundAmount = (signaAmount * 90) / 100;
+        long burnAmount = signaAmount - refundAmount;
+
+        // Refund SIGNA
+        if (refundAmount > 0) {
+            sendAmount(refundAmount, currentTx.sender);
+        }
+
+        // Burn
+        if (burnAmount > 0) {
+            sendAmount(burnAmount, 0); // Burn address
+        }
+
+        refundPowerUpsWithPenalty();
+        return 0; // Failed cooldown check
+    }
+
+    return 1; // Passed
+}
+
+inline void refundPowerUpsWithPenalty() {
+    long assets[4];
+    long quantities[4];
+    long count = 0;
+    // Collect all sent assets
+    for (long i = 1; i <= 4; i++) {
+        long assetId = currentTx.assetIds[i];
+        if (assetId == 0) break;
+
+        long quantity = getQuantity(currentTx.txId, assetId);
+        if (quantity > 0) {
+            assets[count] = assetId;
+            quantities[count] = quantity;
+            count++;
+        }
+    }
+
+    if (count == 0) return; // No power-ups sent
+
+    // Pick ONE random to keep (penalty)
+    long keepIndex = (getWeakRandomNumber() >> 1) % count;
+
+    // Refund all EXCEPT the chosen one
+    for (long j = 0; j < count; j++) {
+        if (j != keepIndex) {
+            sendQuantity(currentTx.sender, assets[j], quantities[j]);
+        }
+        // else: kept as penalty
+    }
+}
+
+inline long calculateSignaDamage() {
+    long amount = getAmount(currentTx.txId);
+    return (amount * baseDamageRatio) / 100;
+}
+
+long applyDebuff(long damage, long stacks) {
+    if (stacks <= 0) return damage;
+
+    // Calculate total reduction
+    long totalReduction = stacks * debuff.damageReduction;
+
+    // Apply reduction (can be negative = buff!)
+    long modifiedDamage = (damage * (100 - totalReduction)) / 100;
+
+    // Ensure non-negative
+    if (modifiedDamage < 0) modifiedDamage = 0;
+
+    return modifiedDamage;
+}
+
+long applyTokenModifiers(long baseDamage) {
+    long damage = baseDamage;
+    long assetId;
+    for (long i = 1; i <= 4; i++) {
+        assetId = currentTx.assetIds[i];
+        if (assetId == 0) break; // No more assets
+
+        long quantity = getQuantity(currentTx.txId, assetId);
+        if (quantity > 0) {
+            damage = applyTokenEffect(damage, assetId, quantity);
+        }
+    }
+
+    return damage;
+}
+
+long applyTokenEffect(long damage, long tokenId, long quantity) {
+    // Get token config
+    long multiplier = getMapValue(MAP_DAMAGE_MULTIPLIER, tokenId);
+    long addition = getMapValue(MAP_DAMAGE_ADDITION, tokenId);
+    long tokenLimit = getMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId);
+    long decimals = getMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId);
+
+    // Check if token is registered
+    if (multiplier == 0 && addition == 0) {
+        return damage; // Unknown token, ignore
+    }
+
+    // Apply token limit
+    if (tokenLimit > 0 && quantity > tokenLimit) {
+        quantity = tokenLimit;
+    }
+
+    // Normalize token amount (remove decimals)
+    long normalizedQuantity = quantity / pow10(decimals);
+
+    // Apply multiplier (per token)
+    if (multiplier > 0) {
+        damage = (damage * multiplier) / 100;
+    }
+
+    // Apply addition (per token)
+    if (addition > 0) {
+        damage += (addition * normalizedQuantity);
+    }
+
+    return damage;
+}
+
+// Helper function
+inline long pow10(long exp) {
+    long result = 1;
+    long i;
+    for (i = 0; i < exp; i++) {
+        result *= 10;
+    }
+    return result;
+}
+
+long applyBreachLimit(long damage) {
+    if (breachLimit <= 0) return damage; // No limit
+
+    long currentHP = getCurrentHitpoints();
+    long maxDamage = (currentHP * breachLimit) / 100;
+
+    if (damage > maxDamage) {
+        return maxDamage;
+    }
+
+    return damage;
+}
+
+inline long shouldCounterAttack() {
+    if (debuff.chance <= 0 || debuff.damageReduction == 0) return 0;
+
+    long random = getWeakRandomNumber() % 100;
+    return (random < debuff.chance);
+}
+
+void executeCounterAttack() {
+    long currentStacks = getMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender);
+
+    if (currentStacks < debuff.maxStack) {
+        setMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender, currentStacks + 1);
+        if(debuff.damageReduction < 0){
+            sendMsgCounterBuff(currentTx.sender);
+        }else{
+            sendMsgCounterDebuff(currentTx.sender);
+        }
+    }
+}
+
+void handleDefeat() {
+    long totalSigna = getCurrentBalance();
+    finalBlowAccount = currentTx.sender;
+    sendMsgVictory(finalBlowAccount);
+    sendMsgDefeated(getCreator());
+    sendAmount(finalBlowBonus, finalBlowAccount);
+    sendAmount(firstBloodBonus, firstBloodAccount);
+
+    // Distribute Rewards
+    totalSigna = totalSigna - (finalBlowBonus + firstBloodBonus);
+
+    // Calculate shares
+    long attackerShare = (totalSigna * rewardDistribution.attackers) / 100;
+    long burnShare = (totalSigna * rewardDistribution.burn) / 100;
+    long treasuryShare = (totalSigna * rewardDistribution.treasury) / 100;
+
+    distributeToHolders(0, hpTokenId, attackerShare, 0, 0);
+
+    // Burn
+    if (burnShare > 0) {
+        sendAmount(0, burnShare);
+    }
+
+    // Treasury (creator)
+    if (treasuryShare > 0) {
+        sendAmount(getCreator(), treasuryShare);
+    }
+
+    // Send NFT if configured
+    if (rewardNftId != 0) {
+        // TODO: define message to be sent to NFT contract -> transfer ownership
+        long message[4];
+        sendAmountAndMessage(5_0000_000, message, rewardNftId);
+    }
+}
+
+// ---- ONLY CREATOR CAN CALL THESE FUNCTIONS
+
+
+void setActive(long active) {
+    isActive = active;
+}
+
+void setBreachLimit(long limit) {
+    if(limit > 0 && limit < 100){
+        breachLimit = limit;
+    }
+}
+
+void setDamageMultiplier(long tokenId, long tokenDecimals, long multiplier, long tokenLimit) {
+
+    if(tokenDecimals >=0 && tokenDecimals <= 6){ // needs valid value
+        setMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId, tokenDecimals);
+
+        if(multiplier > 0 && multiplier <= 1000) { // max 10x damage
+            setMapValue(MAP_DAMAGE_MULTIPLIER, tokenId, multiplier);
+        }
+
+        if(tokenLimit >= 0) {
+            setMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId, tokenLimit);
+        }
+    }
+
+}
+
+void setDamageAddition(long tokenId, long tokenDecimals, long tokenLimit, long damageAddition) {
+    if(tokenDecimals >=0 && tokenDecimals <= 6){ // needs valid value
+        setMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId, tokenDecimals);
+
+        if(damageAddition > 0) {
+           setMapValue(MAP_DAMAGE_ADDITION, tokenId, damageAddition);
+        }
+
+        if(tokenLimit >= 0) {
+            setMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId, tokenLimit);
+        }
+    }
+}
+
+void setRewardNft(long nftId) {
+    if(getCreatorOf(nftId) == 0){
+        long msg[3];
+        msg[] = "Nft does not exist";
+        sendMessage(msg, getCreator());
+        return;
+    }
+    rewardNftId = nftId;
+}
+
+void setRewardDistribution(long attackers, long burn, long treasury) {
+    if(attackers >= 0 && burn >= 0 && treasury >= 0 &&
+       attackers + burn + treasury == 100){
+        rewardDistribution.attackers = attackers;
+        rewardDistribution.burn = burn;
+        rewardDistribution.treasury = treasury;
+    }
+}
+
+void setBoni(long firstBloodAmount, long finalBlowAmount) {
+    if(firstBloodAmount >= 0){
+        firstBloodBonus = firstBloodAmount;
+    }
+    if(finalBlowAmount >= 0){
+        finalBlowBonus = finalBlowAmount;
+    }
+}
+
+
+void setDebuff(long debuffChance, long damageReduction, long maxDebuffStack) {
+    if(debuffChance >= 0) {
+        debuff.chance = debuffChance;
+    }
+
+    // damage reduction can be negative...which is a buffing then!
+    debuff.damageReduction = damageReduction;
+
+    if(maxDebuffStack >= 0){
+        debuff.maxStack = maxDebuffStack;
+    }
+
+}
+
+void setRegeneration(long blockInterval, long hitpoints){
+    if(blockInterval >= 0) {
+        regeneration.blockInterval = blockInterval;
+    }
+    if(hitpoints >= 0 && hitpoints <= maxHp) {
+        regeneration.hitpoints = hitpoints;
+    }
+}
+
+void heal(long hitpoints){
+
+    if(hitpoints <= 0) { return; }
+
+    long currentHitpoints = getCurrentHitpoints();
+    if(hitpoints + currentHitpoints > maxHp){
+        mintAsset(maxHp - currentHitpoints, hpTokenId);
+    }
+    else {
+        mintAsset(hitpoints, hpTokenId);
+    }
+    sendMsgHealer(getCreator());
+}
+
+long getCurrentHitpoints(){
+    return getAssetBalance(hpTokenId);
+}
+
+// ----- MESSAGE HELPERS
+
+
+void sendMsgCooldown(long recipient) {
+    long msg[12];
+    msg[] = "COOLDOWN: Attack too soon! Wait a few blocks. Penalty applied.\n";
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+    sendMessage(msg + 8, recipient);
+}
+
+void sendMsgFirstBlood(long recipient) {
+    long msg[12];
+    msg[] = "FIRST BLOOD! You struck first and claimed a bonus reward on defeat!\n";
+
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+    sendMessage(msg + 8, recipient);
+}
+
+void sendMsgVictory(long recipient) {
+    long msg[12];
+    msg[] = "VICTORY! Construct defeated! You dealt the final blow. Claiming rewards...\n";
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+    sendMessage(msg + 8, recipient);
+}
+
+void sendMsgCounterDebuff(long recipient) {
+    long msg[12];
+    msg[] = "COUNTER ATTACK! Construct strikes back. Next attack reduced.\n";
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+    sendMessage(msg + 8, recipient);
+}
+
+void sendMsgCounterBuff(long recipient) {
+    long msg[8];
+    msg[] = "BERSERK! Andrenaline Pure. Next attack is stronger.\n";
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+}
+
+void sendMsgBreachLimit(long recipient) {
+    long msg[8];
+    msg[] = "BREACH LIMIT: Construct armor absorbed excess damage!\n";
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+}
+
+void sendMsgHealer(long recipient) {
+    long msg[8];
+    msg[] = "HEALING: Construct recovered hitpoints!\n";
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+}
+
+void sendMsgDefeated(long recipient) {
+    long msg[8];
+    msg[] = "DEFEATED: Construct was defeated!\n";
+    sendMessage(msg, recipient);
+    sendMessage(msg + 4, recipient);
+}
