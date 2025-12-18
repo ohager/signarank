@@ -61,6 +61,13 @@ struct REGENERATION {
     long lastRegenerationBlock;
 } regeneration;
 
+// Define initializer values if running on testbed
+#ifdef TESTBED
+ const name = TESTBED_name;
+ const xpTokenId = TESTBED_xpTokenId;
+ const maxHp = TESTBED_maxHp;
+#endif
+
 
 // derived/calculated state - not intended for initialization
 long isDefeated;
@@ -471,6 +478,9 @@ void handleDefeat() {
 
 
 void setActive(long active) {
+    if(active != 0){
+        active = 1;
+    }
     isActive = active;
 }
 

@@ -8,6 +8,7 @@ export const Context = {
     SenderAccount2: 20n,
     CreatorAccount: 555n,
     ThisContract: 999n,
+    XPTokenId: 1000n,
     ActivationFee: 2_0000_0000n,
     Methods: {
         SetActive: 1n,
