@@ -2,7 +2,6 @@ import {join} from 'path';
 
 
 export const Context = {
-    CodeHashId: 9615458887490004648n,
     ContractPath: join(__dirname + '/construct.contract.smart.c'),
     SenderAccount1: 10n,
     SenderAccount2: 20n,
@@ -21,6 +20,7 @@ export const Context = {
         SetDebuff: 8n,
         SetRegeneration: 9n,
         Heal: 10n,
+        SetTokenDecimals: 11n,
     },
     Maps: {
         DamageMultiplier: 1n,

@@ -17,7 +17,10 @@
 #define SETDEBUFF 8
 #define SETREGENERATION 9
 #define HEAL 10
+#define SETTOKENDECIMALS 11
 
+// helper
+#define MAP_SET_FLAG 1024
 
 // Maps
 #define MAP_DAMAGE_MULTIPLIER 1
@@ -142,10 +145,10 @@ void main() {
                     setBreachLimit(currentTx.message[1]);
                 break;
                 case SETDAMAGEMULTIPLIER:
-                    setDamageMultiplier(currentTx.message[1], currentTx.message[2], currentTx.message[3], currentTx.message[4]);
+                    setDamageMultiplier(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
                 break;
                 case SETDAMAGEADDITION:
-                    setDamageAddition(currentTx.message[1], currentTx.message[2], currentTx.message[3], currentTx.message[4]);
+                    setDamageAddition(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
                 break;
                 case SETREWARDNFT:
                     setRewardNft(currentTx.message[1]);
@@ -164,6 +167,9 @@ void main() {
                 break;
                 case HEAL:
                     heal(currentTx.message[1]);
+                break;
+                case SETTOKENDECIMALS:
+                    setTokenDecimals(currentTx.message[1], currentTx.message[2]);
                 break;
             }
         }
@@ -367,42 +373,50 @@ long applyTokenEffect(long damage, long tokenId, long quantity) {
     long multiplier = getMapValue(MAP_DAMAGE_MULTIPLIER, tokenId);
     long addition = getMapValue(MAP_DAMAGE_ADDITION, tokenId);
     long tokenLimit = getMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId);
-    long decimals = getMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId);
+    long decimals = getTokenDecimals(tokenId, 0); // do not send message
 
     // Check if token is registered
     if (multiplier == 0 && addition == 0) {
         return damage; // Unknown token, ignore
     }
 
-    // Apply token limit
-    if (tokenLimit > 0 && quantity > tokenLimit) {
-        quantity = tokenLimit;
+    // Apply token limit (convert to raw units with decimals)
+    if (tokenLimit > 0) {
+        long tokenLimitRaw = tokenLimit * pow10(decimals);
+        if (quantity > tokenLimitRaw) {
+            quantity = tokenLimitRaw;
+        }
     }
 
-    // Normalize token amount (remove decimals)
-    long normalizedQuantity = quantity / pow10(decimals);
-
-    // Apply multiplier (per token)
+    // Apply multiplier (stacks per token, supports fractional tokens)
+    // Example: 2 tokens × 500 (5x multiplier) = 1000 / 100 = 10x total
+    // Example: 0.5 tokens × 500 = 250 / 100 = 2.5x total
     if (multiplier > 0) {
-        damage = (damage * multiplier) / 100;
+        damage = (damage * multiplier * quantity) / (100 * pow10(decimals));
     }
 
-    // Apply addition (per token)
+    // Apply addition (stacks per token, supports fractional tokens)
+    // Example: 2 tokens × 50 addition = 100 damage added
+    // Example: 0.5 tokens × 50 addition = 25 damage added
     if (addition > 0) {
-        damage += (addition * normalizedQuantity);
+        damage += (addition * quantity) / pow10(decimals);
     }
 
     return damage;
 }
 
-// Helper function
-inline long pow10(long exp) {
-    long result = 1;
-    long i;
-    for (i = 0; i < exp; i++) {
-        result *= 10;
+// Helper function - optimized for decimals 0-6
+long pow10(long exp) {
+    switch(exp) {
+        case 0: return 1;
+        case 1: return 10;
+        case 2: return 100;
+        case 3: return 1000;
+        case 4: return 10000;
+        case 5: return 100000;
+        case 6: return 1000000;
+        default: return 1; // Should never happen since decimals are capped at 6
     }
-    return result;
 }
 
 long applyBreachLimit(long damage) {
@@ -490,33 +504,29 @@ void setBreachLimit(long limit) {
     }
 }
 
-void setDamageMultiplier(long tokenId, long tokenDecimals, long multiplier, long tokenLimit) {
+void setDamageMultiplier(long tokenId, long multiplier, long tokenLimit) {
+    // validate for registered token sends message on token decimals
+    getTokenDecimals(tokenId, 1);
 
-    if(tokenDecimals >=0 && tokenDecimals <= 6){ // needs valid value
-        setMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId, tokenDecimals);
-
-        if(multiplier > 0 && multiplier <= 1000) { // max 10x damage
-            setMapValue(MAP_DAMAGE_MULTIPLIER, tokenId, multiplier);
-        }
-
-        if(tokenLimit >= 0) {
-            setMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId, tokenLimit);
-        }
+    if(multiplier > 0 && multiplier <= 1000) { // max 10x damage
+        setMapValue(MAP_DAMAGE_MULTIPLIER, tokenId, multiplier);
     }
 
+    if(tokenLimit >= 0) {
+        setMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId, tokenLimit);
+    }
 }
 
-void setDamageAddition(long tokenId, long tokenDecimals, long tokenLimit, long damageAddition) {
-    if(tokenDecimals >=0 && tokenDecimals <= 6){ // needs valid value
-        setMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId, tokenDecimals);
+void setDamageAddition(long tokenId, long tokenLimit, long damageAddition) {
+    // validate for registered token sends message on token decimals
+    getTokenDecimals(tokenId, 1);
 
-        if(damageAddition > 0) {
-           setMapValue(MAP_DAMAGE_ADDITION, tokenId, damageAddition);
-        }
+    if(damageAddition > 0) {
+       setMapValue(MAP_DAMAGE_ADDITION, tokenId, damageAddition);
+    }
 
-        if(tokenLimit >= 0) {
-            setMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId, tokenLimit);
-        }
+    if(tokenLimit >= 0) {
+        setMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId, tokenLimit);
     }
 }
 
@@ -584,6 +594,28 @@ void heal(long hitpoints){
         mintAsset(hitpoints, hpTokenId);
     }
     sendMsgHealer(getCreator());
+}
+
+void setTokenDecimals(long tokenId, long tokenDecimals){
+    if(tokenDecimals >= 0 && tokenDecimals <= 6){
+        // the getMapValue return 0 also for non registered tokens, but 0 can be a valid decimal value
+        // we need to flag a set value, as we cannot rely solely on the value
+        setMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId, tokenDecimals + MAP_SET_FLAG);
+    }
+}
+
+long getTokenDecimals(long tokenId, long shouldSendMessage){
+    long tokenDecimals = getMapValue(MAP_TOKEN_DECIMALS_INFO, tokenId);
+    if(tokenDecimals >= MAP_SET_FLAG){
+        // Return only the decimal value (subtract the flag)
+        return tokenDecimals - MAP_SET_FLAG;
+    }
+    if(shouldSendMessage != 0){
+        long msg[4];
+        msg[] = "Unregistered Token detected!";
+        sendMessage(msg, getCreator());
+    }
+    return 0;
 }
 
 long getCurrentHitpoints(){

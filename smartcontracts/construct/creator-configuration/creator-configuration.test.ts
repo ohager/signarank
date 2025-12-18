@@ -10,6 +10,7 @@ const DefaultRequiredInitializers = {
     maxHp: 50_000n,
 }
 
+const MAP_SET_FLAG = 1024n;
 
 describe('Construct Contract - Creator Configuration', () => {
     test('should have default initialization as expected', () => {
@@ -187,6 +188,134 @@ describe('Construct Contract - Creator Configuration', () => {
                 .loadContract(Context.ContractPath, DefaultRequiredInitializers)
                 .runScenario();
             expect(testbed.getContractMemoryValue('breachLimit')).toBe(99n)
+        })
+    })
+
+    describe('setDamageMultiplier', () => {
+        const TestTokenId = 5000n;
+
+        test('should set damage multiplier with valid values', () => {
+            const testbed = new SimulatorTestbed([
+                ...BootstrapScenario,
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.CreatorAccount,
+                    messageArr: [Context.Methods.SetTokenDecimals, TestTokenId, 2n],
+                    recipient: Context.ThisContract,
+                },
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.CreatorAccount,
+                    messageArr: [Context.Methods.SetDamageMultiplier, TestTokenId, 150n, 20n],
+                    recipient: Context.ThisContract,
+                },
+            ])
+                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .runScenario();
+
+            const hasWarning = testbed.blockchain.transactions.some(tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("Unregistered Token"))
+            expect(hasWarning).toBeFalsy();
+            expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(2n + MAP_SET_FLAG);
+            expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(150n);
+            expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(20n);
+        })
+
+        test('should NOT set damage multiplier when sender is not creator', () => {
+            const testbed = new SimulatorTestbed([
+                ...BootstrapScenario,
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.SenderAccount1,
+                    messageArr: [Context.Methods.SetTokenDecimals, TestTokenId, 2n],
+                    recipient: Context.ThisContract,
+                },
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.SenderAccount1,
+                    messageArr: [Context.Methods.SetDamageMultiplier, TestTokenId, 150n, 1000n],
+                    recipient: Context.ThisContract,
+                },
+            ])
+                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .runScenario();
+            const hasWarning = testbed.blockchain.transactions.some(tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("Unregistered Token"))
+            expect(hasWarning).toBeFalsy();
+
+            expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(0n);
+            expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(0n);
+            expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(0n);
+        })
+
+        test('should NOT set multiplier when value is 0', () => {
+            const testbed = new SimulatorTestbed([
+                ...BootstrapScenario,
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.CreatorAccount,
+                    messageArr: [Context.Methods.SetDamageMultiplier, TestTokenId, 0n, 1000n],
+                    recipient: Context.ThisContract,
+                },
+            ])
+                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .runScenario();
+            expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(0n); // Should not be set
+            expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(1000n);
+        })
+
+        test('should NOT set multiplier when value > 1000', () => {
+            const testbed = new SimulatorTestbed([
+                ...BootstrapScenario,
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.CreatorAccount,
+                    messageArr: [Context.Methods.SetDamageMultiplier, TestTokenId, 1001n, 1000n],
+                    recipient: Context.ThisContract,
+                },
+            ])
+                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .runScenario();
+            expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(0n); // Should not be set
+            expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(1000n);
+        })
+
+        test('should set multiplier with edge case value 1', () => {
+            const testbed = new SimulatorTestbed([
+                ...BootstrapScenario,
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.CreatorAccount,
+                    messageArr: [Context.Methods.SetDamageMultiplier, TestTokenId, 1n, 0n],
+                    recipient: Context.ThisContract,
+                },
+            ])
+                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .runScenario();
+            expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(1n);
+            expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(0n);
+        })
+
+        test('should set multiplier with edge case value 1000', () => {
+            const testbed = new SimulatorTestbed([
+                ...BootstrapScenario,
+                {
+                    blockheight: 2,
+                    amount: Context.ActivationFee,
+                    sender: Context.CreatorAccount,
+                    messageArr: [Context.Methods.SetDamageMultiplier, TestTokenId, 1000n, 5000n],
+                    recipient: Context.ThisContract,
+                },
+            ])
+                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .runScenario();
+            expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(1000n);
+            expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(5000n);
         })
     })
 
