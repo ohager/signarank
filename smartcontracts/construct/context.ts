@@ -3,10 +3,11 @@ import {join} from 'path';
 
 export const Context = {
     ContractPath: join(__dirname + '/construct.contract.smart.c'),
+    NftContractPath: join(__dirname + '/nft.mock.contract.smart.c'),
     SenderAccount1: 10n,
     SenderAccount2: 20n,
     CreatorAccount: 555n,
-    ThisContract: 999n,
+    ThisContract: 999n, // only if NFT Contract is not loaded
     XPTokenId: 1000n,
     ActivationFee: 2_0000_0000n,
     Methods: {
@@ -41,9 +42,8 @@ export const Context = {
         coolDownInBlocks: 11n,
         isActive: 12n,
         rewardNftId: 13n,
-        rewardDistribution_attackers: 14n,
-        rewardDistribution_burn: 15n,
-        rewardDistribution_treasury: 16n,
+        rewardDistribution_players: 14n,
+        rewardDistribution_treasury: 15n,
         debuff_chance: 17n,
         debuff_damageReduction: 18n,
         debuff_maxStack: 19n,

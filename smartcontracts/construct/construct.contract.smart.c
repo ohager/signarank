@@ -3,7 +3,7 @@
 #program activationAmount 200000000
 #pragma optimizationLevel 3
 #pragma verboseAssembly false
-#pragma maxAuxVars 3
+#pragma maxAuxVars 4
 #pragma version 2.3.0
 
 // Magic codes for methods
@@ -49,9 +49,9 @@ long rewardNftId;
 
 // Structs
 struct REWARDDISTRIBUTION {
-    long attackers;
-    long burn;
+    long players;
     long treasury;
+    // burn is implicit the rest
 } rewardDistribution;
 
 struct DEBUFF {
@@ -68,9 +68,13 @@ struct REGENERATION {
 
 // Define initializer values if running on testbed
 #ifdef TESTBED
- const name = TESTBED_name;
- const xpTokenId = TESTBED_xpTokenId;
- const maxHp = TESTBED_maxHp;
+    const name = TESTBED_name;
+    const xpTokenId = TESTBED_xpTokenId;
+    const maxHp = TESTBED_maxHp;
+    const breachLimit = TESTBED_breachLimit;
+    const coolDownInBlocks = TESTBED_coolDownInBlocks;
+    const firstBloodBonus = TESTBED_firstBloodBonus;
+    const finalBlowBonus = TESTBED_finalBlowBonus;
 #endif
 
 
@@ -115,10 +119,10 @@ void init(){
         coolDownInBlocks = 15;
     }
 
-    if(rewardDistribution.attackers <= 0){
-        rewardDistribution.attackers = 85;
-        rewardDistribution.burn = 10;
+    if(rewardDistribution.players <= 0){
+        rewardDistribution.players = 85;
         rewardDistribution.treasury = 5;
+        // rest is burn => 10%%
     }
     // debuff is optional... all zero is fine
 
@@ -156,7 +160,7 @@ void main() {
                     setRewardNft(currentTx.message[1]);
                 break;
                 case SETREWARDDISTRIBUTION:
-                    setRewardDistribution(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
+                    setRewardDistribution(currentTx.message[1], currentTx.message[2]);
                 break;
                 case SETBONI:
                     setBoni(currentTx.message[1], currentTx.message[2]);
@@ -176,7 +180,12 @@ void main() {
             }
         }
     }
-    regenerate();
+
+    if(isDefeated) {
+        handleDefeat();
+    } else {
+        regenerate();
+    }
 }
 
 void regenerate() {
@@ -217,8 +226,7 @@ void runAttackerRound() {
     }
 
     // 2. Calculate Damage
-//     long totalDamage = applyTokenModifiers(calculateSignaDamage());
-    long totalDamage = calculateSignaDamage();
+    long totalDamage = applyTokenModifiers(calculateSignaDamage());
 
     // 3. Apply Debuff
     long debuffStacks = getMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender);
@@ -261,7 +269,7 @@ void runAttackerRound() {
     }
 
     // Breach Limit Hit?
-    if (breachLimitHit) {
+    if (breachLimitHit && !isDefeated) {
         sendMsgBreachLimit(currentTx.sender);
     }
 
@@ -272,10 +280,6 @@ void runAttackerRound() {
 
     // 8. Update Last Attack Block
     setMapValue(MAP_ATTACKERS_LAST_ATTACK, currentTx.sender, currentTx.height);
-
-    if(isDefeated){
-        handleDefeat();
-    }
 }
 
 long checkCooldown() {
@@ -359,31 +363,58 @@ long applyDebuff(long damage, long stacks) {
 
 long applyTokenModifiers(long baseDamage) {
     long damage = baseDamage;
-    long assetId;
-    for (long i = 1; i <= 4; i++) {
-        assetId = currentTx.assetIds[i];
-        if (assetId == 0) break; // No more assets
+    long totalAddition = 0;
 
-        long quantity = getQuantity(currentTx.txId, assetId);
-        if (quantity > 0) {
-            damage = applyTokenEffect(damage, assetId, quantity);
-        }
-    }
+    // First pass: Apply all flat additions
+    totalAddition += applyTokenAddition(currentTx.assetIds[0]);
+    totalAddition += applyTokenAddition(currentTx.assetIds[1]);
+    totalAddition += applyTokenAddition(currentTx.assetIds[2]);
+    totalAddition += applyTokenAddition(currentTx.assetIds[3]);
+
+    damage += totalAddition;
+
+    // Second pass: Apply all multipliers
+    damage = applyTokenMultiplier(damage, currentTx.assetIds[0]);
+    damage = applyTokenMultiplier(damage, currentTx.assetIds[1]);
+    damage = applyTokenMultiplier(damage, currentTx.assetIds[2]);
+    damage = applyTokenMultiplier(damage, currentTx.assetIds[3]);
 
     return damage;
 }
 
-long applyTokenEffect(long damage, long tokenId, long quantity) {
-    // Get token config
-    long multiplier = getMapValue(MAP_DAMAGE_MULTIPLIER, tokenId);
+long applyTokenAddition(long tokenId) {
+    long quantity = getQuantity(currentTx.txId, tokenId);
+    if (quantity == 0) { return 0; }
+
     long addition = getMapValue(MAP_DAMAGE_ADDITION, tokenId);
+    if (addition == 0) { return 0; }
+
     long tokenLimit = getMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId);
     long decimals = getTokenDecimals(tokenId, 0); // do not send message
 
-    // Check if token is registered
-    if (multiplier == 0 && addition == 0) {
-        return damage; // Unknown token, ignore
+    // Apply token limit (convert to raw units with decimals)
+    if (tokenLimit > 0) {
+        long tokenLimitRaw = tokenLimit * pow10(decimals);
+        if (quantity > tokenLimitRaw) {
+            quantity = tokenLimitRaw;
+        }
     }
+
+    // Apply addition (stacks per token, supports fractional tokens)
+    // Example: 2 tokens × 50 addition = 100 damage added
+    // Example: 0.5 tokens × 50 addition = 25 damage added
+    return (addition * quantity) / pow10(decimals);
+}
+
+long applyTokenMultiplier(long damage, long tokenId) {
+    long quantity = getQuantity(currentTx.txId, tokenId);
+    if (quantity == 0) { return damage; }
+
+    long multiplier = getMapValue(MAP_DAMAGE_MULTIPLIER, tokenId);
+    if (multiplier == 0) { return damage; }
+
+    long tokenLimit = getMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId);
+    long decimals = getTokenDecimals(tokenId, 0); // do not send message
 
     // Apply token limit (convert to raw units with decimals)
     if (tokenLimit > 0) {
@@ -396,18 +427,7 @@ long applyTokenEffect(long damage, long tokenId, long quantity) {
     // Apply multiplier (stacks per token, supports fractional tokens)
     // Example: 2 tokens × 500 (5x multiplier) = 1000 / 100 = 10x total
     // Example: 0.5 tokens × 500 = 250 / 100 = 2.5x total
-    if (multiplier > 0) {
-        damage = (damage * multiplier * quantity) / (100 * pow10(decimals));
-    }
-
-    // Apply addition (stacks per token, supports fractional tokens)
-    // Example: 2 tokens × 50 addition = 100 damage added
-    // Example: 0.5 tokens × 50 addition = 25 damage added
-    if (addition > 0) {
-        damage += (addition * quantity) / pow10(decimals);
-    }
-
-    return damage;
+    return (damage * multiplier * quantity) / (100 * pow10(decimals));
 }
 
 // Helper function - optimized for decimals 0-6
@@ -425,11 +445,11 @@ long pow10(long exp) {
 }
 
 long applyBreachLimit(long damage) {
-    if (breachLimit <= 0) return damage; // No limit
+    if (breachLimit <= 0) {
+        return damage;
+    }
 
-    long currentHP = getCurrentHitpoints();
-    long maxDamage = (currentHP * breachLimit) / 100;
-
+    long maxDamage = (maxHp * breachLimit) / 100;
     if (damage > maxDamage) {
         return maxDamage;
     }
@@ -458,42 +478,38 @@ void executeCounterAttack() {
 }
 
 void handleDefeat() {
-    long totalSigna = getCurrentBalance();
+    long message[4];
     finalBlowAccount = currentTx.sender;
-    sendMsgVictory(finalBlowAccount);
     sendMsgDefeated(getCreator());
+    sendMsgVictory(finalBlowAccount);
     sendAmount(finalBlowBonus, finalBlowAccount);
-    sendAmount(firstBloodBonus, firstBloodAccount);
-
-    // Distribute Rewards
-    totalSigna = totalSigna - (finalBlowBonus + firstBloodBonus - 5000_0000); // keep 0.5 SIGNA
-
-    // Calculate shares
-    long attackerShare = (totalSigna * rewardDistribution.attackers) / 100;
-    long burnShare = (totalSigna * rewardDistribution.burn) / 100;
-    long treasuryShare = (totalSigna * rewardDistribution.treasury) / 100;
-
-    distributeToHolders(0, hpTokenId, attackerShare, 0, 0);
-
-    // Burn
-    if (burnShare > 0) {
-        sendAmount(0, burnShare);
-    }
-
-    // Treasury (creator)
-    if (treasuryShare > 0) {
-        sendAmount(getCreator(), treasuryShare);
-    }
+    message[] = "First Blood Bonus";
+    sendAmountAndMessage(firstBloodBonus, message, firstBloodAccount);
 
     // Send NFT if configured
     if (rewardNftId != 0) {
-        long message[4];
         message[0] = TRANSFER_NFT_METHOD_HASH;
         message[1] = finalBlowAccount;
         message[2] = 0;
         message[3] = 0;
         sendAmountAndMessage(NFT_FEES_PLANCK, message, rewardNftId);
     }
+
+
+    // Distribute Rewards
+    long totalSigna = getCurrentBalance();
+    long treasuryShare = (totalSigna * rewardDistribution.treasury) / 100;
+    if (treasuryShare > 0) {
+        sendAmount(treasuryShare, getCreator());
+    }
+
+    long playersCount = getAssetHoldersCount(1, hpTokenId);
+    long distributionCosts = playersCount * 10_0000;
+    long playersShare = ((totalSigna * rewardDistribution.players) / 100) - distributionCosts;
+    distributeToHolders(1, hpTokenId, playersShare, 0, 0);
+
+    long burnShare = totalSigna - (playersShare + treasuryShare);
+    sendAmount(burnShare, 0);
 }
 
 // ---- ONLY CREATOR CAN CALL THESE FUNCTIONS
@@ -507,7 +523,7 @@ void setActive(long active) {
 }
 
 void setBreachLimit(long limit) {
-    if(limit > 0 && limit < 100){
+    if(limit > 0 && limit <= 100){
         breachLimit = limit;
     }
 }
@@ -525,7 +541,7 @@ void setDamageMultiplier(long tokenId, long multiplier, long tokenLimit) {
     }
 }
 
-void setDamageAddition(long tokenId, long tokenLimit, long damageAddition) {
+void setDamageAddition(long tokenId, long damageAddition, long tokenLimit) {
     // validate for registered token sends message on token decimals
     getTokenDecimals(tokenId, 1);
 
@@ -539,6 +555,7 @@ void setDamageAddition(long tokenId, long tokenLimit, long damageAddition) {
 }
 
 void setRewardNft(long nftId) {
+    long nftCreator = getCreatorOf(nftId);
     if(getCreatorOf(nftId) == 0){
         long msg[3];
         msg[] = "Nft does not exist";
@@ -548,11 +565,9 @@ void setRewardNft(long nftId) {
     rewardNftId = nftId;
 }
 
-void setRewardDistribution(long attackers, long burn, long treasury) {
-    if(attackers >= 0 && burn >= 0 && treasury >= 0 &&
-       attackers + burn + treasury == 100){
-        rewardDistribution.attackers = attackers;
-        rewardDistribution.burn = burn;
+void setRewardDistribution(long players, long treasury) {
+    if(players + treasury <= 100){
+        rewardDistribution.players = players;
         rewardDistribution.treasury = treasury;
     }
 }
@@ -652,7 +667,7 @@ void sendMsgFirstBlood(long recipient) {
 
 void sendMsgVictory(long recipient) {
     long msg[12];
-    msg[] = "VICTORY! Construct defeated! You dealt the final blow. Claiming rewards...\n";
+    msg[] = "VICTORY! Construct defeated! You dealt the final blow. You got the bonus.\n";
     sendMessage(msg, recipient);
     sendMessage(msg + 4, recipient);
     sendMessage(msg + 8, recipient);
