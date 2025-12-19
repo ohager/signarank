@@ -22,6 +22,7 @@ export const Context = {
         SetRegeneration: 9n,
         Heal: 10n,
         SetTokenDecimals: 11n,
+        SetEventListener: 12n,
     },
     Maps: {
         DamageMultiplier: 1n,

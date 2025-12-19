@@ -1,43 +1,9 @@
 import {describe, expect, test} from "vitest";
 import {SimulatorTestbed} from "signum-smartc-testbed";
 import {Context} from "../context";
-import {getCurrentHitpoints, DefaultRequiredInitializers, BootstrapScenario} from "../lib";
+import {getCurrentHitpoints, DefaultRequiredInitializers, BootstrapScenario, attack, timeLapse} from "../lib";
 
-
-type AttackParams = {
-    testbed: SimulatorTestbed,
-    signa: bigint,
-    tokens?: Array<{ asset: bigint, quantity: bigint}>,
-    sender?: bigint
-}
-
-
-function attack({testbed, sender = Context.SenderAccount1, signa, tokens = []}: AttackParams) {
-
-    if(tokens.length > 4){
-        throw new Error("Max 4 tokens allowed")
-    }
-
-    return testbed.sendTransactionAndGetResponse([{
-        sender,
-        recipient: Context.ThisContract,
-        amount: (signa * 1_0000_0000n) + Context.ActivationFee,
-        tokens
-    }])
-}
-
-type TimelapseType = {
-    testbed: SimulatorTestbed,
-        blocks: bigint
-}
-
-function timeLapse({testbed, blocks}: TimelapseType) {
-    for(let i = 0; i < blocks; i++){
-        testbed.blockchain.forgeBlock()
-    }
-}
-
-describe('Construct Contract - Game Mechanics', () => {
+describe('Attack Mechanics', () => {
     describe("Basic Attack Mechanics", () => {
         test("should NOT run when inactive", async () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
@@ -134,81 +100,6 @@ describe('Construct Contract - Game Mechanics', () => {
             // Second attack should not change first blood
             attack({testbed, signa: 100n, sender: Context.SenderAccount2})
             expect(testbed.getContractMemoryValue('firstBloodAccount')).toBe(Context.SenderAccount1);
-        })
-    })
-
-    describe("Cooldown Mechanics", () => {
-        test("should prevent attack during cooldown", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, {
-                    ...DefaultRequiredInitializers,
-                    coolDownInBlocks: 15n,
-                })
-                .runScenario();
-
-            const initialHp = getCurrentHitpoints(testbed)!;
-
-            // First attack
-            attack({testbed, signa: 100n})
-
-            const hpAfterFirstAttack = getCurrentHitpoints(testbed)!;
-            expect(hpAfterFirstAttack).toBeLessThan(initialHp);
-
-            // Second attack immediately (same block)
-            attack({testbed, signa: 100n})
-
-            // HP should not change (attack blocked by cooldown)
-            expect(testbed.getTransactions().some( tx => tx.recipient === Context.SenderAccount1 && tx.messageText?.startsWith("COOLDOWN")))
-            expect(getCurrentHitpoints(testbed)).toBe(hpAfterFirstAttack);
-        })
-
-        test("should refund 90% of SIGNA during cooldown", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, {
-                    ...DefaultRequiredInitializers,
-                    coolDownInBlocks: 15n,
-                })
-                .runScenario();
-
-            // First attack
-            attack({testbed, signa: 100n})
-
-            // Second attack immediately
-            attack({testbed, signa: 100n})
-
-            const refundTransactions =  testbed.getTransactions().slice(-2);
-            expect(refundTransactions[0].messageText).toMatch("COOLDOWN")
-            expect(refundTransactions[0].recipient).toBe(Context.SenderAccount1); // in planck
-            expect(refundTransactions[0].amount).toBe(90_0000_0000n); // in planck
-            expect(refundTransactions[1].recipient).toBe(0n); // burn
-            expect(refundTransactions[1].amount).toBe(10_0000_0000n); // in planck
-        })
-
-        test("should allow attack after cooldown expires", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, {
-                    ...DefaultRequiredInitializers,
-                    coolDownInBlocks: 10n,
-                })
-                .runScenario();
-
-            // First attack at block 1
-            attack({testbed, signa: 100n})
-            const hpAfterFirst = getCurrentHitpoints(testbed)!;
-
-            // not cooled down yet
-            timeLapse({testbed, blocks: 5n})
-
-            attack({testbed, signa: 100n})
-            expect(getCurrentHitpoints(testbed)).toBe(hpAfterFirst);
-
-            // Advance blocks past cooldown
-            timeLapse({testbed, blocks: 5n})
-
-            // Second attack should work
-            attack({testbed, signa: 100n})
-
-            expect(getCurrentHitpoints(testbed)).toBeLessThan(hpAfterFirst);
         })
     })
 
@@ -732,61 +623,6 @@ describe('Construct Contract - Game Mechanics', () => {
         })
     })
 
-    describe("Defeat and Victory", () => {
-        test("should handle defeat correctly", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 100n, // maximal 1000 SIGNA
-                    breachLimit: 100n,
-                    firstBloodBonus: 50_0000_0000n,
-                    finalBlowBonus: 100_0000_0000n,
-                })
-                .runScenario();
-
-            // Attack to defeat
-            attack({testbed, signa: 550n, sender: Context.SenderAccount1})
-            timeLapse({testbed, blocks: 2n})
-            attack({testbed, signa: 520n, sender: Context.SenderAccount2})
-
-            // Check defeated flag
-            const hitpoints =  getCurrentHitpoints(testbed);
-            expect(hitpoints).toBe(0n);
-            const isDefeated = testbed.getContractMemoryValue('isDefeated');
-            expect(isDefeated).toBe(1n);
-
-            // check messages - first blood, final blow and rewards for same account
-            const transactions = testbed.getTransactions();
-            const sentFirstBloodMsgToAttacker = transactions.some( tx => tx.recipient === Context.SenderAccount1 && tx.messageText?.startsWith("FIRST BLOOD"))
-            const sentVictoryMsgToAttacker = transactions.some( tx => tx.recipient === Context.SenderAccount2 && tx.messageText?.startsWith("VICTORY"))
-            const sentFirstBloodBonus = transactions.some( tx => tx.recipient === Context.SenderAccount1 && tx.amount === 50_0000_0000n);
-            const sentFinalBlowBonus = transactions.some( tx => tx.recipient === Context.SenderAccount2 && tx.amount === 100_0000_0000n);
-            const sentDistributionPayout = transactions.some( tx => tx.recipient === 0n && tx.type === 2 && tx.messageText?.startsWith("Indirect balance/token distributed"))
-            const sentBurnAmount = transactions.some( tx => tx.recipient === 0n && tx.amount > 90_0000_0000n)
-            const sentTreasuryAmount = transactions.some( tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("DEFEATED") && tx.amount > 40_0000_0000n)
-            expect(sentVictoryMsgToAttacker).toBeTruthy();
-            expect(sentFirstBloodMsgToAttacker).toBeTruthy();
-            expect(sentDistributionPayout).toBeTruthy();
-            expect(sentBurnAmount).toBeTruthy();
-            expect(sentFirstBloodBonus).toBeTruthy();
-            expect(sentFinalBlowBonus).toBeTruthy();
-            expect(sentTreasuryAmount).toBeTruthy();
-
-            const firstBloodAccount = testbed.getContractMemoryValue('firstBloodAccount')
-            expect(firstBloodAccount).toBe(Context.SenderAccount1)
-            testbed.getAccount(Context.SenderAccount1)!.tokens.forEach(t => {
-                expect(t.quantity).toBe(55n); // xp and hp
-            })
-
-            const finalBlowAccount = testbed.getContractMemoryValue('finalBlowAccount')
-            expect(finalBlowAccount).toBe(Context.SenderAccount2)
-            testbed.getAccount(Context.SenderAccount2)!.tokens.forEach(t => {
-                expect(t.quantity).toBe(45n); // xp and hp
-            })
-
-        })
-    })
-
     describe("Multiple Attackers", () => {
         test("should handle attacks from different accounts", async () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
@@ -832,4 +668,5 @@ describe('Construct Contract - Game Mechanics', () => {
             expect(getCurrentHitpoints(testbed)).toBeLessThan(hpAfterFirst);
         })
     })
+
 })

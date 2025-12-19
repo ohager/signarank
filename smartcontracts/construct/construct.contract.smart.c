@@ -18,6 +18,7 @@
 #define SETREGENERATION 9
 #define HEAL 10
 #define SETTOKENDECIMALS 11
+#define SETEVENTLISTENER 12
 
 // helper
 #define MAP_SET_FLAG 1024
@@ -46,6 +47,7 @@ long finalBlowBonus;
 long coolDownInBlocks;
 long isActive;
 long rewardNftId;
+long eventListenerAccountId;
 
 // Structs
 struct REWARDDISTRIBUTION {
@@ -75,6 +77,9 @@ struct REGENERATION {
     const coolDownInBlocks = TESTBED_coolDownInBlocks;
     const firstBloodBonus = TESTBED_firstBloodBonus;
     const finalBlowBonus = TESTBED_finalBlowBonus;
+    const isActive = TESTBED_isActive;
+    const rewardNftId = TESTBED_rewardNftId;
+    const eventListenerAccountId = TESTBED_eventListenerAccountId;
 #endif
 
 
@@ -92,6 +97,9 @@ struct TX {
     long assetIds[4];
     long message[4];
 } currentTx;
+
+long messageBuffer[12];
+long eventBuffer[4];
 
 init();
 
@@ -177,6 +185,9 @@ void main() {
                 case SETTOKENDECIMALS:
                     setTokenDecimals(currentTx.message[1], currentTx.message[2]);
                 break;
+                case SETEVENTLISTENER:
+                    setEventListener(currentTx.message[1]);
+                break;
             }
         }
     }
@@ -209,6 +220,7 @@ void regenerate() {
                 actualRegen = maxHp - currentHp;
             }
             mintAsset(actualRegen, hpTokenId);
+            sendEventHealed(actualRegen, 1);
         }
     }
 
@@ -220,39 +232,31 @@ void regenerate() {
 void runAttackerRound() {
     long breachLimitHit = 0;
 
-    // 1. Check Cooldown
     if (!checkCooldown()) {
         return;
     }
 
-    // 2. Calculate Damage
     long totalDamage = applyTokenModifiers(calculateSignaDamage());
 
-    // 3. Apply Debuff
     long debuffStacks = getMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender);
     if (debuffStacks > 0) {
         totalDamage = applyDebuff(totalDamage, debuffStacks);
-        // Reduce stack
         setMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender, debuffStacks - 1);
     }
 
-    // 4. Apply Breach Limit
     long preBreachDamage = totalDamage;
     long effectiveDamage = applyBreachLimit(totalDamage);
     if (effectiveDamage < preBreachDamage) {
         breachLimitHit = 1;
     }
 
-    // 6. Check if defeated
     long currentHP = getCurrentHitpoints();
     if (effectiveDamage >= currentHP) {
         isDefeated = 1;
         effectiveDamage = currentHP; // we cannot do more damage
     }
 
-    // 6. Send XP Tokens to Attacker
     if(getAssetBalance(xpTokenId) < effectiveDamage){
-        // send warning to creator
         long msg[4];
         msg[] = "Insufficient XP Tokens!";
         sendMessage(msg, getCreator());
@@ -260,26 +264,26 @@ void runAttackerRound() {
     sendQuantity(effectiveDamage, xpTokenId, currentTx.sender);
     sendQuantity(effectiveDamage, hpTokenId, currentTx.sender);
 
-    // 7. Send Messages for important events
-
-    // First Blood?
     if (firstBloodAccount == 0) {
         firstBloodAccount = currentTx.sender;
         sendMsgFirstBlood(firstBloodAccount);
     }
 
-    // Breach Limit Hit?
     if (breachLimitHit && !isDefeated) {
         sendMsgBreachLimit(currentTx.sender);
     }
 
-    // Counter Attack?
     if (shouldCounterAttack()) {
-        executeCounterAttack(); // Sends counter attack message
+        executeCounterAttack();
     }
 
     // 8. Update Last Attack Block
     setMapValue(MAP_ATTACKERS_LAST_ATTACK, currentTx.sender, currentTx.height);
+
+    if(!isDefeated){
+        // if is defeated a another event is sent... avoid stacked message sending
+        sendEventHit(effectiveDamage);
+    }
 }
 
 long checkCooldown() {
@@ -474,6 +478,7 @@ void executeCounterAttack() {
         }else{
             sendMsgCounterDebuff(currentTx.sender);
         }
+        sendEventCounterAttacked();
     }
 }
 
@@ -508,6 +513,8 @@ void handleDefeat() {
     long playersShare = ((totalSigna * rewardDistribution.players) / 100) - distributionCosts;
     distributeToHolders(1, hpTokenId, playersShare, 0, 0);
 
+    sendEventDefeated(); // before we burn all amount
+
     long burnShare = totalSigna - (playersShare + treasuryShare);
     sendAmount(burnShare, 0);
 }
@@ -520,6 +527,7 @@ void setActive(long active) {
         active = 1;
     }
     isActive = active;
+    sendEventActiveToggled();
 }
 
 void setBreachLimit(long limit) {
@@ -609,14 +617,15 @@ void heal(long hitpoints){
 
     if(hitpoints <= 0) { return; }
 
+    long actualHealing = hitpoints;
     long currentHitpoints = getCurrentHitpoints();
     if(hitpoints + currentHitpoints > maxHp){
-        mintAsset(maxHp - currentHitpoints, hpTokenId);
+        actualHealing = maxHp - currentHitpoints;
     }
-    else {
-        mintAsset(hitpoints, hpTokenId);
-    }
+
+    mintAsset(actualHealing, hpTokenId);
     sendMsgHealer(getCreator());
+    sendEventHealed(actualHealing, 0);
 }
 
 void setTokenDecimals(long tokenId, long tokenDecimals){
@@ -643,6 +652,10 @@ long getTokenDecimals(long tokenId, long shouldSendMessage){
 
 long getCurrentHitpoints(){
     return getAssetBalance(hpTokenId);
+}
+
+void setEventListener(long accountId){
+    eventListenerAccountId = accountId;
 }
 
 // ----- MESSAGE HELPERS
@@ -707,4 +720,56 @@ void sendMsgDefeated(long recipient) {
     msg[] = "DEFEATED: Construct was defeated!\n";
     sendMessage(msg, recipient);
     sendMessage(msg + 4, recipient);
+}
+
+//  SEND EVENT HELPERS
+inline void sendEventActiveToggled(){
+    eventBuffer[0]=600;
+    eventBuffer[1]=isActive;
+    eventBuffer[2]=0;
+    eventBuffer[3]=0;
+    sendEvent(eventBuffer);
+}
+
+inline void sendEventHit(long damage){
+    eventBuffer[0]=601;
+    eventBuffer[1]=currentTx.sender;
+    eventBuffer[2]=damage;
+    eventBuffer[3]=getCurrentHitpoints() - damage;
+    sendEvent(eventBuffer);
+}
+
+inline void sendEventHealed(long healed, long isRegenerated){
+    eventBuffer[0]=602;
+    if(isRegenerated) {
+        eventBuffer[1]=0;
+    } else {
+        eventBuffer[1]=currentTx.sender;
+    }
+    eventBuffer[2]=healed;
+    eventBuffer[3]=getCurrentHitpoints() + healed;
+    sendEvent(eventBuffer);
+}
+
+inline void sendEventCounterAttacked(){
+    eventBuffer[0]=603;
+    eventBuffer[1]=currentTx.sender;
+    eventBuffer[2]=0;
+    eventBuffer[3]=0;
+    sendEvent(eventBuffer);
+}
+
+inline void sendEventDefeated(){
+    eventBuffer[0]=666;
+    eventBuffer[1]=finalBlowAccount;
+    eventBuffer[2]=0;
+    eventBuffer[3]=0;
+    sendEvent(eventBuffer);
+}
+
+void sendEvent(long * buffer){
+    // send only when exists, and not caused by listener themself
+    if(eventListenerAccountId != 0 && currentTx.sender != eventListenerAccountId){
+        sendMessage(buffer, eventListenerAccountId);
+    }
 }
