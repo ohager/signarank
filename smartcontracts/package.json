@@ -1,0 +1,22 @@
+{
+  "name": "smartcontracts",
+  "version": "1.0.0",
+  "description": "Smartcontracts for Signarank adventures",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vitest"
+  },
+  "keywords": [
+    "web3",
+    "blockchain",
+    "smartcontracts",
+    "signum"
+  ],
+  "author": "ohager",
+  "license": "ISC",
+  "devDependencies": {
+    "signum-smartc-testbed": "^1.0.4",
+    "typescript": "^5.2.2",
+    "vitest": "^3.2.4"
+  }
+}
