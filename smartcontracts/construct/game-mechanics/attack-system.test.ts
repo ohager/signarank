@@ -101,6 +101,43 @@ describe('Attack Mechanics', () => {
             attack({testbed, signa: 100n, sender: Context.SenderAccount2})
             expect(testbed.getContractMemoryValue('firstBloodAccount')).toBe(Context.SenderAccount1);
         })
+
+        test("should refund the attackers signa and tokens if construct is inactive", async () => {
+            const testbed = new SimulatorTestbed(BootstrapScenario)
+                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .runScenario();
+
+            const PowerUpTokenId = 2000n;
+
+            // Set construct to inactive
+            testbed.sendTransactionAndGetResponse([{
+                sender: Context.CreatorAccount,
+                recipient: Context.ThisContract,
+                amount: Context.ActivationFee,
+                messageArr: [Context.Methods.SetActive, 0n],
+            }])
+
+            // Attack while inactive
+            attack({
+                testbed,
+                signa: 1n,
+                tokens: [{asset: PowerUpTokenId, quantity: 5n}]
+            })
+
+            // Verify HP unchanged
+            expect(getCurrentHitpoints(testbed)).toBe(DefaultRequiredInitializers.maxHp);
+
+            // Verify attacker didn't receive XP/HP tokens
+            const attacker = testbed.getAccount(Context.SenderAccount1);
+            const xpToken = attacker?.tokens.find(t => t.asset === Context.XPTokenId);
+            expect(xpToken).toBeUndefined();
+
+            const tx = testbed.getTransactions().filter(tx => tx.recipient === Context.SenderAccount1 && tx.sender === Context.ThisContract)
+            expect(tx.length).toBe(2)
+            expect(tx[0].messageText).toMatch("Construct is not active!")
+            expect(tx[0].amount).toBeLessThanOrEqual(1_0000_0000n); // 1 SIGNA attack
+            expect(tx[1].tokens).toEqual([{asset: PowerUpTokenId, quantity: 5n}]);
+        })
     })
 
     describe("Breach Limit Mechanics", () => {

@@ -3,7 +3,7 @@
 #program activationAmount 200000000
 #pragma optimizationLevel 3
 #pragma verboseAssembly false
-#pragma maxAuxVars 4
+#pragma maxAuxVars 3
 #pragma version 2.3.0
 
 // Magic codes for methods
@@ -142,15 +142,25 @@ void main() {
 
     currentTx.height =  getCurrentBlockheight();
 
+    if(isActive == 1 && getAssetBalance(xpTokenId) < getCurrentHitpoints()){
+        messageBuffer[] = "XP Token Shortage";
+        sendMessage(messageBuffer, getCreator());
+        isActive = 0;
+    }
+
     while ((currentTx.txId = getNextTx()) != 0) {
         currentTx.sender = getSender(currentTx.txId);
         readMessage(currentTx.txId, 0, currentTx.message);
         readAssets(currentTx.txId, currentTx.assetIds);
+        if(currentTx.sender != getCreator() && isDefeated==0){
 
-        if(currentTx.sender != getCreator() && isActive==1 && isDefeated==0){
-            runAttackerRound();
+            if(isActive == 1) {
+                runAttackerRound();
+            }else{
+                refund();
+            }
         }
-        else {
+        else if(currentTx.sender == getCreator()) {
             switch(currentTx.message[0]) {
                 case SETACTIVE:
                     setActive(currentTx.message[1]);
@@ -192,10 +202,27 @@ void main() {
         }
     }
 
-    if(isDefeated) {
+    if(isDefeated == 1) {
         handleDefeat();
     } else {
         regenerate();
+    }
+}
+
+void refund(){
+    messageBuffer[] = "Construct is not active!";
+    sendAmountAndMessage(getAmount(currentTx.txId), messageBuffer, currentTx.sender);
+    if(currentTx.assetIds[0] != 0){
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[0]), currentTx.assetIds[0], currentTx.sender);
+    }
+    if(currentTx.assetIds[1] != 0){
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[1]), currentTx.assetIds[1], currentTx.sender);
+    }
+    if(currentTx.assetIds[2] != 0){
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[2]), currentTx.assetIds[2], currentTx.sender);
+    }
+    if(currentTx.assetIds[3] != 0){
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[3]), currentTx.assetIds[3], currentTx.sender);
     }
 }
 
@@ -257,9 +284,8 @@ void runAttackerRound() {
     }
 
     if(getAssetBalance(xpTokenId) < effectiveDamage){
-        long msg[4];
-        msg[] = "Insufficient XP Tokens!";
-        sendMessage(msg, getCreator());
+        messageBuffer[] = "Insufficient XP Tokens!";
+        sendMessage(messageBuffer, getCreator());
     }
     sendQuantity(effectiveDamage, xpTokenId, currentTx.sender);
     sendQuantity(effectiveDamage, hpTokenId, currentTx.sender);
@@ -282,7 +308,7 @@ void runAttackerRound() {
 
     if(!isDefeated){
         // if is defeated a another event is sent... avoid stacked message sending
-        sendEventHit(effectiveDamage);
+        sendEventHit(effectiveDamage, currentHP);
     }
 }
 
@@ -313,34 +339,39 @@ long checkCooldown() {
 }
 
 inline void refundPowerUpsWithPenalty() {
-    long assets[4];
-    long quantities[4];
     long count = 0;
-    // Collect all sent assets
-    for (long i = 1; i <= 4; i++) {
-        long assetId = currentTx.assetIds[i];
-        if (assetId == 0) break;
 
-        long quantity = getQuantity(currentTx.txId, assetId);
-        if (quantity > 0) {
-            assets[count] = assetId;
-            quantities[count] = quantity;
-            count++;
-        }
-    }
+    // using unrolled loops for efficiency
 
-    if (count == 0) return; // No power-ups sent
+    if(currentTx.assetIds[0] != 0) { count++; }
+    if(currentTx.assetIds[1] != 0) { count++; }
+    if(currentTx.assetIds[2] != 0) { count++; }
+    if(currentTx.assetIds[3] != 0) { count++; }
+
+    if (count == 0) return;
+    if (count == 1) return;
 
     // Pick ONE random to keep (penalty)
+    // the other
     long keepIndex = (getWeakRandomNumber() >> 1) % count;
+    long currentIndex = 0;
 
-    // Refund all EXCEPT the chosen one
-    for (long j = 0; j < count; j++) {
-        if (j != keepIndex) {
-            sendQuantity(quantities[j], assets[j], currentTx.sender);
-        }
-        // else: kept as penalty
+    if(currentTx.assetIds[0] != 0 && currentIndex++ != keepIndex) {
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[0]), currentTx.assetIds[0], currentTx.sender);
     }
+
+    if(currentTx.assetIds[1] != 0 && currentIndex++ != keepIndex) {
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[1]), currentTx.assetIds[1], currentTx.sender);
+    }
+
+    if(currentTx.assetIds[2] != 0 && currentIndex++ != keepIndex) {
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[2]), currentTx.assetIds[2], currentTx.sender);
+    }
+
+    if(currentTx.assetIds[3] != 0 && currentIndex++ != keepIndex) {
+        sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[3]), currentTx.assetIds[3], currentTx.sender);
+    }
+
 }
 
 inline long calculateSignaDamage() {
@@ -353,6 +384,10 @@ inline long calculateSignaDamage() {
 long applyDebuff(long damage, long stacks) {
     if (stacks <= 0) return damage;
 
+    // Cap to current maxStack (technically maxStack can change during game)
+    if (debuff.maxStack > 0 && stacks > debuff.maxStack) {
+        stacks = debuff.maxStack;
+    }
     // Calculate total reduction
     long totalReduction = stacks * debuff.damageReduction;
 
@@ -394,7 +429,7 @@ long applyTokenAddition(long tokenId) {
     if (addition == 0) { return 0; }
 
     long tokenLimit = getMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId);
-    long decimals = getTokenDecimals(tokenId, 0); // do not send message
+    long decimals = getTokenDecimals(tokenId, 0); // 0 means: do not send message
 
     // Apply token limit (convert to raw units with decimals)
     if (tokenLimit > 0) {
@@ -428,10 +463,11 @@ long applyTokenMultiplier(long damage, long tokenId) {
         }
     }
 
+    // ASSERT: quantity cannot be 0 at this point!!!
     // Apply multiplier (stacks per token, supports fractional tokens)
     // Example: 2 tokens × 500 (5x multiplier) = 1000 / 100 = 10x total
     // Example: 0.5 tokens × 500 = 250 / 100 = 2.5x total
-    return (damage * multiplier * quantity) / (100 * pow10(decimals));
+    return ((damage * multiplier) / 100 * quantity) / pow10(decimals);
 }
 
 // Helper function - optimized for decimals 0-6
@@ -471,6 +507,12 @@ inline long shouldCounterAttack() {
 void executeCounterAttack() {
     long currentStacks = getMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender);
 
+    // Cap existing stacks if admin lowered maxStack in the meanwhile
+    if (currentStacks > debuff.maxStack) {
+        currentStacks = debuff.maxStack;
+        setMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender, currentStacks);
+    }
+
     if (currentStacks < debuff.maxStack) {
         setMapValue(MAP_ATTACKERS_DEBUFF, currentTx.sender, currentStacks + 1);
         if(debuff.damageReduction < 0){
@@ -483,21 +525,20 @@ void executeCounterAttack() {
 }
 
 void handleDefeat() {
-    long message[4];
     finalBlowAccount = currentTx.sender;
     sendMsgDefeated(getCreator());
     sendMsgVictory(finalBlowAccount);
     sendAmount(finalBlowBonus, finalBlowAccount);
-    message[] = "First Blood Bonus";
-    sendAmountAndMessage(firstBloodBonus, message, firstBloodAccount);
+    messageBuffer[] = "First Blood Bonus";
+    sendAmountAndMessage(firstBloodBonus, messageBuffer, firstBloodAccount);
 
     // Send NFT if configured
     if (rewardNftId != 0) {
-        message[0] = TRANSFER_NFT_METHOD_HASH;
-        message[1] = finalBlowAccount;
-        message[2] = 0;
-        message[3] = 0;
-        sendAmountAndMessage(NFT_FEES_PLANCK, message, rewardNftId);
+        messageBuffer[0] = TRANSFER_NFT_METHOD_HASH;
+        messageBuffer[1] = finalBlowAccount;
+        messageBuffer[2] = 0;
+        messageBuffer[3] = 0;
+        sendAmountAndMessage(NFT_FEES_PLANCK, messageBuffer, rewardNftId);
     }
 
 
@@ -515,8 +556,7 @@ void handleDefeat() {
 
     sendEventDefeated(); // before we burn all amount
 
-    long burnShare = totalSigna - (playersShare + treasuryShare);
-    sendAmount(burnShare, 0);
+    sendAmount(getCurrentBalance(), 0);
 }
 
 // ---- ONLY CREATOR CAN CALL THESE FUNCTIONS
@@ -565,15 +605,16 @@ void setDamageAddition(long tokenId, long damageAddition, long tokenLimit) {
 void setRewardNft(long nftId) {
     long nftCreator = getCreatorOf(nftId);
     if(getCreatorOf(nftId) == 0){
-        long msg[3];
-        msg[] = "Nft does not exist";
-        sendMessage(msg, getCreator());
+        messageBuffer[] = "Nft does not exist";
+        sendMessage(messageBuffer, getCreator());
         return;
     }
     rewardNftId = nftId;
 }
 
 void setRewardDistribution(long players, long treasury) {
+    if(players < 0) return;
+    if(treasury < 0) return;
     if(players + treasury <= 100){
         rewardDistribution.players = players;
         rewardDistribution.treasury = treasury;
@@ -643,9 +684,8 @@ long getTokenDecimals(long tokenId, long shouldSendMessage){
         return tokenDecimals - MAP_SET_FLAG;
     }
     if(shouldSendMessage != 0){
-        long msg[4];
-        msg[] = "Unregistered Token detected!";
-        sendMessage(msg, getCreator());
+        messageBuffer[] = "Unregistered Token detected!";
+        sendMessage(messageBuffer, getCreator());
     }
     return 0;
 }
@@ -662,64 +702,56 @@ void setEventListener(long accountId){
 
 
 void sendMsgCooldown(long recipient) {
-    long msg[12];
-    msg[] = "COOLDOWN: Attack too soon! Wait a few blocks. Penalty applied.\n";
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
-    sendMessage(msg + 8, recipient);
+    messageBuffer[] = "COOLDOWN: Attack too soon! Wait a few blocks. Penalty applied.\n";
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
+    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgFirstBlood(long recipient) {
-    long msg[12];
-    msg[] = "FIRST BLOOD! You struck first and claimed a bonus reward on defeat!\n";
+    messageBuffer[] = "FIRST BLOOD! You struck first and claimed a bonus reward on defeat!\n";
 
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
-    sendMessage(msg + 8, recipient);
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
+    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgVictory(long recipient) {
-    long msg[12];
-    msg[] = "VICTORY! Construct defeated! You dealt the final blow. You got the bonus.\n";
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
-    sendMessage(msg + 8, recipient);
+    messageBuffer[] = "VICTORY! Construct defeated! You dealt the final blow. You got the bonus.\n";
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
+    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgCounterDebuff(long recipient) {
-    long msg[12];
-    msg[] = "COUNTER ATTACK! Construct strikes back. Next attack reduced.\n";
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
-    sendMessage(msg + 8, recipient);
+    messageBuffer[] = "COUNTER ATTACK! Construct strikes back. Next attack reduced.\n";
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
+    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgCounterBuff(long recipient) {
-    long msg[8];
-    msg[] = "BERSERK! Andrenaline Pure. Next attack is stronger.\n";
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
+    messageBuffer[] = "BERSERK! Andrenaline Pure. Next attack is stronger.\n";
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
 }
 
 void sendMsgBreachLimit(long recipient) {
-    long msg[8];
-    msg[] = "BREACH LIMIT: Construct armor absorbed excess damage!\n";
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
+    messageBuffer[] = "BREACH LIMIT: Construct armor absorbed excess damage!\n";
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
 }
 
 void sendMsgHealer(long recipient) {
-    long msg[8];
-    msg[] = "HEALING: Construct recovered hitpoints!\n";
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
+    messageBuffer[] = "HEALING: Construct recovered hitpoints!\n";
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
 }
 
 void sendMsgDefeated(long recipient) {
-    long msg[8];
-    msg[] = "DEFEATED: Construct was defeated!\n";
-    sendMessage(msg, recipient);
-    sendMessage(msg + 4, recipient);
+    messageBuffer[] = "DEFEATED: Construct was defeated!\n";
+    sendMessage(messageBuffer, recipient);
+    sendMessage(messageBuffer + 4, recipient);
 }
 
 //  SEND EVENT HELPERS
@@ -731,11 +763,11 @@ inline void sendEventActiveToggled(){
     sendEvent(eventBuffer);
 }
 
-inline void sendEventHit(long damage){
+inline void sendEventHit(long damage, long currentHitpoints){
     eventBuffer[0]=601;
     eventBuffer[1]=currentTx.sender;
     eventBuffer[2]=damage;
-    eventBuffer[3]=getCurrentHitpoints() - damage;
+    eventBuffer[3]=currentHitpoints - damage;
     sendEvent(eventBuffer);
 }
 

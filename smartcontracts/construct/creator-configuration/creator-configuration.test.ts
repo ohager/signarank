@@ -1,8 +1,8 @@
-import {describe, expect, test} from "vitest";
+import {ContextTestEnvironment, describe, expect, test} from "vitest";
 
 import {SimulatorTestbed, utils} from "signum-smartc-testbed";
 import {Context} from "../context";
-import {getCurrentHitpoints, BootstrapScenario, DefaultRequiredInitializers} from "../lib";
+import {getCurrentHitpoints, BootstrapScenario, DefaultRequiredInitializers, attack} from "../lib";
 
 const MAP_SET_FLAG = 1024n;
 
@@ -39,6 +39,50 @@ describe('Construct Contract - Creator Configuration', () => {
 
         // more to come
     })
+    test('should deactivate contract when XP is less than HP', () => {
+        // Create scenario with insufficient XP tokens
+        const InsufficientXPScenario = [
+            {
+                blockheight: 1,
+                amount: 200_0000_0000n, // charge
+                sender: Context.CreatorAccount,
+                recipient: Context.ThisContract,
+                tokens: [
+                    {asset: Context.XPTokenId, quantity: 100n} // Only 100 XP, but maxHp is 50,000
+                ]
+            }
+        ];
+
+        const testbed = new SimulatorTestbed(InsufficientXPScenario)
+            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .runScenario();
+
+        // Initially active
+        expect(testbed.getContractMemoryValue('isActive')).toBe(1n);
+
+        // Trigger the check by sending any transaction
+        attack({
+            testbed,
+            sender: Context.SenderAccount1,
+            signa: 1n,
+        })
+
+        // Should now be deactivated
+        expect(testbed.getContractMemoryValue('isActive')).toBe(0n);
+
+        // Verify creator received warning message
+        const transactions = testbed.getTransactions();
+        const hasWarningMessage = transactions.some(
+            tx => tx.recipient === Context.CreatorAccount &&
+                  tx.messageText?.startsWith("XP Token Shortage")
+        );
+        expect(hasWarningMessage).toBeTruthy();
+
+        // check if Sender gets his money back
+        const refundTx = transactions.find( tx => tx.recipient === Context.SenderAccount1 && tx.sender === Context.ThisContract)
+        expect(refundTx?.amount).toBe(1_0000_0000n);
+    })
+
 
     describe('setBoni', () => {
         test('should setBoni as expected', () => {
