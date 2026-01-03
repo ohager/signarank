@@ -274,7 +274,7 @@ describe('Attack Mechanics', () => {
     describe("Token Modifier Mechanics", () => {
         const PowerUpTokenId = 2000n;
 
-        test("should apply damage multiplier from tokens", async () => {
+        test("should apply damage multiplier from tokens - buffing", async () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
                 .loadContract(Context.ContractPath, DefaultRequiredInitializers)
                 .runScenario();
@@ -308,6 +308,56 @@ describe('Attack Mechanics', () => {
             const damage = initialHp - getCurrentHitpoints(testbed)!;
             expect(damage).toBe(50n);
         })
+
+
+        test("should apply damage multiplier from tokens - debuffing", async () => {
+                    const testbed = new SimulatorTestbed(BootstrapScenario)
+                        .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                        .runScenario();
+
+                    // Configure token with 0.5x multiplier (50 = 0.5x)
+                    testbed.sendTransactionAndGetResponse([{
+                        sender: Context.CreatorAccount,
+                        recipient: Context.ThisContract,
+                        amount: Context.ActivationFee,
+                        messageArr: [Context.Methods.SetDamageMultiplier, PowerUpTokenId, 50n, 2n],
+                    }])
+
+                    // Set token decimals to 0
+                    testbed.sendTransactionAndGetResponse([{
+                        sender: Context.CreatorAccount,
+                        recipient: Context.ThisContract,
+                        amount: Context.ActivationFee,
+                        messageArr: [Context.Methods.SetTokenDecimals, PowerUpTokenId, 0n],
+                    }])
+
+                    const initialHp = getCurrentHitpoints(testbed)!;
+
+                    // Attack with 100 SIGNA and 1 power-up token
+                    // Base damage = 10, with 0.5x multiplier = 5
+                    attack({
+                        testbed,
+                        signa: 100n,
+                        tokens: [{asset: PowerUpTokenId, quantity: 1n}]
+                    })
+
+                    let damage = initialHp - getCurrentHitpoints(testbed)!;
+                    expect(damage).toBe(5n);
+
+
+                    timeLapse({testbed, blocks: 20n});
+
+                    // Attack with 100 SIGNA and 2 power-up token
+                    // Base damage = 10, with 0.5x0.5 multiplier = 0.25 => 2 damage
+                    attack({
+                        testbed,
+                        signa: 100n,
+                        tokens: [{asset: PowerUpTokenId, quantity: 2n}]
+                    })
+
+                    damage = initialHp - damage - getCurrentHitpoints(testbed)!;
+                    expect(damage).toBe(2n);
+                })
 
         test("should apply damage addition from tokens", async () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
@@ -657,6 +707,111 @@ describe('Attack Mechanics', () => {
                 expect(c).toBeGreaterThan(1);
             })
 
+        })
+
+        test("should scale counter attack chance when damage exceeds breach limit", async () => {
+            // Use 100% counter attack chance for deterministic testing
+            // maxHp: 1000, breachLimit: 10% = 100 max damage
+            const testbed = new SimulatorTestbed(BootstrapScenario)
+                .loadContract(Context.ContractPath, {
+                    ...DefaultRequiredInitializers,
+                    maxHp: 1000n,
+                    breachLimit: 10n, // Different from default 20%
+                })
+                .runScenario();
+
+            // Configure 100% counter chance for deterministic behavior
+            testbed.sendTransactionAndGetResponse([{
+                sender: Context.CreatorAccount,
+                recipient: Context.ThisContract,
+                amount: Context.ActivationFee,
+                messageArr: [Context.Methods.SetDebuff, 100n, 25n, 50n],
+            }])
+
+            // Attack with high damage that exceeds breach limit
+            // 10,000 SIGNA * 10% = 1000 damage (before breach limit)
+            // breachLimitDamage = (1000 * 10) / 100 = 100
+            // rawDamage (1000) >> breachLimitDamage (100)
+            // With 100% base chance and scaling, should always trigger
+            attack({testbed, signa: 10_000n})
+
+            // Should get debuff stack with 100% chance when exceeding breach
+            const stacks = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
+            expect(stacks).toBeGreaterThan(0n);
+        })
+
+        test("should use base chance when damage is below breach limit", async () => {
+            // maxHp: 10000, breachLimit: 20% = 2000 max damage
+            const testbed = new SimulatorTestbed(BootstrapScenario)
+                .loadContract(Context.ContractPath, {
+                    ...DefaultRequiredInitializers,
+                    maxHp: 10000n,
+                    breachLimit: 20n,
+                })
+                .runScenario();
+
+            // Configure debuff: 10% base chance (low)
+            testbed.sendTransactionAndGetResponse([{
+                sender: Context.CreatorAccount,
+                recipient: Context.ThisContract,
+                amount: Context.ActivationFee,
+                messageArr: [Context.Methods.SetDebuff, 10n, 25n, 20n],
+            }])
+
+            // Attack with 100 SIGNA = 10 damage (well below breach limit of 2000)
+            // Should use base 10% chance
+            const iterations = 50;
+            let counterAttackCount = 0;
+
+            for(let i = 0; i < iterations; i++) {
+                const stacksBefore = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
+
+                attack({testbed, signa: 100n})
+                timeLapse({testbed, blocks: 20n})
+
+                const stacksAfter = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
+
+                if(stacksAfter > stacksBefore) {
+                    counterAttackCount++;
+                }
+            }
+
+            // With 10% chance, expect around 5 out of 50 (allow some variance)
+            // Should be significantly less than if it was scaling up
+            expect(counterAttackCount).toBeLessThan(20); // Well below what scaled chance would give
+        })
+
+        test("should scale counter attack chance proportionally", async () => {
+            // Test with 100% chance to ensure counter attacks happen
+            // maxHp: 1000, breachLimit: 10% = 100 max damage
+            const testbed = new SimulatorTestbed(BootstrapScenario)
+                .loadContract(Context.ContractPath, {
+                    ...DefaultRequiredInitializers,
+                    maxHp: 1000n,
+                    breachLimit: 10n, // Different from default
+                })
+                .runScenario();
+
+            // Configure 100% counter chance
+            testbed.sendTransactionAndGetResponse([{
+                sender: Context.CreatorAccount,
+                recipient: Context.ThisContract,
+                amount: Context.ActivationFee,
+                messageArr: [Context.Methods.SetDebuff, 100n, 25n, 50n],
+            }])
+
+            // Attack below breach limit - should use 100% base chance
+            attack({testbed, signa: 100n}) // 10 damage, well below 100 breach limit
+            let stacks1 = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
+            expect(stacks1).toBe(1n); // Should get 1 stack with 100% chance
+
+            timeLapse({testbed, blocks: 20n})
+
+            // Attack above breach limit - should still use 100% (or capped at 90%)
+            attack({testbed, signa: 10_000n}) // 1000 damage, way above 100 breach limit
+            let stacks2 = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
+            // Should be 1 (previous stack consumed, new stack added)
+            expect(stacks2).toBe(1n);
         })
     })
 

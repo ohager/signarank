@@ -1,4 +1,4 @@
-import {ContextTestEnvironment, describe, expect, test} from "vitest";
+import {describe, expect, test} from "vitest";
 
 import {SimulatorTestbed, utils} from "signum-smartc-testbed";
 import {Context} from "../context";

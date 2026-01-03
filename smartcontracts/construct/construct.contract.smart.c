@@ -299,7 +299,7 @@ void runAttackerRound() {
         sendMsgBreachLimit(currentTx.sender);
     }
 
-    if (shouldCounterAttack()) {
+    if (shouldCounterAttack(preBreachDamage)) {
         executeCounterAttack();
     }
 
@@ -381,6 +381,7 @@ inline long calculateSignaDamage() {
     return (getAmount(currentTx.txId) * baseDamageRatio) / 100_0000_0000;
 }
 
+
 long applyDebuff(long damage, long stacks) {
     if (stacks <= 0) return damage;
 
@@ -445,29 +446,49 @@ long applyTokenAddition(long tokenId) {
     return (addition * quantity) / pow10(decimals);
 }
 
+
 long applyTokenMultiplier(long damage, long tokenId) {
-    long quantity = getQuantity(currentTx.txId, tokenId);
-    if (quantity == 0) { return damage; }
+  long quantity = getQuantity(currentTx.txId, tokenId);
+  if (quantity == 0) { return damage; }
 
-    long multiplier = getMapValue(MAP_DAMAGE_MULTIPLIER, tokenId);
-    if (multiplier == 0) { return damage; }
+  long multiplier = getMapValue(MAP_DAMAGE_MULTIPLIER, tokenId);
+  if (multiplier == 0) { return damage; }
 
-    long tokenLimit = getMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId);
-    long decimals = getTokenDecimals(tokenId, 0); // do not send message
+  long tokenLimit = getMapValue(MAP_DAMAGE_TOKEN_LIMIT, tokenId);
+  long decimals = getTokenDecimals(tokenId, 0);
 
-    // Apply token limit (convert to raw units with decimals)
-    if (tokenLimit > 0) {
-        long tokenLimitRaw = tokenLimit * pow10(decimals);
-        if (quantity > tokenLimitRaw) {
-            quantity = tokenLimitRaw;
-        }
-    }
+  // Apply token limit (convert to raw units with decimals)
+  if (tokenLimit > 0) {
+      long tokenLimitRaw = tokenLimit * pow10(decimals);
+      if (quantity > tokenLimitRaw) {
+          quantity = tokenLimitRaw;
+      }
+  }
 
-    // ASSERT: quantity cannot be 0 at this point!!!
-    // Apply multiplier (stacks per token, supports fractional tokens)
-    // Example: 2 tokens × 500 (5x multiplier) = 1000 / 100 = 10x total
-    // Example: 0.5 tokens × 500 = 250 / 100 = 2.5x total
-    return ((damage * multiplier) / 100 * quantity) / pow10(decimals);
+  // Handle resistance tokens (< 100) multiplicatively, buffs linearly
+  if (multiplier < 100) {
+      // Resistance: Apply each token individually (exponential stacking)
+      long quantityInt = quantity / pow10(decimals);
+      long i = 0;
+      while (i < quantityInt) {
+          damage = (damage * multiplier) / 100;
+          i = i + 1;
+      }
+
+      // Handle fractional part (if decimals > 0)
+      long fractional = quantity % pow10(decimals);
+      if (fractional > 0) {
+          // Linear interpolation for fractional tokens
+          // Example: 0.5 tokens × 94 = (100 + 94)/2 = 97 effective multiplier
+          long fractionalMultiplier = 100 - (((100 - multiplier) * fractional) / pow10(decimals));
+          damage = (damage * fractionalMultiplier) / 100;
+      }
+
+      return damage;
+  } else {
+      // Buff tokens: Linear stacking (existing behavior)
+      return ((damage * multiplier) / 100 * quantity) / pow10(decimals);
+  }
 }
 
 // Helper function - optimized for decimals 0-6
@@ -497,11 +518,31 @@ long applyBreachLimit(long damage) {
     return damage;
 }
 
-inline long shouldCounterAttack() {
+inline long shouldCounterAttack(long rawDamage) {
     if (debuff.chance <= 0 || debuff.damageReduction == 0) return 0;
 
+    long dynamicChance = calculateCounterAttackChance(rawDamage);
+
     long random = getWeakRandomNumber() % 100;
-    return (random < debuff.chance);
+    return (random < dynamicChance);
+}
+
+inline long calculateCounterAttackChance(long rawDamage) {
+    // If no breach limit, use base chance
+    if (breachLimit <= 0) {
+      return debuff.chance;
+    }
+
+    long breachLimitDamage = (maxHp * breachLimit) / 100;
+    if(rawDamage <= breachLimitDamage){
+        return debuff.chance;
+    }
+    // the higher the rawDamage (exceeding breachLimitDamage) the higher the chance of debuffing
+    long scaledChance = (debuff.chance * rawDamage) / breachLimitDamage;
+    if (scaledChance > 90) {
+      scaledChance = 90;
+    }
+    return scaledChance;
 }
 
 void executeCounterAttack() {
