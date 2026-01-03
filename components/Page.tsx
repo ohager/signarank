@@ -2,7 +2,10 @@ import Head from 'next/head'
 import {ReactNode} from 'react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
+import VideoBackground from '../components/VideoBackground'
+import Snowfall from '../components/Snowfall'
 import styles from '../styles/Home.module.scss'
+import seasonsData from '../lib/seasons.json'
 
 // add to this every new season
 export const seasons = [
@@ -16,9 +19,13 @@ interface PageProps {
 }
 
 const Page = (props: PageProps) => {
+    // Get the video URL from seasons data
+    const videoUrl = seasonsData.frostfest?.background || '';
 
     return (
         <div className={styles.container}>
+            {videoUrl && <VideoBackground videoUrl={videoUrl} />}
+            <Snowfall />
             <Head>
                 <title>{props.title}</title>
                 <title>SignaRank - Check your Signum Blockchain Score</title>
