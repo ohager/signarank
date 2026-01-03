@@ -14,6 +14,7 @@ const Header = () => {
       <span className={styles.logo}>
         <img src='/signum-logo.svg' height={32} alt='Signum Logo'/>
         <Link href="/"><a>&nbsp;SIGNArank</a></Link>
+          <span className={styles.pill}>{name}</span>
           {isTestnet && <span className={styles.pill} style={{backgroundColor: 'red'}}>TESTNET</span>}
       </span>
             </h1>
