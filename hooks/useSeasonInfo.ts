@@ -5,6 +5,7 @@ export type SeasonInfo = {
     name: string;
     background: string;
     isCurrent: boolean;
+    description: string;
 }
 
 export const useSeasonInfo = () => {

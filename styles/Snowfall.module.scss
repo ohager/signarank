@@ -19,10 +19,10 @@
 
 @keyframes fall {
   0% {
-    transform: translateY(-20px) translateX(0);
+    transform: translateY(-20px) translateX(0) rotate(0deg);
   }
   100% {
-    transform: translateY(100vh) translateX(50px);
+    transform: translateY(100vh) translateX(50px) rotate(var(--rotation, 360deg));
   }
 }
 

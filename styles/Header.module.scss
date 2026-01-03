@@ -65,3 +65,52 @@
     display: none;
   }
 }
+
+.seasonBanner {
+  position: absolute;
+  margin: 15px 0 0 0;
+  max-width: 400px;
+  padding: 10px 15px;
+  background: linear-gradient(135deg, rgba(0, 153, 255, 0.1), rgba(0, 255, 136, 0.1));
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 255, 136, 0.2);
+  animation: pulse-glow 3s ease-in-out infinite;
+  text-align: left;
+}
+
+.seasonName {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--main-color2);
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.seasonDescription {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.9);
+  font-style: italic;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 255, 136, 0.2);
+    border-color: rgba(0, 255, 136, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 30px rgba(0, 255, 136, 0.4);
+    border-color: rgba(0, 255, 136, 0.5);
+  }
+}
+
+@include mobile {
+  .seasonBanner {
+    display: none;
+  }
+}

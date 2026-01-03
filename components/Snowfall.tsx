@@ -16,8 +16,9 @@ const Snowfall: React.FC = () => {
                         animationDelay: `${Math.random() * 10}s`,
                         animationDuration: `${10 + Math.random() * 20}s`,
                         opacity: 0.3 + Math.random() * 0.7,
-                        fontSize: `${10 + Math.random() * 20}px`
-                    }}
+                        fontSize: `${10 + Math.random() * 20}px`,
+                        '--rotation': `${Math.random() * 360}deg`
+                    } as React.CSSProperties}
                 >
                     ❄
                 </div>
