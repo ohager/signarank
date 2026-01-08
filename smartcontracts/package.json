@@ -18,5 +18,8 @@
     "signum-smartc-testbed": "^1.0.4",
     "typescript": "^5.2.2",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "smartc-signum-compiler": "^2.3.0"
   }
 }

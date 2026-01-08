@@ -1,7 +1,18 @@
 import type {SimulatorTestbed, TransactionObj} from "signum-smartc-testbed";
 import {Context} from "./context";
+import {SmartC} from "smartc-signum-compiler";
 
-export function getCurrentHitpoints(testbed: SimulatorTestbed){
+export function compileToBytecode(code: string) {
+    const compiler = new SmartC({
+        language: "C",
+        sourceCode: code,
+    });
+    compiler.compile();
+    return compiler.getMachineCode();
+}
+
+
+export function getCurrentHitpoints(testbed: SimulatorTestbed) {
     const hpTokenId = testbed.getContractMemoryValue('hpTokenId');
     const hpToken = testbed.getContract().tokens.find(t => t.asset === hpTokenId);
     return hpToken?.quantity
@@ -10,14 +21,14 @@ export function getCurrentHitpoints(testbed: SimulatorTestbed){
 type AttackParams = {
     testbed: SimulatorTestbed,
     signa: bigint,
-    tokens?: Array<{ asset: bigint, quantity: bigint}>,
+    tokens?: Array<{ asset: bigint, quantity: bigint }>,
     sender?: bigint
 }
 
 
 export function attack({testbed, sender = Context.SenderAccount1, signa, tokens = []}: AttackParams) {
 
-    if(tokens.length > 4){
+    if (tokens.length > 4) {
         throw new Error("Max 4 tokens allowed")
     }
 
@@ -35,7 +46,7 @@ type TimelapseType = {
 }
 
 export function timeLapse({testbed, blocks}: TimelapseType) {
-    for(let i = 0; i < blocks; i++){
+    for (let i = 0; i < blocks; i++) {
         testbed.blockchain.forgeBlock()
     }
 }
@@ -51,7 +62,7 @@ export const DefaultRequiredInitializers = {
     finalBlowBonus: 0n,
     isActive: 0n,
     rewardNftId: 0n,
-    eventListenerAccountId:0n
+    eventListenerAccountId: 0n
 }
 
 

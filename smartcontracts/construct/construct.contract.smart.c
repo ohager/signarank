@@ -4,6 +4,7 @@
 #pragma optimizationLevel 3
 #pragma verboseAssembly false
 #pragma maxAuxVars 3
+#pragma maxConstVars 5
 #pragma version 2.3.0
 
 // Magic codes for methods
@@ -743,56 +744,50 @@ void setEventListener(long accountId){
 
 
 void sendMsgCooldown(long recipient) {
-    messageBuffer[] = "COOLDOWN: Attack too soon! Wait a few blocks. Penalty applied.\n";
+    messageBuffer[] = "COOLDOWN! Attack too soon. Penalty applied.\n";
     sendMessage(messageBuffer, recipient);
     sendMessage(messageBuffer + 4, recipient);
-    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgFirstBlood(long recipient) {
-    messageBuffer[] = "FIRST BLOOD! You struck first and claimed a bonus reward on defeat!\n";
-
+    messageBuffer[] = "FIRST BLOOD! Bonus on defeat!\n";
     sendMessage(messageBuffer, recipient);
     sendMessage(messageBuffer + 4, recipient);
-    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgVictory(long recipient) {
-    messageBuffer[] = "VICTORY! Construct defeated! You dealt the final blow. You got the bonus.\n";
+    messageBuffer[] = "VICTORY! Final blow bonus!\n";
     sendMessage(messageBuffer, recipient);
     sendMessage(messageBuffer + 4, recipient);
-    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgCounterDebuff(long recipient) {
-    messageBuffer[] = "COUNTER ATTACK! Construct strikes back. Next attack reduced.\n";
+    messageBuffer[] = "COUNTER! Damage reduced.\n";
     sendMessage(messageBuffer, recipient);
     sendMessage(messageBuffer + 4, recipient);
-    sendMessage(messageBuffer + 8, recipient);
 }
 
 void sendMsgCounterBuff(long recipient) {
-    messageBuffer[] = "BERSERK! Andrenaline Pure. Next attack is stronger.\n";
+    messageBuffer[] = "BERSERK! Damage increased.\n";
     sendMessage(messageBuffer, recipient);
     sendMessage(messageBuffer + 4, recipient);
 }
 
 void sendMsgBreachLimit(long recipient) {
-    messageBuffer[] = "BREACH LIMIT: Construct armor absorbed excess damage!\n";
+    messageBuffer[] = "BREACH! Armor absorbed excess damage!\n";
     sendMessage(messageBuffer, recipient);
     sendMessage(messageBuffer + 4, recipient);
 }
 
 void sendMsgHealer(long recipient) {
-    messageBuffer[] = "HEALING: Construct recovered hitpoints!\n";
+    messageBuffer[] = "HEALING: Construct recovered a bit!\n";
     sendMessage(messageBuffer, recipient);
     sendMessage(messageBuffer + 4, recipient);
 }
 
 void sendMsgDefeated(long recipient) {
-    messageBuffer[] = "DEFEATED: Construct was defeated!\n";
+    messageBuffer[] = "DEFEATED!\n";
     sendMessage(messageBuffer, recipient);
-    sendMessage(messageBuffer + 4, recipient);
 }
 
 //  SEND EVENT HELPERS
