@@ -107,7 +107,6 @@ init();
 void init(){
 
     hpTokenId = issueAsset(name, "", 0);
-    mintAsset(maxHp, hpTokenId);
 
     // set defaults
     if(baseDamageRatio <= 0){
@@ -140,6 +139,11 @@ void init(){
 }
 
 void main() {
+
+    if(hpTokenId != 0 && getCurrentHitpoints() == 0) {
+        mintAsset(maxHp, hpTokenId);
+        return; // Let mint finalize before processing transactions
+    }
 
     currentTx.height =  getCurrentBlockheight();
 

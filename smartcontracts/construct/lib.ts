@@ -75,5 +75,11 @@ export const BootstrapScenario: TransactionObj[] = [
         tokens: [
             {asset: Context.XPTokenId, quantity: 50_000n}
         ]
+    },
+    {
+        blockheight: 2,
+        amount: 2_0000_0000n, // minting
+        sender: Context.CreatorAccount,
+        recipient: Context.ThisContract,
     }
 ]

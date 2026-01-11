@@ -850,12 +850,12 @@ describe('Attack Mechanics', () => {
             attack({testbed, signa: 100n, sender: Context.SenderAccount1})
             const hpAfterFirst = getCurrentHitpoints(testbed)!;
             const sender1LastHit = testbed.getContractMapValue(Context.Maps.AttackersLastAttack, Context.SenderAccount1)
-            expect(sender1LastHit).toBe(5n);
+            expect(sender1LastHit).toBe(6n);
 
             // Attacker 2 can attack immediately (different account)
             attack({testbed, signa: 100n, sender: Context.SenderAccount2})
             const sender2LastHit = testbed.getContractMapValue(Context.Maps.AttackersLastAttack, Context.SenderAccount2)
-            expect(sender2LastHit).toBe(7n);
+            expect(sender2LastHit).toBe(8n);
 
             expect(getCurrentHitpoints(testbed)).toBeLessThan(hpAfterFirst);
         })
