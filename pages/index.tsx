@@ -9,7 +9,6 @@ import {fetchLeaderboard} from './api/leaderboard/fetchLeaderboard';
 import {GetStaticProps} from 'next';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import process from 'process';
-import Link from 'next/link';
 
 // ISR: Statically generate homepage and regenerate every 30 minutes
 export const getStaticProps: GetStaticProps = async () => {

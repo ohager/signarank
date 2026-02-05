@@ -12,7 +12,16 @@ import "nprogress/nprogress.css";
 import {useEffect} from 'react';
 import {useRouter} from 'next/router';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            retry: 1,
+            staleTime: 20 * 1000, // 20 seconds
+        },
+    },
+});
 function App({Component, pageProps}: AppProps) {
     const router = useRouter();
     useEffect(() => {

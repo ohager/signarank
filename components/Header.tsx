@@ -3,11 +3,13 @@ import React from 'react';
 import styles from '../styles/Header.module.scss';
 import {ConnectButton} from '@components/ConnectButton';
 import {useSeasonInfo} from "@hooks/useSeasonInfo";
+import {SeasonBanner} from '@components/SeasonBanner';
 
 const isTestnet = process.env.NEXT_PUBLIC_SIGNUM_NETWORK === "Signum-TESTNET"
 
 const Header = () => {
-    const {name, isCurrent, description} = useSeasonInfo()
+    const {name} = useSeasonInfo()
+
     return (
         <div className={`${styles.header} header`}>
             <h1>
@@ -18,15 +20,13 @@ const Header = () => {
           {isTestnet && <span className={styles.pill} style={{backgroundColor: 'red'}}>TESTNET</span>}
       </span>
             </h1>
-            {isCurrent && description && (
-                <div className={styles.seasonBanner}>
-                    <span className={styles.seasonName}>{name}</span>
-                    <p className={styles.seasonDescription}>{description}</p>
-                </div>
-            )}
+            <SeasonBanner />
             <ul>
                 <li>
                     <Link href="/"><a>Home</a></Link>
+                </li>
+                <li>
+                    <Link href="/season"><a>Season</a></Link>
                 </li>
                 <li>
                     <Link href="/leaderboard"><a>Leaderboard</a></Link>
