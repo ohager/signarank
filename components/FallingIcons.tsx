@@ -1,7 +1,11 @@
 import React from 'react';
 import styles from '../styles/Snowfall.module.scss';
 
-const Snowfall: React.FC = () => {
+interface FallingIconsProps {
+    emojis: string[]
+}
+
+const FallingIcons = ({emojis}: FallingIconsProps) => {
     // Create multiple snowflakes with different animations
     const snowflakes = Array.from({ length: 50 }, (_, i) => i);
 
@@ -20,11 +24,11 @@ const Snowfall: React.FC = () => {
                         '--rotation': `${Math.random() * 360}deg`
                     } as React.CSSProperties}
                 >
-                    ❄
+                    {emojis[Math.floor(Math.random() * emojis.length)]}
                 </div>
             ))}
         </div>
     );
 };
 
-export default Snowfall;
+export default FallingIcons;

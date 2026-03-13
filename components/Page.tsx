@@ -3,7 +3,7 @@ import {ReactNode} from 'react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 import VideoBackground from '../components/VideoBackground'
-import Snowfall from '../components/Snowfall'
+import FallingIcons from './FallingIcons'
 import styles from '../styles/Home.module.scss'
 import seasonsData from '../lib/seasons.json'
 
@@ -20,12 +20,12 @@ interface PageProps {
 
 const Page = (props: PageProps) => {
     // Get the video URL from seasons data
-    const videoUrl = seasonsData.frostfest?.background || '';
+    const videoUrl = seasonsData.bloombrawl?.background || '';
 
     return (
         <div className={styles.container}>
             {videoUrl && <VideoBackground videoUrl={videoUrl} />}
-            <Snowfall />
+            <FallingIcons emojis={['🌼','🌺', '🌸']} />
             <Head>
                 <title>{props.title}</title>
                 <title>SignaRank - Check your Signum Blockchain Score</title>
