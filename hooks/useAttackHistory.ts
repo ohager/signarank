@@ -2,9 +2,7 @@ import { useQuery } from 'react-query';
 import { AttackRecord } from '@lib/construct/types';
 import { POLLING_INTERVALS } from '@lib/construct/constants';
 import { useSignumLedger } from './useSignumLedger';
-
-// Signum blockchain epoch (August 11, 2014)
-const SIGNUM_EPOCH_MS = 1407722400000;
+import {ChainTime} from "@signumjs/util";
 
 interface UseAttackHistoryResult {
     attacks: AttackRecord[];
@@ -55,7 +53,7 @@ export const useAttackHistory = (
                     attacker: transfer.recipientRS,
                     attackerName,
                     damage: parseInt(transfer.quantityQNT || '0'),
-                    timestamp: (transfer.timestamp * 1000) + SIGNUM_EPOCH_MS,
+                    timestamp: ChainTime.fromChainTimestamp(transfer.timestamp).getEpoch(),
                     blockHeight: transfer.height,
                 });
             }

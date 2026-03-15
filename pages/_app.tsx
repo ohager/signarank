@@ -12,6 +12,10 @@ import "nprogress/nprogress.css";
 import {useEffect} from 'react';
 import {useRouter} from 'next/router';
 
+import {Crypto} from "@signumjs/crypto"
+import {WebCryptoAdapter} from "@signumjs/crypto/adapters";
+
+
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
@@ -25,6 +29,7 @@ const queryClient = new QueryClient({
 function App({Component, pageProps}: AppProps) {
     const router = useRouter();
     useEffect(() => {
+        Crypto.init(new WebCryptoAdapter())
         NProgress.configure({ showSpinner: false, easing: "ease", speed: 400 });
 
         router.events.on("routeChangeStart", () => {

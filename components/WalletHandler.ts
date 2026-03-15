@@ -2,14 +2,14 @@ import { useAppDispatch} from "@states/hooks";
 import { actions as appActions } from "@states/appState";
 import { useEffect, useRef } from "react";
 import {
-    GenericExtensionWallet, InvalidNetworkError,
-    WalletConnection,
+    ExtensionWallet,
+    ExtensionWalletConnection, InvalidNetworkError,
 } from "@signumjs/wallets";
 import {useAppContext} from '@hooks/useAppContext';
 
 export const WalletHandler = () => {
     const listenerRef = useRef<any>(null);
-    const connectionRef = useRef<WalletConnection | null>(null);
+    const connectionRef = useRef<ExtensionWalletConnection | null>(null);
     const dispatch = useAppDispatch();
     const { Ledger, Wallet } = useAppContext();
 
@@ -17,7 +17,7 @@ export const WalletHandler = () => {
         function handleDisconnectWallet() {
             listenerRef.current?.unlisten();
             dispatch(appActions.setConnectedAccount(null));
-            Wallet.Extension = new GenericExtensionWallet();
+            Wallet.Extension = new ExtensionWallet();
         }
 
         function onNetworkChange(args: any) {
