@@ -1,13 +1,16 @@
 import {Button} from '@components/Button';
-import {requestWalletConnection} from '@lib/requestWalletConnection';
+import {requestWalletConnection, requestMobileWalletConnection} from '@lib/requestWalletConnection';
 import styles from './connectButton.module.scss';
 import {AddressInput} from '@components/AddressInput';
 import {useCallback, useMemo, useState} from 'react';
 import {useAppDispatch, useAppSelector} from '@states/hooks';
 import {selectConnectedAccount, actions, selectWalletError} from '@states/appState';
 import {useAddressPrefix} from '@hooks/useAddressPrefix';
+import {useIsMobile} from '@hooks/useIsMobile';
+import {useAppContext} from '@hooks/useAppContext';
 import {Address} from '@signumjs/core';
 import {useSignumLedger} from '@hooks/useSignumLedger';
+import {useRouter} from 'next/router';
 
 interface Props {
     withAddressInput?: boolean
@@ -22,6 +25,9 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
     const ledger  = useSignumLedger()
     const dispatch = useAppDispatch()
     const prefix = useAddressPrefix()
+    const isMobile = useIsMobile()
+    const {Wallet, Ledger} = useAppContext()
+    const router = useRouter()
 
     const onAddressChange = (e: any) => {
         setError('')
@@ -68,17 +74,37 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
         return Address.fromPublicKey(connectedAccount, prefix).getReedSolomonAddress()
     }, [connectedAccount])
 
+    const accountId = useMemo(() => {
+        if (!connectedAccount) return null;
+        return Address.fromPublicKey(connectedAccount).getNumericId()
+    }, [connectedAccount])
+
+    const handleConnect = () => {
+        if (isMobile) {
+            requestMobileWalletConnection(Wallet.Mobile, Ledger.Network, router.asPath);
+        } else {
+            requestWalletConnection();
+        }
+    }
+
+    const handleCheckRank = () => {
+        if (accountId) {
+            router.push(`/address/${accountId}`)
+        }
+    }
+
     return connectedAddress
         ? (
             <div className={styles.accountWrapper}>
                 <div>You are connected with</div>
                 <div className={styles.address}>{connectedAddress}</div>
+                <Button onClick={handleCheckRank} label="Check your Rank"/>
             </div>
         )
 
         : (
             <div className={styles.connectButtonWrapper}>
-                <Button onClick={requestWalletConnection} label="Connect Wallet"/>
+                <Button onClick={handleConnect} label="Connect Wallet"/>
                 {walletError && <div className={styles.walletError}>{walletError}</div> }
                 {
                     withAddressInput && (

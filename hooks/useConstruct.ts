@@ -1,28 +1,9 @@
-import { useQuery } from 'react-query';
-import { ConstructData, ConstructMeta } from '@lib/construct/types';
-import { ConstructCache } from '@lib/construct/cache';
-import { R2_CDN_BASE, POLLING_INTERVALS } from '@lib/construct/constants';
-import { useSignumLedger } from './useSignumLedger';
-
-// TODO: Replace with real contract reading when helper library is provided
-const MOCK_CONSTRUCT: ConstructData = {
-    contractId: '12345678901234567890',
-    name: 'CT000001',
-    description: 'A fearsome construct awaiting challengers.',
-    imageUrl: `${R2_CDN_BASE}/bafybeicus73ymjljts2wkkkn4cqzo2khzaplj6zkheei4hka54dgrqz6sm`,
-    currentHp: 35000,
-    maxHp: 50000,
-    coolDownInBlocks: 15,
-    baseDamageRatio: 10,
-    breachLimit: 20,
-    isActive: true,
-    isDefeated: false,
-    xpTokenId: '1000',
-    hpTokenId: '1001',
-    rewardNftId: null,
-    firstBloodAccount: null,
-    finalBlowAccount: null,
-};
+import {useQuery} from 'react-query';
+import {ConstructData} from '@lib/construct/types';
+import {ConstructCache} from '@lib/construct/cache';
+import {R2_CDN_BASE, POLLING_INTERVALS} from '@lib/construct/constants';
+import {useSignumLedger} from './useSignumLedger';
+import {ReadOnlyPlayer} from "@signarank/client"
 
 interface UseConstructResult {
     construct: ConstructData | null;
@@ -34,73 +15,93 @@ interface UseConstructResult {
 export const useConstruct = (contractId: string | null): UseConstructResult => {
     const ledger = useSignumLedger();
 
-    const { data: construct, isLoading: loading, error: queryError, refetch } = useQuery(
+    const {data: construct, isLoading: loading, error: queryError, refetch} = useQuery(
         ['construct', contractId],
         async () => {
             if (!contractId) return null;
+            if (!ledger) return null;
 
-            // Check cache first for static metadata
-            const cachedMeta = ConstructCache.getConstructMeta(contractId);
             const cachedDefeated = ConstructCache.getDefeatedStatus(contractId);
+            if (cachedDefeated) {
+                const cachedMeta = ConstructCache.getConstructMeta(contractId);
+                if (cachedMeta) {
+                    return {
+                        contractId,
+                        name: cachedMeta.name,
+                        description: cachedMeta.description,
+                        imageUrl: cachedMeta.imageUrl,
+                        maxHp: cachedMeta.maxHp,
+                        coolDownInBlocks: cachedMeta.coolDownInBlocks,
+                        currentHp: 0,
+                        baseDamageRatio: 0,
+                        breachLimit: 0,
+                        isActive: false,
+                        isDefeated: true,
+                        xpTokenId: '',
+                        hpTokenId: '',
+                        rewardNftId: null,
+                        firstBloodAccount: cachedDefeated.firstBloodAccount,
+                        finalBlowAccount: cachedDefeated.finalBlowAccount,
+                    } as ConstructData;
+                }
+            }
 
-            // TODO: When helper library is provided, replace this with real contract reads
-            // For now, use mock data
-            // const contractData = await helperLibrary.getConstructStatus(ledger, contractId);
+            const player = new ReadOnlyPlayer({ledger, accountId: ''});
+            const instance = player.constructService.with(contractId);
+            const [metadata, status] = await Promise.all([
+                instance.getMetadata(),
+                instance.getStatus(),
+            ]);
 
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const imageUrl = metadata.avatar
+                ? `${R2_CDN_BASE}/${metadata.avatar.ipfsCid}`
+                : '';
 
-            // Use mock data for now
-            const mockData = {
-                ...MOCK_CONSTRUCT,
+            const data: ConstructData = {
                 contractId,
-                // If we have cached metadata, use it
-                ...(cachedMeta && {
-                    name: cachedMeta.name,
-                    description: cachedMeta.description,
-                    imageUrl: cachedMeta.imageUrl,
-                    maxHp: cachedMeta.maxHp,
-                    coolDownInBlocks: cachedMeta.coolDownInBlocks,
-                }),
+                name: metadata.name,
+                description: metadata.description,
+                imageUrl,
+                currentHp: Number(status.hitpoints),
+                maxHp: status.maxHp,
+                coolDownInBlocks: status.coolDownInBlocks,
+                baseDamageRatio: status.baseDamageRatio,
+                breachLimit: status.breachLimit,
+                isActive: status.isActive,
+                isDefeated: status.isDefeated,
+                xpTokenId: status.xpTokenId,
+                hpTokenId: status.hpTokenId,
+                rewardNftId: status.rewardNftId || null,
+                firstBloodAccount: status.firstBloodAccount || null,
+                finalBlowAccount: status.finalBlowAccount || null,
             };
 
-            // If defeated status is cached, use it
-            if (cachedDefeated) {
-                mockData.isDefeated = true;
-                mockData.firstBloodAccount = cachedDefeated.firstBloodAccount;
-                mockData.finalBlowAccount = cachedDefeated.finalBlowAccount;
-            }
+            ConstructCache.setConstructMeta(contractId, {
+                contractId,
+                name: data.name,
+                description: data.description,
+                imageUrl: data.imageUrl,
+                maxHp: data.maxHp,
+                coolDownInBlocks: data.coolDownInBlocks,
+            });
 
-            // Cache static metadata if not already cached
-            if (!cachedMeta) {
-                ConstructCache.setConstructMeta(contractId, {
-                    contractId,
-                    name: mockData.name,
-                    description: mockData.description,
-                    imageUrl: mockData.imageUrl,
-                    maxHp: mockData.maxHp,
-                    coolDownInBlocks: mockData.coolDownInBlocks,
-                });
-            }
-
-            // Cache defeated status if construct is defeated
-            if (mockData.isDefeated && !cachedDefeated) {
+            if (data.isDefeated) {
                 ConstructCache.setDefeatedStatus(contractId, {
                     contractId,
-                    finalBlowAccount: mockData.finalBlowAccount || '',
-                    firstBloodAccount: mockData.firstBloodAccount || '',
+                    finalBlowAccount: data.finalBlowAccount || '',
+                    firstBloodAccount: data.firstBloodAccount || '',
                     defeatedAt: Date.now(),
                 });
             }
 
-            return mockData;
+            return data;
         },
         {
-            enabled: !!contractId,
-            staleTime: 20 * 1000, // Consider data fresh for 20 seconds
-            refetchInterval: POLLING_INTERVALS.currentHp, // Refetch every 30 seconds
-            refetchOnWindowFocus: false, // Don't refetch on window focus
-            keepPreviousData: true, // Keep previous data while fetching new data (prevents flashing)
+            enabled: !!contractId && !!ledger,
+            staleTime: 20 * 1000,
+            refetchInterval: POLLING_INTERVALS.currentHp,
+            refetchOnWindowFocus: false,
+            keepPreviousData: true,
         }
     );
 
@@ -108,6 +109,8 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
         construct: construct ?? null,
         loading,
         error: queryError ? String(queryError) : null,
-        refetch: () => { refetch(); }
+        refetch: () => {
+            refetch();
+        }
     };
 };

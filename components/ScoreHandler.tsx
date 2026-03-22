@@ -3,12 +3,10 @@ import {useQuery} from 'react-query';
 import {useAppSelector} from '@states/hooks';
 import {selectConnectedAccount} from '@states/appState';
 import {Address} from '@signumjs/core';
-import {useRouter} from 'next/router';
 import NProgress from "nprogress";
 
 export const ScoreHandler: React.FC = ({children}) => {
     const account = useAppSelector(selectConnectedAccount)
-    const router = useRouter()
 
     const accountId = useMemo(() => {
         if (!account) return null;
@@ -23,10 +21,9 @@ export const ScoreHandler: React.FC = ({children}) => {
         }
     )
     useEffect(() => {
-        if (data && accountId) {
-            router.push(`/address/${accountId}`)
+        if (data) {
+            NProgress.done();
         }
-
     }, [data])
 
     return (

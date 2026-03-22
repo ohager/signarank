@@ -1,5 +1,7 @@
+const withTM = require('next-transpile-modules')(['@signarank/client']);
+
 /** @type {import('next').NextConfig} */
-module.exports = {
+module.exports = withTM({
   reactStrictMode: true,
   webpack: (config) => {
     config.module.rules.push({
@@ -11,4 +13,4 @@ module.exports = {
     });
     return config;
   },
-}
+})
