@@ -12,10 +12,11 @@ const WalletConnectedPage = () => {
 
     useEffect(() => {
         try {
-            const {publicKey, status} = MobileWallet.parseConnectCallback();
+
+            const {publicKey} = MobileWallet.parseConnectCallback();
             const returnUrl = (router.query.returnUrl as string) || '/';
 
-            if (status === 'success' && publicKey) {
+            if (publicKey) {
                 dispatch(appActions.setConnectedAccount(publicKey));
                 router.replace(returnUrl);
             } else if (status === 'rejected') {
