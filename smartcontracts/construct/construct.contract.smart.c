@@ -141,7 +141,7 @@ void init(){
 
 void main() {
 
-    if(hpTokenId != ZERO && getCurrentHitpoints() == ZERO) {
+    if(!isDefeated && hpTokenId != ZERO && getCurrentHitpoints() == ZERO) {
         mintAsset(maxHp, hpTokenId);
         return; // Let mint finalize before processing transactions
     }
