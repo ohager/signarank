@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useState, useEffect} from 'react';
 import styles from '../styles/Snowfall.module.scss';
 
 interface FallingIconsProps {
@@ -6,16 +6,26 @@ interface FallingIconsProps {
 }
 
 const FallingIcons = React.memo(({emojis}: FallingIconsProps) => {
-    const snowflakes = useMemo(() =>
-        Array.from({length: 50}, () => ({
-            left: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 10}s`,
-            animationDuration: `${10 + Math.random() * 20}s`,
-            opacity: 0.3 + Math.random() * 0.7,
-            fontSize: `${10 + Math.random() * 20}px`,
-            rotation: `${Math.random() * 360}deg`,
-            emoji: emojis[Math.floor(Math.random() * emojis.length)],
-        })), [emojis]);
+    const [snowflakes, setSnowflakes] = useState<Array<{
+        left: string; animationDelay: string; animationDuration: string;
+        opacity: number; fontSize: string; rotation: string; emoji: string;
+    }>>([]);
+
+    useEffect(() => {
+        setSnowflakes(
+            Array.from({length: 50}, () => ({
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 10}s`,
+                animationDuration: `${10 + Math.random() * 20}s`,
+                opacity: 0.3 + Math.random() * 0.7,
+                fontSize: `${10 + Math.random() * 20}px`,
+                rotation: `${Math.random() * 360}deg`,
+                emoji: emojis[Math.floor(Math.random() * emojis.length)],
+            }))
+        );
+    }, [emojis]);
+
+    if (snowflakes.length === 0) return null;
 
     return (
         <div className={styles.snowfall}>
