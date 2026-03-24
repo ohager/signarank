@@ -13,7 +13,7 @@ const WalletConnectedPage = () => {
     useEffect(() => {
         try {
 
-            const {publicKey} = MobileWallet.parseConnectCallback();
+            const {publicKey, status} = MobileWallet.parseConnectCallback();
             const returnUrl = (router.query.returnUrl as string) || '/';
 
             if (publicKey) {
