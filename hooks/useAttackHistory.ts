@@ -1,4 +1,4 @@
-import {useQuery} from 'react-query';
+import {useQuery} from '@tanstack/react-query';
 import {AttackRecord} from '@lib/construct/types';
 import {getSignaRankTokenId, POLLING_INTERVALS} from '@lib/construct/constants';
 import {resolveAccount} from '@lib/construct/accountCache';
@@ -16,25 +16,23 @@ export const useAttackHistory = (
 ): UseAttackHistoryResult => {
     const ledger = useSignumLedger();
 
-    const {data: attacks = [], isLoading: loading, error: queryError} = useQuery(
-        ['attackHistory', contractId, xpTokenId],
-        async () => {
+    const {data: attacks = [], isLoading: loading, error: queryError} = useQuery({
+        queryKey: ['attackHistory', contractId, xpTokenId],
+        queryFn: async () => {
             if (!ledger || !contractId || !xpTokenId) {
                 return [];
             }
 
-            // Get XP token transfers FROM the contract (outgoing = damage dealt)
             const transfers = await ledger.asset.getAssetTransfers({
                 assetId: xpTokenId,
                 accountId: contractId,
                 firstIndex: 0,
-                lastIndex: 50, // Last 10
+                lastIndex: 50,
             });
 
             const attackRecords: AttackRecord[] = [];
             const signaRankTokenId = getSignaRankTokenId()
             for (const transfer of transfers.transfers || []) {
-                // Only include outgoing transfers (contract is sender)
                 if (transfer.sender !== contractId) continue;
                 if (attackRecords.length >= 10) break;
 
@@ -57,14 +55,12 @@ export const useAttackHistory = (
 
             return attackRecords;
         },
-        {
-            enabled: !!ledger && !!contractId && !!xpTokenId,
-            staleTime: 30 * 1000, // Consider data fresh for 30 seconds
-            refetchInterval: POLLING_INTERVALS.attackHistory, // Refetch every 60 seconds
-            refetchOnWindowFocus: false,
-            keepPreviousData: true, // Prevents flashing
-        }
-    );
+        enabled: !!ledger && !!contractId && !!xpTokenId,
+        staleTime: 30 * 1000,
+        refetchInterval: POLLING_INTERVALS.attackHistory,
+        refetchOnWindowFocus: false,
+        placeholderData: (prev: any) => prev,
+    });
 
     return {
         attacks,

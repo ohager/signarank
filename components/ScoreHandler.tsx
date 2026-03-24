@@ -1,11 +1,11 @@
-import React, {useMemo, useEffect} from 'react';
-import {useQuery} from 'react-query';
+import React, {useMemo, useEffect, PropsWithChildren} from 'react';
+import {useQuery} from '@tanstack/react-query';
 import {useAppSelector} from '@states/hooks';
 import {selectConnectedAccount} from '@states/appState';
 import {Address} from '@signumjs/core';
 import NProgress from "nprogress";
 
-export const ScoreHandler: React.FC = ({children}) => {
+export const ScoreHandler: React.FC<PropsWithChildren> = ({children}) => {
     const account = useAppSelector(selectConnectedAccount)
 
     const accountId = useMemo(() => {
@@ -14,12 +14,15 @@ export const ScoreHandler: React.FC = ({children}) => {
     }, [account])
 
 
-    const {data} = useQuery(`score-${accountId}`, () => {
+    const {data} = useQuery({
+        queryKey: ['score', accountId],
+        queryFn: () => {
             if(!accountId) return;
             NProgress.start();
             return fetch(`/api/score/${accountId}`).then(res => res.json())
-        }
-    )
+        },
+        enabled: !!accountId,
+    })
     useEffect(() => {
         if (data) {
             NProgress.done();

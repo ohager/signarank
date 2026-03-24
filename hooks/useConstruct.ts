@@ -1,4 +1,4 @@
-import {useQuery} from 'react-query';
+import {useQuery} from '@tanstack/react-query';
 import {ConstructData} from '@lib/construct/types';
 import {ConstructCache} from '@lib/construct/cache';
 import {R2_CDN_BASE, POLLING_INTERVALS} from '@lib/construct/constants';
@@ -15,9 +15,9 @@ interface UseConstructResult {
 export const useConstruct = (contractId: string | null): UseConstructResult => {
     const ledger = useSignumLedger();
 
-    const {data: construct, isLoading: loading, error: queryError, refetch} = useQuery(
-        ['construct', contractId],
-        async () => {
+    const {data: construct, isLoading: loading, error: queryError, refetch} = useQuery({
+        queryKey: ['construct', contractId],
+        queryFn: async () => {
             if (!contractId) return null;
             if (!ledger) return null;
 
@@ -36,7 +36,7 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
             const imageUrl = metadata.avatar
                 ? `${R2_CDN_BASE}/${metadata.avatar.ipfsCid}`
                 : '';
-            
+
             const data: ConstructData = {
                 contractId,
                 name: metadata.name,
@@ -77,14 +77,12 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
 
             return data;
         },
-        {
-            enabled: !!contractId && !!ledger,
-            staleTime: 20 * 1000,
-            refetchInterval: POLLING_INTERVALS.currentHp,
-            refetchOnWindowFocus: false,
-            keepPreviousData: true,
-        }
-    );
+        enabled: !!contractId && !!ledger,
+        staleTime: 20 * 1000,
+        refetchInterval: POLLING_INTERVALS.currentHp,
+        refetchOnWindowFocus: false,
+        placeholderData: (prev: any) => prev,
+    });
 
     return {
         construct: construct ?? null,

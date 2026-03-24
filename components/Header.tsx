@@ -15,7 +15,7 @@ const Header = () => {
             <h1>
       <span className={styles.logo}>
         <img src='/signum-logo.svg' height={32} alt='Signum Logo'/>
-        <Link href="/"><a>&nbsp;SIGNArank</a></Link>
+        <Link href="/">&nbsp;SIGNArank</Link>
           <span className={styles.pill}>{name}</span>
           {isTestnet && <span className={styles.pill} style={{backgroundColor: 'red'}}>TESTNET</span>}
       </span>
@@ -23,13 +23,13 @@ const Header = () => {
             <SeasonBanner/>
             <ul>
                 <li>
-                    <Link href="/"><a>Home</a></Link>
+                    <Link href="/">Home</Link>
                 </li>
                 <li>
-                    <Link href="/season"><a>Season</a></Link>
+                    <Link href="/season">Season</Link>
                 </li>
                 <li>
-                    <Link href="/leaderboard"><a>Leaderboard</a></Link>
+                    <Link href="/leaderboard">Leaderboard</Link>
                 </li>
             </ul>
             <div className={styles.btn}>

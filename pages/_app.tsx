@@ -1,6 +1,6 @@
 import '../styles/globals.scss'
 import type {AppProps} from 'next/app'
-import {QueryClient, QueryClientProvider} from 'react-query'
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 import {Provider as ReduxProvider} from 'react-redux';
 import {store} from '@states/store';
 import {AppContextProvider} from '@components/contexts/AppContext';

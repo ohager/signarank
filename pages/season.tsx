@@ -69,51 +69,49 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({ contractId, n
     const isDefeated = construct.isDefeated;
 
     return (
-        <Link href={`/construct/${construct.contractId}`}>
-            <a style={{ textDecoration: 'none' }}>
-                <div
-                    className={`${styles.constructCard} ${
-                        isActive ? styles.active : isDefeated ? styles.defeated : ''
-                    }`}
-                >
-                    <div className={styles.cardImage}>
-                        <img src={construct.imageUrl} alt={construct.name} />
-                        {isActive && <div className={styles.activeBadge}>⚡ ACTIVE</div>}
-                        {isDefeated && <div className={styles.defeatedBadge}>💀 DEFEATED</div>}
-                    </div>
-                    <div className={styles.cardContent}>
-                        <h3 className={styles.cardTitle}>{construct.name}</h3>
-                        <div className={styles.hpInfo}>
-                            <div className={styles.hpLabel}>
-                                <span>HP</span>
-                                <span>
-                                    {construct.currentHp.toLocaleString()} / {construct.maxHp.toLocaleString()}
-                                </span>
-                            </div>
-                            <div className={styles.hpBar}>
-                                <div
-                                    className={styles.hpFill}
-                                    style={{
-                                        width: `${hpPercent * 100}%`,
-                                        backgroundColor:
-                                            hpPercent > 0.5
-                                                ? '#4ade80'
-                                                : hpPercent > 0.25
-                                                ? '#fbbf24'
-                                                : '#ef4444',
-                                    }}
-                                />
-                            </div>
-                        </div>
-                        {isActive && <div className={styles.cardCta}>Attack Now →</div>}
-                        {isDefeated && construct.finalBlowAccount && (
-                            <div className={styles.victorInfo}>
-                                Victor: {construct.finalBlowAccount.slice(0, 10)}...
-                            </div>
-                        )}
-                    </div>
+        <Link href={`/construct/${construct.contractId}`} style={{ textDecoration: 'none' }}>
+            <div
+                className={`${styles.constructCard} ${
+                    isActive ? styles.active : isDefeated ? styles.defeated : ''
+                }`}
+            >
+                <div className={styles.cardImage}>
+                    <img src={construct.imageUrl} alt={construct.name} />
+                    {isActive && <div className={styles.activeBadge}>⚡ ACTIVE</div>}
+                    {isDefeated && <div className={styles.defeatedBadge}>💀 DEFEATED</div>}
                 </div>
-            </a>
+                <div className={styles.cardContent}>
+                    <h3 className={styles.cardTitle}>{construct.name}</h3>
+                    <div className={styles.hpInfo}>
+                        <div className={styles.hpLabel}>
+                            <span>HP</span>
+                            <span>
+                                {construct.currentHp.toLocaleString()} / {construct.maxHp.toLocaleString()}
+                            </span>
+                        </div>
+                        <div className={styles.hpBar}>
+                            <div
+                                className={styles.hpFill}
+                                style={{
+                                    width: `${hpPercent * 100}%`,
+                                    backgroundColor:
+                                        hpPercent > 0.5
+                                            ? '#4ade80'
+                                            : hpPercent > 0.25
+                                            ? '#fbbf24'
+                                            : '#ef4444',
+                                }}
+                            />
+                        </div>
+                    </div>
+                    {isActive && <div className={styles.cardCta}>Attack Now →</div>}
+                    {isDefeated && construct.finalBlowAccount && (
+                        <div className={styles.victorInfo}>
+                            Victor: {construct.finalBlowAccount.slice(0, 10)}...
+                        </div>
+                    )}
+                </div>
+            </div>
         </Link>
     );
 };

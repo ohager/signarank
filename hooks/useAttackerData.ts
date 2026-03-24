@@ -1,4 +1,4 @@
-import {useQuery} from 'react-query';
+import {useQuery} from '@tanstack/react-query';
 import {useSignumLedger} from './useSignumLedger';
 import {getSignaRankTokenId} from "@lib/construct/constants";
 import {Address} from "@signumjs/core";
@@ -6,9 +6,9 @@ import {Address} from "@signumjs/core";
 export const useAttackerData = (accountId: string | null | undefined) => {
     const ledger = useSignumLedger();
 
-    const {data} = useQuery(
-        ['accountName', accountId],
-        async () => {
+    const {data} = useQuery({
+        queryKey: ['accountName', accountId],
+        queryFn: async () => {
             if (!ledger || !accountId) return null;
             try {
                 const account = await ledger.account.getAccount({accountId});
@@ -27,13 +27,11 @@ export const useAttackerData = (accountId: string | null | undefined) => {
                 };
             }
         },
-        {
-            enabled: !!ledger && !!accountId,
-            staleTime: Infinity,
-            cacheTime: Infinity,
-            refetchOnWindowFocus: false,
-        }
-    );
+        enabled: !!ledger && !!accountId,
+        staleTime: Infinity,
+        gcTime: Infinity,
+        refetchOnWindowFocus: false,
+    });
 
     return data ?? null;
 };

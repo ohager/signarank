@@ -8,13 +8,13 @@ interface Props {
 }
 
 export const AddressInput: React.FC<Props> = ({onChange, onEnter, value}) => {
-    const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if(onEnter && e.key === 'Enter') {
             onEnter()
         }
     }
 
     return (
-        <TextField placeholder="Enter Address, or Id" onChange={onChange} value={value} onKeyPress={handleKeyPress} />
+        <TextField placeholder="Enter Address, or Id" onChange={onChange} value={value} onKeyDown={handleKeyDown} />
     )
 }

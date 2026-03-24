@@ -1,4 +1,4 @@
-import { FC, createContext } from "react";
+import { FC, createContext, PropsWithChildren } from "react";
 import {ExtensionWallet, MobileWallet} from '@signumjs/wallets';
 
 const toStringArray = (csv: any = ""): Array<string> => csv.length ? csv.split(",") :[];
@@ -31,6 +31,6 @@ console.debug('Config', JSON.stringify(config))
 
 export const AppContext = createContext<AppContextType>(config);
 
-export const AppContextProvider: FC = ({ children }) => {
+export const AppContextProvider: FC<PropsWithChildren> = ({ children }) => {
   return <AppContext.Provider value={config}>{children}</AppContext.Provider>;
 };

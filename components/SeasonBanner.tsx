@@ -26,14 +26,12 @@ export const SeasonBanner: React.FC = () => {
     return (
         <div className={styles.seasonBanner}>
             {!loading && construct && construct.imageUrl && (
-                <Link href={`/construct/${construct.contractId}`}>
-                    <a className={styles.constructAvatar}>
-                        <img
-                            src={construct.imageUrl}
-                            alt={construct.name}
-                            title={`Fight ${construct.name}`}
-                        />
-                    </a>
+                <Link href={`/construct/${construct.contractId}`} className={styles.constructAvatar}>
+                    <img
+                        src={construct.imageUrl}
+                        alt={construct.name}
+                        title={`Fight ${construct.name}`}
+                    />
                 </Link>
             )}
             <div className={styles.seasonContent}>

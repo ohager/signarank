@@ -7,7 +7,7 @@ const Terms = ({ }) => {
       <div>
         <h3>Terms of Use</h3>
         <p>This mobile Website (the “Website”) is made available by Examp, LLC, 1267 Willis St. Ste 200, Redding CA 96001.</p>
-        <p>You, the user of the Website, confirm your acceptance of these Website terms of use (“Website Terms”).&nbsp;If you do not agree to these Website Terms, you must immediately leave the Website and discontinue its use.&nbsp; These Website Terms should be read alongside our <Link href="/privacy"><a>Privacy Policy</a></Link>.</p>
+        <p>You, the user of the Website, confirm your acceptance of these Website terms of use (“Website Terms”).&nbsp;If you do not agree to these Website Terms, you must immediately leave the Website and discontinue its use.&nbsp; These Website Terms should be read alongside our <Link href="/privacy">Privacy Policy</Link>.</p>
         <p><strong><u><a id="general"></a>General Terms&nbsp;</u></strong></p>
         <p><strong>Website and Related Terms</strong>&nbsp;&nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;</p>
         <p>We may from time to time vary these Website Terms. Please check these Website Terms regularly to ensure you are aware of any variations made by us. If you continue to use this Website, you are deemed to have accepted such variations. If you do not agree to such variations, you should not use the Website.</p>

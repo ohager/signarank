@@ -55,7 +55,7 @@ const ConstructPage = () => {
                         <h2>Failed to load construct</h2>
                         <p>{error || 'Construct not found'}</p>
                         <Link href="/">
-                            <a>Return to Home</a>
+                            Return to Home
                         </Link>
                     </div>
                 </div>
