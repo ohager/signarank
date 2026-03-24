@@ -36,26 +36,19 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
 
     const fetchAccountsPublicKey = useCallback(async () => {
 
-        let publicKey = null;
+        if(!ledger) return;
+
         try{
             const  accountId = Address.create(address).getNumericId()
-            // TOOD: fetch by alias
-            // @ts-ignore
-            const { publicKey : pk} = await ledger?.account.getAccount({
+            const {publicKey} = await ledger.account.getAccount({
                 accountId
             })
-
-            if(pk && !pk.startsWith('000000000000000')){
-                publicKey = pk
-            }
+            return publicKey;
         }catch(e){
             // ignore
         }
 
-        if(!publicKey){
-            setError('Invalid or unknown account')
-        }
-        return  publicKey
+        setError('Invalid or unknown account')
     }, [ledger, address])
 
     const onAddressEnter = async (e: any) => {

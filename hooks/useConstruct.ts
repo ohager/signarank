@@ -109,8 +109,6 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
         construct: construct ?? null,
         loading,
         error: queryError ? String(queryError) : null,
-        refetch: () => {
-            refetch();
-        }
+        refetch
     };
 };

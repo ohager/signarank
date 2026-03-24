@@ -16,7 +16,7 @@ export const requestMobileWalletConnection = (
     const callbackUrl = `${window.location.origin}/wallet/connected?returnUrl=${encodeURIComponent(returnUrl)}`;
     mobileWallet.connect({
         callbackUrl,
-        appName: 'signarank.io',
+        appName: 'signarank.club',
         network: network.toLowerCase().includes('testnet') ? 'testnet' : 'mainnet',
     });
 };
