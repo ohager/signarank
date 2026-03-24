@@ -529,9 +529,32 @@
     }
 }
 
+.attackMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .attackTime {
     color: rgba(255, 255, 255, 0.5);
     font-size: 0.7rem;
+}
+
+.attackBlock {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.65rem;
+    font-family: monospace;
+}
+
+.explorerLink {
+    color: rgba(100, 180, 255, 0.7);
+    font-size: 0.65rem;
+    text-decoration: none;
+
+    &:hover {
+        color: rgba(100, 180, 255, 1);
+        text-decoration: underline;
+    }
 }
 
 .damageAmount {

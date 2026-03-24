@@ -1,8 +1,8 @@
-import { useQuery } from 'react-query';
-import { AttackRecord } from '@lib/construct/types';
-import { POLLING_INTERVALS } from '@lib/construct/constants';
-import { useSignumLedger } from './useSignumLedger';
-import {ChainTime} from "@signumjs/util";
+import {useQuery} from 'react-query';
+import {AttackRecord} from '@lib/construct/types';
+import {getSignaRankTokenId, POLLING_INTERVALS} from '@lib/construct/constants';
+import {resolveAccount} from '@lib/construct/accountCache';
+import {useSignumLedger} from './useSignumLedger';
 
 interface UseAttackHistoryResult {
     attacks: AttackRecord[];
@@ -16,7 +16,7 @@ export const useAttackHistory = (
 ): UseAttackHistoryResult => {
     const ledger = useSignumLedger();
 
-    const { data: attacks = [], isLoading: loading, error: queryError } = useQuery(
+    const {data: attacks = [], isLoading: loading, error: queryError} = useQuery(
         ['attackHistory', contractId, xpTokenId],
         async () => {
             if (!ledger || !contractId || !xpTokenId) {
@@ -28,32 +28,29 @@ export const useAttackHistory = (
                 assetId: xpTokenId,
                 accountId: contractId,
                 firstIndex: 0,
-                lastIndex: 9, // Last 10
+                lastIndex: 50, // Last 10
             });
 
             const attackRecords: AttackRecord[] = [];
-
+            const signaRankTokenId = getSignaRankTokenId()
             for (const transfer of transfers.transfers || []) {
                 // Only include outgoing transfers (contract is sender)
-                if (transfer.senderRS === transfer.recipientRS) continue;
+                if (transfer.sender !== contractId) continue;
+                if (attackRecords.length >= 10) break;
 
-                // Try to get attacker name
-                let attackerName: string | undefined;
-                try {
-                    const account = await ledger.account.getAccount({
-                        accountId: transfer.recipientRS,
-                    });
-                    attackerName = account.name;
-                } catch {
-                    // Account may not have a name
-                }
+                const resolved = await resolveAccount(ledger, transfer.recipient);
 
+                const {name: attackerName, assetBalances} = resolved!
+
+                const xpToken = assetBalances.find(ab => ab.asset === signaRankTokenId)
+                const attackerXp = Number(xpToken?.balanceQNT || 0)
                 attackRecords.push({
                     txId: transfer.assetTransfer,
                     attacker: transfer.recipientRS,
                     attackerName,
+                    attackerXp,
                     damage: parseInt(transfer.quantityQNT || '0'),
-                    timestamp: ChainTime.fromChainTimestamp(transfer.timestamp).getEpoch(),
+                    timestamp: transfer.timestamp,
                     blockHeight: transfer.height,
                 });
             }

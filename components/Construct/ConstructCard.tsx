@@ -1,5 +1,6 @@
 import React from 'react';
 import { ConstructData } from '@lib/construct/types';
+import { useAttackerData } from '@hooks/useAttackerData';
 import styles from '@styles/Construct.module.scss';
 
 interface ConstructCardProps {
@@ -7,6 +8,8 @@ interface ConstructCardProps {
 }
 
 export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
+    const finalBlowAttacker = useAttackerData(construct.finalBlowAccount);
+    const firstBloodAttacker = useAttackerData(construct.firstBloodAccount);
     const hpPercent = construct.currentHp / construct.maxHp;
     const hpColor = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
 
@@ -69,11 +72,14 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                     </div>
                 </div>
 
-                {construct.isDefeated && construct.finalBlowAccount && (
+                {construct.isDefeated && finalBlowAttacker && (
                     <div className={styles.victoryInfo}>
-                        <p>Final Blow: {construct.finalBlowAccount}</p>
-                        {construct.firstBloodAccount && (
-                            <p>First Blood: {construct.firstBloodAccount}</p>
+                        <p>Final Blow: {finalBlowAttacker.attacker ? `[${finalBlowAttacker.attackerName}] ` : ''}
+                            {finalBlowAttacker.attacker} ({finalBlowAttacker.attackerXp} XP)
+                        </p>
+                        {firstBloodAttacker && (
+                            <p>First Blood: {firstBloodAttacker.attacker ? `[${firstBloodAttacker.attackerName}] ` : ''}
+                                {firstBloodAttacker.attacker} ({firstBloodAttacker.attackerXp} XP)</p>
                         )}
                     </div>
                 )}

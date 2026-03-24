@@ -35,12 +35,15 @@ export interface DefeatedStatus {
     finalBlowAccount: string;
     firstBloodAccount: string;
     defeatedAt: number;
+    /** Full construct snapshot cached at time of defeat */
+    constructData?: ConstructData;
 }
 
 export interface AttackRecord {
     txId: string;
     attacker: string;
     attackerName?: string;
+    attackerXp: number;
     damage: number;
     timestamp: number;
     blockHeight: number;
