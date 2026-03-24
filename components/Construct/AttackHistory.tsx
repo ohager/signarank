@@ -1,5 +1,4 @@
 import React from 'react';
-import { AttackRecord } from '@lib/construct/types';
 import { useAttackHistory } from '@hooks/useAttackHistory';
 import styles from '@styles/Construct.module.scss';
 

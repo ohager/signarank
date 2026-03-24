@@ -20,7 +20,7 @@ const Header = () => {
           {isTestnet && <span className={styles.pill} style={{backgroundColor: 'red'}}>TESTNET</span>}
       </span>
             </h1>
-            <SeasonBanner />
+            <SeasonBanner/>
             <ul>
                 <li>
                     <Link href="/"><a>Home</a></Link>

@@ -1,11 +1,12 @@
 import { FC, createContext } from "react";
-import {ExtensionWallet} from '@signumjs/wallets';
+import {ExtensionWallet, MobileWallet} from '@signumjs/wallets';
 
 const toStringArray = (csv: any = ""): Array<string> => csv.length ? csv.split(",") :[];
 
 export interface AppContextType {
   Wallet: {
     Extension: ExtensionWallet;
+    Mobile: MobileWallet;
   };
   Ledger: {
     ReliableNodes: string[];
@@ -16,7 +17,8 @@ export interface AppContextType {
 
 const config: AppContextType = {
   Wallet: {
-    Extension: new ExtensionWallet()
+    Extension: new ExtensionWallet(),
+    Mobile: new MobileWallet()
   },
   Ledger: {
     DefaultNode: process.env.NEXT_PUBLIC_SIGNUM_DEFAULT_NODE || "http://localhost:6786",
