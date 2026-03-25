@@ -55,7 +55,7 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
     return (
         <Page title="SIGNArank - An achievement system built on the Signum blockchain">
             {/* Hero */}
-            <section className="min-h-[85vh] flex flex-col items-center justify-center text-center px-8 relative">
+            <section className="min-h-[80vh] md:min-h-[85vh] flex flex-col items-center justify-center text-center px-4 md:px-8 relative">
                 {/* Ambient glow */}
                 <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[800px] h-[800px] pointer-events-none" style={{background: 'radial-gradient(circle, rgba(197,164,78,0.06) 0%, rgba(126,200,227,0.03) 40%, transparent 70%)'}} />
 
@@ -65,7 +65,7 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
                     <span className="w-[50px] h-px" style={{background: 'linear-gradient(90deg, transparent, var(--gold), transparent)'}} />
                 </div>
 
-                <h1 className="text-[clamp(2.8rem,6vw,5rem)] font-extrabold leading-[1.05] tracking-[0.04em] uppercase mb-6" style={{fontFamily: "'Cinzel', serif"}}>
+                <h1 className="text-[clamp(2rem,6vw,5rem)] font-extrabold leading-[1.1] tracking-[0.02em] uppercase mb-4 md:mb-6" style={{fontFamily: "'Cinzel', serif"}}>
                     <span
                         className="inline-block animate-[shimmer_6s_linear_infinite]"
                         style={{
@@ -80,19 +80,19 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
                     </span>
                 </h1>
 
-                <p className="text-2xl font-medium italic text-[var(--text)] max-w-[520px] leading-relaxed mb-12 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" style={{fontFamily: "'Cormorant Garamond', serif"}}>
+                <p className="text-lg md:text-2xl font-medium italic text-[var(--text)] max-w-[520px] leading-relaxed mb-8 md:mb-12 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" style={{fontFamily: "'Cormorant Garamond', serif"}}>
                     Track your Signum blockchain deeds, earn achievements, and rise through the ranks.
                 </p>
 
                 {/* Connect box */}
                 <div className="w-full max-w-[460px]">
-                    <div className="glass-static p-7">
+                    <div className="glass-static p-5 md:p-7">
                         <ConnectButton mode="full" withAddressInput/>
                     </div>
                 </div>
 
                 {/* Scroll hint */}
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[var(--text-faint)] text-[0.6rem] tracking-[0.2em] uppercase animate-[breathe_3s_ease-in-out_infinite]" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
+                <div className="hidden md:flex absolute bottom-10 left-1/2 -translate-x-1/2 flex-col items-center gap-2 text-[var(--text-faint)] text-[0.6rem] tracking-[0.2em] uppercase animate-[breathe_3s_ease-in-out_infinite]" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                     Scroll
                     <div className="w-px h-[30px]" style={{background: 'linear-gradient(to bottom, var(--text-faint), transparent)'}} />
                 </div>
@@ -105,7 +105,7 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
                 <div className="grid grid-cols-2 gap-6 max-md:grid-cols-1">
                     {/* Top Ranks */}
                     <div className="glass-static overflow-hidden">
-                        <div className="px-6 py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5" style={{fontFamily: "'Cinzel', serif", fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' as const}}>
+                        <div className="px-3 md:px-6 py-3 md:py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5" style={{fontFamily: "'Cinzel', serif", fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' as const}}>
                             <span className="text-[var(--gold)]">♛</span> Top Ranks
                         </div>
                         {leaders.map((user: User, i: number) => (
@@ -115,7 +115,7 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
 
                     {/* Latest Scores */}
                     <div className="glass-static overflow-hidden">
-                        <div className="px-6 py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5" style={{fontFamily: "'Cinzel', serif", fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' as const}}>
+                        <div className="px-3 md:px-6 py-3 md:py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5" style={{fontFamily: "'Cinzel', serif", fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' as const}}>
                             <span className="text-[var(--gold)]">⚡</span> Latest Scores
                         </div>
                         {latestUsers.map((user: User, i: number) => (
@@ -144,15 +144,15 @@ const Entry = memo<EntryProps>(({address, score, explorerBaseUrl, rank}) => {
     const rankColors: Record<number, string> = {1: 'var(--gold-bright)', 2: '#c0c0c0', 3: '#cd7f32'}
 
     return (
-        <div className="grid grid-cols-[36px_1fr_auto] items-center gap-4 px-6 py-3.5 border-b border-[rgba(255,255,255,0.03)] transition-colors hover:bg-[rgba(255,255,255,0.03)] cursor-pointer">
-            <span className="text-[0.8rem] font-semibold" style={{fontFamily: "'IBM Plex Mono', monospace", color: rank ? (rankColors[rank] || 'var(--text-faint)') : 'var(--text-faint)'}}>
+        <div className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[36px_1fr_auto] items-center gap-2 md:gap-4 px-3 md:px-6 py-3 border-b border-[rgba(255,255,255,0.03)] transition-colors hover:bg-[rgba(255,255,255,0.03)] cursor-pointer">
+            <span className="text-[0.7rem] md:text-[0.8rem] font-semibold" style={{fontFamily: "'IBM Plex Mono', monospace", color: rank ? (rankColors[rank] || 'var(--text-faint)') : 'var(--text-faint)'}}>
                 {rank ? `#${rank}` : '—'}
             </span>
-            <span className="text-[0.8rem]" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
-                <a href={addressExplorerUrl} target="_blank" rel="noreferrer noopener" className="mr-1.5 opacity-50 hover:opacity-100 transition-opacity" title="Open in Explorer">🌐</a>
+            <span className="text-[0.65rem] md:text-[0.8rem] truncate min-w-0" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
+                <a href={addressExplorerUrl} target="_blank" rel="noreferrer noopener" className="mr-1 opacity-50 hover:opacity-100 transition-opacity hidden md:inline" title="Open in Explorer">🌐</a>
                 <a href={`/address/${address}`} className="hover:text-[var(--gold)] transition-colors">{displayName}</a>
             </span>
-            <span className="text-[0.95rem] font-bold text-[var(--gold)]" style={{fontFamily: "'Cinzel', serif"}}>{score}</span>
+            <span className="text-[0.8rem] md:text-[0.95rem] font-bold text-[var(--gold)]" style={{fontFamily: "'Cinzel', serif"}}>{score}</span>
         </div>
     )
 })

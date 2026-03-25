@@ -3,8 +3,8 @@ import React from 'react';
 
 function Footer() {
     return (
-        <footer className="border-t border-[var(--glass-border)] mt-20">
-            <div className="max-w-[1300px] mx-auto px-8 py-10 flex justify-between items-center max-md:flex-col max-md:gap-6 max-md:text-center">
+        <footer className="border-t border-[var(--glass-border)] mt-12 md:mt-20">
+            <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-8 md:py-10 flex justify-between items-center max-md:flex-col max-md:gap-6 max-md:text-center">
                 {/* Logo */}
                 <div className="flex items-center gap-2" style={{fontFamily: "'Cinzel', serif", fontWeight: 700, letterSpacing: '0.15em'}}>
                     <div className="w-7 h-7 border-2 border-[var(--gold)] rounded-full flex items-center justify-center overflow-hidden">
@@ -14,7 +14,7 @@ function Footer() {
                 </div>
 
                 {/* Links */}
-                <nav className="flex gap-7">
+                <nav className="flex flex-wrap justify-center gap-4 md:gap-7">
                     <Link href="/" className="text-sm text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">Home</Link>
                     <Link href="/leaderboard" className="text-sm text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">Leaderboard</Link>
                     <Link href="/faqs" className="text-sm text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">FAQs</Link>

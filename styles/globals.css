@@ -41,8 +41,10 @@
     background-color: #080610;
     color: var(--text);
     height: 100%;
+    width: 100%;
     font-size: 17px;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   a {
@@ -136,7 +138,13 @@
 .content-area {
   max-width: 1300px;
   margin: 0 auto;
-  padding: 0 32px 80px;
+  padding: 0 16px 60px;
+}
+
+@media (min-width: 768px) {
+  .content-area {
+    padding: 0 32px 80px;
+  }
 }
 
 /* Section labels */
