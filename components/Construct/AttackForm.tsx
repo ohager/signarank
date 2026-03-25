@@ -8,7 +8,6 @@ import { useAppSelector } from '@states/hooks';
 import { selectConnectedAccount } from '@states/appState';
 import { TokenSelector, TokenSelection } from './TokenSelector';
 import { CooldownTimer } from './CooldownTimer';
-import styles from '@styles/Construct.module.scss';
 
 interface AttackFormProps {
     construct: ConstructData;
@@ -80,8 +79,8 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
     if (!connectedAccount) {
         return (
-            <div className={styles.attackForm}>
-                <div className={styles.connectPrompt}>
+            <div className="bg-black/60 rounded-2xl p-4 border border-white/10 backdrop-blur-sm max-md:p-3">
+                <div className="text-center p-8 bg-white/5 rounded-lg text-white/70">
                     <p>Connect your wallet to attack this construct</p>
                 </div>
             </div>
@@ -89,8 +88,8 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
     }
 
     return (
-        <div className={styles.attackForm}>
-            <h3 className={styles.attackTitle}>Attack</h3>
+        <div className="bg-black/60 rounded-2xl p-4 border border-white/10 backdrop-blur-sm max-md:p-3">
+            <h3 className="text-base font-bold text-white m-0 mb-3 max-md:text-[0.95rem]">Attack</h3>
 
             {/* Success/Error Messages */}
             {lastResult && (
@@ -132,13 +131,13 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
             )}
 
             {/* SIGNA Input */}
-            <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>
+            <div className="mb-3">
+                <label className="block text-white/70 text-[0.8rem] mb-1.5 max-md:text-xs">
                     SIGNA Amount (Balance: {signaBalance.toFixed(2)} SIGNA)
                 </label>
                 <input
                     type="number"
-                    className={styles.signaInput}
+                    className="w-full py-2.5 px-3 bg-white/10 border border-white/20 rounded-lg text-white text-[0.9rem] max-md:py-2 max-md:px-2.5 max-md:text-[0.85rem] focus:outline-none focus:border-[#D9048E] placeholder:text-white/40"
                     placeholder="Enter SIGNA amount"
                     min="0"
                     step="0.01"
@@ -161,7 +160,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
             {/* Attack Button */}
             <button
-                className={styles.attackButton}
+                className="w-full py-3 bg-gradient-to-br from-[#D9048E] to-[#ff4ecd] border-none rounded-lg text-white text-[0.95rem] font-bold cursor-pointer transition-all duration-200 max-md:py-2.5 max-md:text-[0.9rem] hover:enabled:-translate-y-0.5 hover:enabled:shadow-[0_4px_20px_rgba(217,4,142,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleAttack}
                 disabled={!canAttack}
             >

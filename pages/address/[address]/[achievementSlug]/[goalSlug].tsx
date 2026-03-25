@@ -1,6 +1,4 @@
 import {useRouter} from 'next/router'
-import styles from '@styles/Address.module.scss'
-import goalStyles from '@styles/Goal.module.scss'
 import achievements from '@lib/achievements.signa.json';
 import {AddressProps} from "../../[address]"
 import ProgressBar from '@components/ProgressBar';
@@ -13,11 +11,9 @@ import {calculateScore} from '../../../api/score/calculateSignaScore';
 import {singleQueryString} from '@lib/singleQueryString';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 
-// Generate on-demand with ISR (fallback: blocking)
-// Pre-generating all address+achievement+goal combinations would be too many paths
 export const getStaticPaths: GetStaticPaths = async () => {
     return {
-        paths: [], // Generate on-demand
+        paths: [],
         fallback: 'blocking'
     };
 };
@@ -58,7 +54,7 @@ const Goal = ({score, rank, progress, address}: AddressProps) => {
 
     return <Page title={`${displayAddress} - SIGNArank`}>
         <div className="content">
-            <div className={styles.address}>
+            <div className="text-center items-center w-[90%] mx-auto mb-10 relative overflow-hidden h-10 [&_h2]:p-2.5 [&_h2]:inline">
                 <h2 className="gradient-box gradient-bottom-only">{displayAddress}</h2>
             </div>
             <Score score={score} rank={rank}/>
@@ -69,9 +65,9 @@ const Goal = ({score, rank, progress, address}: AddressProps) => {
                     <li className="on">{goal.name}</li>
                 </ul>
                 <h3>{goal && goal.name}</h3>
-                <div className={goalStyles.list}>
+                <div className="m-[50px]">
                     {goal && goal.steps.map((step, i) => {
-                        return <div className={`${styles.step} animate__animated`} key={i}>
+                        return <div className="animate__animated" key={i}>
                             <h4>{step.name}</h4>
                             <ProgressBar percent={calculateProgress(i) / 1}/>
                         </div>

@@ -1,5 +1,4 @@
 import {useRouter} from 'next/router'
-import styles from '../../styles/Address.module.scss'
 import achievements from '@lib/achievements.signa.json';
 import Link from 'next/link';
 import ProgressBar from '../../components/ProgressBar';
@@ -14,7 +13,7 @@ import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {singleQueryString} from '@lib/singleQueryString';
 import {prisma} from '@lib/prisma';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
-import * as process from 'process';
+import {getExplorerBaseUrl} from '@lib/explorerUrl';
 
 export const getStaticPaths: GetStaticPaths = async () => {
     return {
@@ -28,8 +27,11 @@ export const getStaticProps: GetStaticProps = async ({params}) => {
     const result = await calculateScore(address);
 
     return {
-        props: result.props,
-        revalidate: ISR_REVALIDATE_SECONDS  // Matches database cache TTL (configurable via CACHE_TTL_SECONDS env var)
+        props: {
+            ...result.props,
+            explorerBaseUrl: getExplorerBaseUrl(),
+        },
+        revalidate: ISR_REVALIDATE_SECONDS
     };
 }
 
@@ -39,10 +41,11 @@ export interface AddressProps {
     rank: number,
     progress: Array<string>,
     error: boolean | string,
-    name?: string
+    name?: string,
+    explorerBaseUrl?: string
 }
 
-const Address = ({address, score, rank, progress, error, name}: AddressProps) => {
+const Address = ({address, score, rank, progress, error, name, explorerBaseUrl}: AddressProps) => {
     const router = useRouter()
     const displayAddress = useReedSolomonAddress(address)
 
@@ -167,11 +170,11 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
             }
         }
     };
-    const addressExplorerUrl = `${process.env.NEXT_PUBLIC_SIGNUM_EXPLORER}/address/${address}`
+    const addressExplorerUrl = `${explorerBaseUrl}/address/${address}`
 
     return <Page title={`${displayAddress} - SIGNARank`}>
         <div className="content">
-            <div className={styles.address}>
+            <div className="text-center items-center w-[90%] mx-auto mb-10 relative overflow-hidden h-10 [&_h2]:p-2.5 [&_h2]:inline">
                 <h2 className="gradient-box gradient-bottom-only">{name || displayAddress}</h2>
                 <a className="explorer-link" href={addressExplorerUrl} target="_blank" rel="noreferrer noopener">🌐</a>
             </div>
@@ -179,7 +182,7 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
 
             <div>
                 <h3>Achievements</h3>
-                <div className={`${styles.cellParent} ${styles.achivements}`}>
+                <div className="grid grid-cols-[48%_48%] text-center gap-y-[30px] gap-x-[6%] justify-items-center box-content max-sm:grid-cols-1">
                     {achievements.map((achievement, i) => {
                         const goals = achievement.goals;
                         const percentages = goals.map((goal, j) => {
@@ -189,7 +192,7 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
                             pathname: '/address/[address]/[achievement]',
                             query: {address, achievement: achievement.slug},
                         }}>
-                            <div className={`${styles.achievement} achievement animate__animated`}>
+                            <div className="cursor-pointer border border-[var(--main-color3)] p-2.5 text-left shadow-[-5px_-5px_0_0_var(--main-color3)] w-full achievement animate__animated [&_h4]:m-[0_0_20px_0] [&_h4]:text-2xl [&_h4]:uppercase [&_h4]:font-normal">
                                 <h4>{achievement.name}</h4>
                                 <ProgressBar percent={percentages / achievement.goals.length}/>
                             </div>
@@ -198,21 +201,19 @@ const Address = ({address, score, rank, progress, error, name}: AddressProps) =>
                 </div>
             </div>
 
-            <div className={styles.categoryRow}>
-                <div className={styles.stats}>
+            <div className="grid grid-cols-[50%_50%] text-center gap-y-[30px] gap-x-0 justify-items-center box-content mt-[30px] max-sm:grid-cols-1">
+                <div className="w-full text-left">
                     <h3>Stats</h3>
-                    <div className={styles.categories}>
+                    <div>
                         {categoryData.map((category, i) => {
-                            return <div
-                                key={i}
-                                className={`${styles.category}`}>
+                            return <div key={i}>
                                 <h4>{category.category}</h4>
                                 <ProgressBar percent={category.percentCompleted}/>
                             </div>
                         })}
                     </div>
                 </div>
-                <div className={styles.radar}>
+                <div className="w-full text-left">
                     <Radar data={data} options={config}/>
                 </div>
             </div>

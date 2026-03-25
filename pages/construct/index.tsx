@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getActiveConstructId } from '@lib/construct/constants';
 import Page from '@components/Page';
-import styles from '@styles/Construct.module.scss';
 
 const ConstructIndexPage = () => {
     const router = useRouter();
@@ -17,8 +16,8 @@ const ConstructIndexPage = () => {
     if (!activeContractId) {
         return (
             <Page title="No Active Construct - SIGNArank">
-                <div className={styles.constructPage}>
-                    <div className={styles.errorContainer}>
+                <div className="max-w-[1400px] mx-auto p-8 max-lg:p-6 max-md:p-4">
+                    <div className="flex flex-col justify-center items-center min-h-[400px] text-red-500 text-center gap-4">
                         <h2>No Active Construct</h2>
                         <p>No construct is currently configured.</p>
                     </div>
@@ -29,8 +28,8 @@ const ConstructIndexPage = () => {
 
     return (
         <Page title="Redirecting... - SIGNArank">
-            <div className={styles.constructPage}>
-                <div className={styles.loadingContainer}>
+            <div className="max-w-[1400px] mx-auto p-8 max-lg:p-6 max-md:p-4">
+                <div className="flex justify-center items-center min-h-[400px] text-white text-xl">
                     Redirecting to active construct...
                 </div>
             </div>

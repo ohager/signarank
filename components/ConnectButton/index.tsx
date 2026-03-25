@@ -1,6 +1,5 @@
 import {Button} from '@components/Button';
 import {requestWalletConnection, requestMobileWalletConnection} from '@lib/requestWalletConnection';
-import styles from './connectButton.module.scss';
 import {AddressInput} from '@components/AddressInput';
 import {useCallback, useMemo, useState} from 'react';
 import {useAppDispatch, useAppSelector} from '@states/hooks';
@@ -88,23 +87,23 @@ export const ConnectButton: React.FC<Props> = ({withAddressInput = false}) => {
 
     return connectedAddress
         ? (
-            <div className={styles.accountWrapper}>
+            <div className="text-sm">
                 <div>You are connected with</div>
-                <div className={styles.address}>{connectedAddress}</div>
+                <div className="text-lg font-bold">{connectedAddress}</div>
                 <Button onClick={handleCheckRank} label="Check your Rank"/>
             </div>
         )
 
         : (
-            <div className={styles.connectButtonWrapper}>
+            <div className="flex flex-col justify-center p-1">
                 <Button onClick={handleConnect} label="Connect Wallet"/>
-                {walletError && <div className={styles.walletError}>{walletError}</div> }
+                {walletError && <div className="relative text-[var(--red)] text-[10px] text-center mt-1">{walletError}</div> }
                 {
                     withAddressInput && (
                         <div>
-                            <div className={styles.or}>OR</div>
+                            <div className="m-2">OR</div>
                             <AddressInput value={address} onChange={onAddressChange} onEnter={onAddressEnter}/>
-                            {error && <div className={styles.error}>{error}</div> }
+                            {error && <div className="absolute text-[var(--red)] text-sm text-left mt-1">{error}</div> }
                         </div>
                     )
                 }

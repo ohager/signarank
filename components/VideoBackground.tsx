@@ -1,5 +1,4 @@
 import React from 'react';
-import styles from '../styles/VideoBackground.module.scss';
 
 interface VideoBackgroundProps {
     videoUrl: string;
@@ -7,16 +6,17 @@ interface VideoBackgroundProps {
 
 const VideoBackground: React.FC<VideoBackgroundProps> = ({ videoUrl }) => {
     return (
-        <div className={styles.videoBackground}>
+        <div className="fixed inset-0 z-[-2] overflow-hidden">
             <video
                 autoPlay
                 loop
                 muted
                 playsInline
-                className={styles.video}
+                className="absolute top-[40%] left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover"
             >
                 <source src={videoUrl} type="video/mp4" />
             </video>
+            <div className="absolute inset-0 bg-black/50" />
         </div>
     );
 };

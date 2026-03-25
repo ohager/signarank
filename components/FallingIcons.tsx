@@ -1,5 +1,4 @@
 import React, {useState, useEffect} from 'react';
-import styles from '../styles/Snowfall.module.scss';
 
 interface FallingIconsProps {
     emojis: string[]
@@ -28,11 +27,11 @@ const FallingIcons = React.memo(({emojis}: FallingIconsProps) => {
     if (snowflakes.length === 0) return null;
 
     return (
-        <div className={styles.snowfall}>
+        <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
             {snowflakes.map((flake, index) => (
                 <div
                     key={index}
-                    className={styles.snowflake}
+                    className="absolute -top-5 text-white select-none animate-[fall_linear_infinite]"
                     style={{
                         left: flake.left,
                         animationDelay: flake.animationDelay,

@@ -1,6 +1,5 @@
 import React from 'react';
 import { BLOCK_TIME_MS } from '@lib/construct/constants';
-import styles from '@styles/Construct.module.scss';
 
 interface CooldownTimerProps {
     blocksRemaining: number;
@@ -12,7 +11,7 @@ export const CooldownTimer: React.FC<CooldownTimerProps> = ({ blocksRemaining })
     const minutesRemaining = Math.ceil(msRemaining / 60000);
 
     return (
-        <div className={styles.cooldownInfo}>
+        <div className="flex items-center gap-2 py-2 px-3 bg-amber-400/10 rounded-lg text-amber-400 mb-3 text-[0.85rem] max-md:py-1.5 max-md:px-2.5 max-md:text-[0.8rem]">
             <svg
                 width="20"
                 height="20"

@@ -4,7 +4,6 @@ import Footer from '../components/Footer'
 import Header from '../components/Header'
 import VideoBackground from '../components/VideoBackground'
 import FallingIcons from './FallingIcons'
-import styles from '../styles/Home.module.scss'
 import seasonsData from '../lib/seasons.json'
 
 // add to this every new season
@@ -23,8 +22,9 @@ const Page = (props: PageProps) => {
     const videoUrl = seasonsData.bloombrawl?.background || '';
 
     return (
-        <div className={styles.container}>
-            {videoUrl && <VideoBackground videoUrl={videoUrl} />}
+        <div className="relative z-10">
+            {/* TODO: re-enable after fixing z-index stacking */}
+            {/* {videoUrl && <VideoBackground videoUrl={videoUrl} />} */}
             <FallingIcons emojis={['🌼','🌺', '🌸']} />
             <Head>
                 <title>{props.title}</title>
@@ -71,7 +71,7 @@ const Page = (props: PageProps) => {
 
             <Header/>
 
-            <main className={styles.main}>
+            <main className="text-center">
                 {props.children}
             </main>
 

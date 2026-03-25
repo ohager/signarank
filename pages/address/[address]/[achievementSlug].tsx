@@ -1,7 +1,6 @@
 
 
 import { useRouter } from 'next/router'
-import styles from '../../../styles/Address.module.scss'
 import achievements from '@lib/achievements.signa.json';
 import Link from 'next/link';
 import { AddressProps } from "../[address]"
@@ -61,7 +60,7 @@ const Achievement = ({ score, rank, progress, name, address }: AddressProps) => 
 
   return <Page title={`${displayAddress} - SIGNArank`}>
     <div className="content">
-      <div className={styles.address}>
+      <div className="text-center items-center w-[90%] mx-auto mb-10 relative overflow-hidden h-10 [&_h2]:p-2.5 [&_h2]:inline">
         <h2 className="gradient-box gradient-bottom-only">{name || displayAddress}</h2>
       </div>
       <Score score={score} rank={rank} />
@@ -71,13 +70,13 @@ const Achievement = ({ score, rank, progress, name, address }: AddressProps) => 
           <li className="on">{achievement.name}</li>
         </ul>
         <h3>{achievement && achievement.name}</h3>
-        <div className={styles.cellParent}>
+        <div className="grid grid-cols-[48%_48%] text-center gap-y-[30px] gap-x-[6%] justify-items-center box-content max-sm:grid-cols-1">
           {achievement && achievement.goals.map((goal, i) => {
             return <Link key={i} href={{
               pathname: '/address/[address]/[achievement]/[goal]',
               query: { address, achievement: achievement.slug, goal: goal.slug },
             }}>
-              <div className={`${styles.achievement} achievement animate__animated`} key={i}>
+              <div className="cursor-pointer border border-[var(--main-color3)] p-2.5 text-left shadow-[-5px_-5px_0_0_var(--main-color3)] w-full achievement animate__animated [&_h4]:m-[0_0_20px_0] [&_h4]:text-2xl [&_h4]:uppercase [&_h4]:font-normal" key={i}>
                 <h4>{goal.name}</h4>
                 <ProgressBar percent={calculateProgress(i) / goal.steps.length} />
               </div>
