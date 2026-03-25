@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { getActiveConstructId } from '@lib/construct/constants';
+import {useEffect} from 'react';
+import {useRouter} from 'next/router';
+import {getActiveConstructId} from '@lib/construct/constants';
 import Page from '@components/Page';
 
 const ConstructIndexPage = () => {
@@ -16,10 +16,20 @@ const ConstructIndexPage = () => {
     if (!activeContractId) {
         return (
             <Page title="No Active Construct - SIGNArank">
-                <div className="max-w-[1400px] mx-auto p-8 max-lg:p-6 max-md:p-4">
-                    <div className="flex flex-col justify-center items-center min-h-[400px] text-red-500 text-center gap-4">
-                        <h2>No Active Construct</h2>
-                        <p>No construct is currently configured.</p>
+                <div className="content-area">
+                    <div className="glass-static p-12 flex flex-col justify-center items-center min-h-[300px] text-center gap-4">
+                        <h2
+                            className="text-[1.4rem] font-semibold text-[var(--ember)]"
+                            style={{fontFamily: "'Cinzel', serif"}}
+                        >
+                            No Active Construct
+                        </h2>
+                        <p
+                            className="text-[var(--text-dim)]"
+                            style={{fontFamily: "'Cormorant Garamond', serif"}}
+                        >
+                            No construct is currently configured.
+                        </p>
                     </div>
                 </div>
             </Page>
@@ -28,9 +38,14 @@ const ConstructIndexPage = () => {
 
     return (
         <Page title="Redirecting... - SIGNArank">
-            <div className="max-w-[1400px] mx-auto p-8 max-lg:p-6 max-md:p-4">
-                <div className="flex justify-center items-center min-h-[400px] text-white text-xl">
-                    Redirecting to active construct...
+            <div className="content-area">
+                <div className="glass-static p-12 flex justify-center items-center min-h-[300px]">
+                    <span
+                        className="text-[var(--text-dim)] text-lg"
+                        style={{fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic'}}
+                    >
+                        Redirecting to active construct...
+                    </span>
                 </div>
             </div>
         </Page>

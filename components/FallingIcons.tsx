@@ -16,8 +16,8 @@ const FallingIcons = React.memo(({emojis}: FallingIconsProps) => {
                 left: `${Math.random() * 100}%`,
                 animationDelay: `${Math.random() * 10}s`,
                 animationDuration: `${10 + Math.random() * 20}s`,
-                opacity: 0.3 + Math.random() * 0.7,
-                fontSize: `${10 + Math.random() * 20}px`,
+                opacity: 0.15 + Math.random() * 0.35,
+                fontSize: `${8 + Math.random() * 16}px`,
                 rotation: `${Math.random() * 360}deg`,
                 emoji: emojis[Math.floor(Math.random() * emojis.length)],
             }))

@@ -1,42 +1,88 @@
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { useSeasonInfo } from '@hooks/useSeasonInfo';
 import { useConstruct } from '@hooks/useConstruct';
 import { getActiveConstructId } from '@lib/construct/constants';
 
 export const SeasonBanner: React.FC = () => {
-    const router = useRouter();
     const { name, isCurrent, description } = useSeasonInfo();
     const activeConstructId = getActiveConstructId();
-    // Use fallback ID for development if no env var is set
     const constructId = activeConstructId || '12345678901234567890';
     const { construct, loading } = useConstruct(constructId);
 
-    // Hide banner on season and construct pages
-    const isSeasonPage = router.pathname === '/season';
-    const isConstructPage = router.pathname.startsWith('/construct/');
-    const shouldHide = isSeasonPage || isConstructPage;
-
-    if (!isCurrent || !description || shouldHide) {
+    if (!isCurrent || !name) {
         return null;
     }
 
     return (
-        <div className="absolute mt-[15px] max-w-[450px] px-[15px] py-[10px] bg-[linear-gradient(135deg,rgba(0,153,255,0.1),rgba(0,255,136,0.1))] border border-[rgba(0,255,136,0.3)] rounded-md backdrop-blur-[10px] shadow-[0_4px_20px_rgba(0,255,136,0.2)] animate-[pulse-glow_3s_ease-in-out_infinite] text-left flex items-center gap-3 max-md:hidden">
-            {!loading && construct && construct.imageUrl && (
-                <Link href={`/construct/${construct.contractId}`} className="shrink-0 w-[50px] h-[50px] rounded-full overflow-hidden border-2 border-[rgba(0,255,136,0.4)] transition-[transform,border-color] duration-200 hover:scale-110 hover:border-[rgba(0,255,136,0.8)]">
+        <div className="relative group max-md:hidden">
+            {/* Badge pill — links to season page */}
+            <Link
+                href="/season"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--gold-dim)] bg-[rgba(197,164,78,0.06)] hover:bg-[rgba(197,164,78,0.12)] hover:border-[var(--gold)] transition-all duration-200"
+            >
+                {!loading && construct?.imageUrl && (
                     <img
                         src={construct.imageUrl}
                         alt={construct.name}
-                        title={`Fight ${construct.name}`}
-                        className="w-full h-full object-cover"
+                        className="w-5 h-5 rounded-full object-cover border border-[var(--gold-dim)]"
                     />
-                </Link>
-            )}
-            <div className="flex-1 min-w-0">
-                <span className="block text-[10px] uppercase tracking-[2px] text-[var(--main-color2)] mb-[5px] font-semibold">{name}</span>
-                <p className="m-0 text-[13px] leading-[1.4] text-white/90 italic">{description}</p>
+                )}
+                <span
+                    className="text-[0.6rem] tracking-[0.08em] uppercase text-[var(--gold)]"
+                    style={{fontFamily: "'IBM Plex Mono', monospace"}}
+                >
+                    {name}
+                </span>
+            </Link>
+
+            {/* Hover dropdown */}
+            <div className="absolute top-full left-0 mt-2 w-[320px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="glass-static p-4 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+                    {/* Season info */}
+                    <div className="mb-3">
+                        <span
+                            className="text-[0.55rem] tracking-[0.15em] uppercase text-[var(--gold)] block mb-1"
+                            style={{fontFamily: "'IBM Plex Mono', monospace"}}
+                        >
+                            Current Season
+                        </span>
+                        <h4
+                            className="text-sm font-semibold tracking-wide m-0 mb-2"
+                            style={{fontFamily: "'Cinzel', serif"}}
+                        >
+                            {name}
+                        </h4>
+                        {description && (
+                            <p
+                                className="text-[0.82rem] leading-relaxed text-[var(--text-dim)] m-0"
+                                style={{fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic'}}
+                            >
+                                {description}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Links */}
+                    <div className="flex gap-2 pt-3 border-t border-[var(--glass-border)]">
+                        <Link
+                            href="/season"
+                            className="flex-1 text-center py-2 text-[0.6rem] tracking-[0.1em] uppercase text-[var(--gold)] border border-[var(--gold-dim)] rounded-sm hover:bg-[var(--gold)] hover:text-[#080610] transition-all duration-200"
+                            style={{fontFamily: "'Cinzel', serif", fontWeight: 600}}
+                        >
+                            Season Details
+                        </Link>
+                        {!loading && construct && !construct.isDefeated && construct.isActive && (
+                            <Link
+                                href={`/construct/${construct.contractId}`}
+                                className="flex-1 text-center py-2 text-[0.6rem] tracking-[0.1em] uppercase text-white rounded-sm transition-all duration-200 hover:shadow-[0_0_20px_rgba(232,93,58,0.3)]"
+                                style={{fontFamily: "'Cinzel', serif", fontWeight: 600, background: 'linear-gradient(135deg, var(--ember), #c44a2a)'}}
+                            >
+                                Fight {construct.name}
+                            </Link>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

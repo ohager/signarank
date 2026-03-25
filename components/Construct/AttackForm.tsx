@@ -79,93 +79,132 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
     if (!connectedAccount) {
         return (
-            <div className="bg-black/60 rounded-2xl p-4 border border-white/10 backdrop-blur-sm max-md:p-3">
-                <div className="text-center p-8 bg-white/5 rounded-lg text-white/70">
-                    <p>Connect your wallet to attack this construct</p>
+            <div className="glass-static overflow-hidden">
+                <div className="px-5 py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5">
+                    <span className="text-[var(--ember)]">⚔</span>
+                    <span
+                        className="text-[0.7rem] text-[var(--text)] uppercase tracking-[0.15em]"
+                        style={{ fontFamily: "'Cinzel', serif", fontWeight: 600 }}
+                    >
+                        Attack
+                    </span>
+                </div>
+                <div className="p-8 text-center">
+                    <p
+                        className="text-[var(--text-dim)] text-[0.9rem] m-0"
+                        style={{ fontFamily: "'Cormorant Garamond', serif" }}
+                    >
+                        Connect your wallet to attack this construct
+                    </p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-black/60 rounded-2xl p-4 border border-white/10 backdrop-blur-sm max-md:p-3">
-            <h3 className="text-base font-bold text-white m-0 mb-3 max-md:text-[0.95rem]">Attack</h3>
-
-            {/* Success/Error Messages */}
-            {lastResult && (
-                <div
-                    style={{
-                        padding: '0.75rem',
-                        marginBottom: '1rem',
-                        borderRadius: '8px',
-                        background: lastResult.success
-                            ? 'rgba(74, 222, 128, 0.1)'
-                            : 'rgba(239, 68, 68, 0.1)',
-                        color: lastResult.success ? '#4ade80' : '#ef4444',
-                    }}
+        <div className="glass-static overflow-hidden">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5">
+                <span className="text-[var(--ember)]">⚔</span>
+                <span
+                    className="text-[0.7rem] text-[var(--text)] uppercase tracking-[0.15em]"
+                    style={{ fontFamily: "'Cinzel', serif", fontWeight: 600 }}
                 >
-                    {lastResult.success ? (
-                        <span>Attack sent! TX: {lastResult.txId?.slice(0, 12)}...</span>
-                    ) : (
-                        <span>Error: {lastResult.error}</span>
-                    )}
-                    <button
-                        onClick={reset}
-                        style={{
-                            marginLeft: '1rem',
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'inherit',
-                            cursor: 'pointer',
-                            textDecoration: 'underline',
-                        }}
-                    >
-                        Dismiss
-                    </button>
-                </div>
-            )}
-
-            {/* Cooldown Warning */}
-            {isInCooldown && cooldownStatus && (
-                <CooldownTimer blocksRemaining={cooldownStatus.blocksRemaining} />
-            )}
-
-            {/* SIGNA Input */}
-            <div className="mb-3">
-                <label className="block text-white/70 text-[0.8rem] mb-1.5 max-md:text-xs">
-                    SIGNA Amount (Balance: {signaBalance.toFixed(2)} SIGNA)
-                </label>
-                <input
-                    type="number"
-                    className="w-full py-2.5 px-3 bg-white/10 border border-white/20 rounded-lg text-white text-[0.9rem] max-md:py-2 max-md:px-2.5 max-md:text-[0.85rem] focus:outline-none focus:border-[#D9048E] placeholder:text-white/40"
-                    placeholder="Enter SIGNA amount"
-                    min="0"
-                    step="0.01"
-                    value={signaAmount}
-                    onChange={e => setSignaAmount(e.target.value)}
-                    disabled={attacking || isInCooldown}
-                />
+                    Attack
+                </span>
             </div>
 
-            {/* Token Selector */}
-            {!tokensLoading && !balancesLoading && (
-                <TokenSelector
-                    tokens={tokenMetas}
-                    balances={balances}
-                    selections={tokenSelections}
-                    onChange={setTokenSelections}
-                    disabled={attacking || isInCooldown}
-                />
-            )}
+            <div className="p-5 max-md:p-4">
+                {/* Success/Error Messages */}
+                {lastResult && (
+                    <div
+                        className="flex items-center justify-between mb-4 py-2.5 px-3 rounded-sm"
+                        style={{
+                            background: lastResult.success
+                                ? 'rgba(74, 222, 128, 0.08)'
+                                : 'rgba(239, 68, 68, 0.08)',
+                            border: `1px solid ${lastResult.success ? 'rgba(74,222,128,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                        }}
+                    >
+                        <span
+                            className="text-[0.8rem]"
+                            style={{
+                                fontFamily: "'IBM Plex Mono', monospace",
+                                color: lastResult.success ? '#4ade80' : '#ef4444',
+                            }}
+                        >
+                            {lastResult.success ? (
+                                <>Attack sent! TX: {lastResult.txId?.slice(0, 12)}...</>
+                            ) : (
+                                <>Error: {lastResult.error}</>
+                            )}
+                        </span>
+                        <button
+                            onClick={reset}
+                            className="bg-transparent border-none cursor-pointer text-[0.75rem] underline"
+                            style={{
+                                fontFamily: "'IBM Plex Mono', monospace",
+                                color: lastResult.success ? '#4ade80' : '#ef4444',
+                            }}
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                )}
 
-            {/* Attack Button */}
-            <button
-                className="w-full py-3 bg-gradient-to-br from-[#D9048E] to-[#ff4ecd] border-none rounded-lg text-white text-[0.95rem] font-bold cursor-pointer transition-all duration-200 max-md:py-2.5 max-md:text-[0.9rem] hover:enabled:-translate-y-0.5 hover:enabled:shadow-[0_4px_20px_rgba(217,4,142,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleAttack}
-                disabled={!canAttack}
-            >
-                {attacking ? 'Attacking...' : isInCooldown ? 'In Cooldown' : 'Attack!'}
-            </button>
+                {/* Cooldown Warning */}
+                {isInCooldown && cooldownStatus && (
+                    <CooldownTimer blocksRemaining={cooldownStatus.blocksRemaining} />
+                )}
+
+                {/* SIGNA Input */}
+                <div className="mb-4">
+                    <label
+                        className="block text-[var(--text-faint)] text-[0.65rem] uppercase tracking-[0.1em] mb-2"
+                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                    >
+                        SIGNA Amount
+                        <span className="text-[var(--text-dim)] ml-2 normal-case tracking-normal">
+                            (Balance: {signaBalance.toFixed(2)})
+                        </span>
+                    </label>
+                    <input
+                        type="number"
+                        className="w-full py-2.5 px-3 bg-[rgba(8,6,12,0.4)] border border-[var(--glass-border)] rounded-sm text-[var(--text)] text-[0.85rem] max-md:py-2 max-md:px-2.5 max-md:text-[0.8rem] focus:outline-none focus:border-[var(--gold)] placeholder:text-[var(--text-faint)]"
+                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        value={signaAmount}
+                        onChange={e => setSignaAmount(e.target.value)}
+                        disabled={attacking || isInCooldown}
+                    />
+                </div>
+
+                {/* Token Selector */}
+                {!tokensLoading && !balancesLoading && (
+                    <TokenSelector
+                        tokens={tokenMetas}
+                        balances={balances}
+                        selections={tokenSelections}
+                        onChange={setTokenSelections}
+                        disabled={attacking || isInCooldown}
+                    />
+                )}
+
+                {/* Attack Button */}
+                <button
+                    className="w-full py-3 border-none rounded-sm text-white text-[0.85rem] font-semibold uppercase tracking-[0.12em] cursor-pointer transition-all duration-200 max-md:py-2.5 max-md:text-[0.8rem] hover:enabled:brightness-110 hover:enabled:shadow-[0_4px_20px_rgba(232,93,58,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                        fontFamily: "'Cinzel', serif",
+                        background: 'linear-gradient(135deg, var(--ember), #c44a2a)',
+                    }}
+                    onClick={handleAttack}
+                    disabled={!canAttack}
+                >
+                    {attacking ? 'Attacking...' : isInCooldown ? 'In Cooldown' : 'Attack'}
+                </button>
+            </div>
         </div>
     );
 };

@@ -1,21 +1,21 @@
-import { useRouter } from 'next/router';
+import {useRouter} from 'next/router';
 import Page from '@components/Page';
-import { ConstructCard } from '@components/Construct/ConstructCard';
-import { AttackForm } from '@components/Construct/AttackForm';
-import { AttackHistory } from '@components/Construct/AttackHistory';
-import { useConstruct } from '@hooks/useConstruct';
-import { useUserCooldown } from '@hooks/useUserCooldown';
-import { useAppSelector } from '@states/hooks';
-import { selectConnectedAccount } from '@states/appState';
-import { singleQueryString } from '@lib/singleQueryString';
-import { Address } from '@signumjs/core';
+import {ConstructCard} from '@components/Construct/ConstructCard';
+import {AttackForm} from '@components/Construct/AttackForm';
+import {AttackHistory} from '@components/Construct/AttackHistory';
+import {useConstruct} from '@hooks/useConstruct';
+import {useUserCooldown} from '@hooks/useUserCooldown';
+import {useAppSelector} from '@states/hooks';
+import {selectConnectedAccount} from '@states/appState';
+import {singleQueryString} from '@lib/singleQueryString';
+import {Address} from '@signumjs/core';
 import Link from 'next/link';
 
 const ConstructPage = () => {
     const router = useRouter();
     const contractId = singleQueryString(router.query.contractId);
     const connectedAccount = useAppSelector(selectConnectedAccount);
-    const { construct, loading, error } = useConstruct(contractId || null);
+    const {construct, loading, error} = useConstruct(contractId || null);
 
     // Convert public key to account ID for cooldown check
     let userAccountId: string | null = null;
@@ -37,9 +37,14 @@ const ConstructPage = () => {
     if (loading) {
         return (
             <Page title="Loading Construct - SIGNArank">
-                <div className="max-w-[1400px] mx-auto p-8 max-lg:p-6 max-md:p-4">
-                    <div className="flex justify-center items-center min-h-[400px] text-white text-xl">
-                        Loading construct data...
+                <div className="content-area">
+                    <div className="glass-static p-12 flex justify-center items-center min-h-[300px]">
+                        <span
+                            className="text-[var(--text-dim)] text-lg"
+                            style={{fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic'}}
+                        >
+                            Loading construct data...
+                        </span>
                     </div>
                 </div>
             </Page>
@@ -49,11 +54,25 @@ const ConstructPage = () => {
     if (error || !construct) {
         return (
             <Page title="Construct Not Found - SIGNArank">
-                <div className="max-w-[1400px] mx-auto p-8 max-lg:p-6 max-md:p-4">
-                    <div className="flex flex-col justify-center items-center min-h-[400px] text-red-500 text-center gap-4">
-                        <h2>Failed to load construct</h2>
-                        <p>{error || 'Construct not found'}</p>
-                        <Link href="/">
+                <div className="content-area">
+                    <div className="glass-static p-12 flex flex-col justify-center items-center min-h-[300px] text-center gap-4">
+                        <h2
+                            className="text-[1.4rem] font-semibold text-[var(--ember)]"
+                            style={{fontFamily: "'Cinzel', serif"}}
+                        >
+                            Failed to load construct
+                        </h2>
+                        <p
+                            className="text-[var(--text-dim)]"
+                            style={{fontFamily: "'Cormorant Garamond', serif"}}
+                        >
+                            {error || 'Construct not found'}
+                        </p>
+                        <Link
+                            href="/"
+                            className="text-[var(--gold)] hover:text-[var(--gold-bright)] transition-colors text-sm tracking-wide"
+                            style={{fontFamily: "'IBM Plex Mono', monospace"}}
+                        >
                             Return to Home
                         </Link>
                     </div>
@@ -64,11 +83,11 @@ const ConstructPage = () => {
 
     return (
         <Page title={`${construct.name} - SIGNArank`}>
-            <div className="max-w-[1400px] mx-auto p-8 max-lg:p-6 max-md:p-4 content">
-                <div className="grid grid-cols-2 gap-8 items-start max-lg:grid-cols-1 max-lg:gap-6 max-md:gap-4">
+            <div className="content-area">
+                <div className="grid grid-cols-2 gap-8 items-start max-lg:grid-cols-1 max-lg:gap-6">
                     {/* Left Column: Card + Attack Form */}
-                    <div className="flex flex-col gap-4 max-md:gap-3">
-                        <ConstructCard construct={construct} />
+                    <div className="flex flex-col gap-5">
+                        <ConstructCard construct={construct}/>
 
                         {/* Attack Form Section */}
                         {!construct.isDefeated && construct.isActive && (

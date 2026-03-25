@@ -40,9 +40,17 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
 
     if (tokens.length === 0) {
         return (
-            <div className="my-4">
-                <p className="text-white/70 text-[0.8rem] mb-2 max-md:text-xs">Attack Tokens (optional)</p>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
+            <div className="mb-4">
+                <p
+                    className="text-[var(--text-faint)] text-[0.65rem] uppercase tracking-[0.1em] mb-2"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                    Attack Tokens (optional)
+                </p>
+                <p
+                    className="text-[var(--text-faint)] text-[0.85rem] m-0"
+                    style={{ fontFamily: "'Cormorant Garamond', serif" }}
+                >
                     No attack tokens configured
                 </p>
             </div>
@@ -50,44 +58,57 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
     }
 
     return (
-        <div className="my-4">
-            <p className="text-white/70 text-[0.8rem] mb-2 max-md:text-xs">Attack Tokens (optional)</p>
+        <div className="mb-4">
+            <p
+                className="text-[var(--text-faint)] text-[0.65rem] uppercase tracking-[0.1em] mb-2"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            >
+                Attack Tokens (optional)
+            </p>
             <div className="flex flex-col gap-2">
                 {tokens.map(token => {
                     const balance = balances[token.tokenId] ?? 0;
                     const formattedBalance = formatBalance(balance, token.decimals);
 
                     return (
-                        <div key={token.tokenId} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg max-md:p-1.5 max-md:gap-1.5">
+                        <div
+                            key={token.tokenId}
+                            className="flex items-center gap-3 py-2.5 px-3 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-sm max-md:py-2 max-md:px-2.5 max-md:gap-2"
+                        >
                             {token.iconUrl ? (
                                 <img
                                     src={token.iconUrl}
                                     alt={token.name}
-                                    className="w-7 h-7 rounded-full bg-white/10 max-md:w-6 max-md:h-6"
+                                    className="w-7 h-7 rounded-full bg-[rgba(255,255,255,0.06)] max-md:w-6 max-md:h-6"
                                 />
                             ) : (
-                                <div className="w-7 h-7 rounded-full bg-white/10 max-md:w-6 max-md:h-6">
-                                    <span style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        height: '100%',
-                                        color: 'rgba(255,255,255,0.5)',
-                                        fontSize: '0.8rem'
-                                    }}>
+                                <div className="w-7 h-7 rounded-full bg-[rgba(255,255,255,0.06)] flex items-center justify-center max-md:w-6 max-md:h-6">
+                                    <span
+                                        className="text-[var(--text-faint)] text-[0.75rem]"
+                                        style={{ fontFamily: "'Cinzel', serif" }}
+                                    >
                                         {token.name.charAt(0).toUpperCase()}
                                     </span>
                                 </div>
                             )}
-                            <div className="flex-1">
-                                <div className="text-white font-medium text-[0.85rem] max-md:text-[0.8rem]">{token.name}</div>
-                                <div className="text-white/50 text-[0.7rem]">
+                            <div className="flex-1 min-w-0">
+                                <div
+                                    className="text-[var(--text)] text-[0.8rem] max-md:text-[0.75rem]"
+                                    style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 600 }}
+                                >
+                                    {token.name}
+                                </div>
+                                <div
+                                    className="text-[var(--text-faint)] text-[0.65rem]"
+                                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                                >
                                     Balance: {formattedBalance}
                                 </div>
                             </div>
                             <input
                                 type="number"
-                                className="w-[90px] py-1.5 px-2 bg-white/10 border border-white/20 rounded-md text-white text-right text-[0.85rem] max-md:w-20 max-md:py-1 max-md:px-1.5 max-md:text-[0.8rem] focus:outline-none focus:border-[#D9048E]"
+                                className="w-[90px] py-1.5 px-2 bg-[rgba(8,6,12,0.4)] border border-[var(--glass-border)] rounded-sm text-[var(--text)] text-right text-[0.8rem] max-md:w-20 max-md:py-1 max-md:px-1.5 max-md:text-[0.75rem] focus:outline-none focus:border-[var(--gold)]"
+                                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                                 placeholder="0"
                                 min="0"
                                 max={balance}
