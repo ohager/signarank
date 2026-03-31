@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Amount } from '@signumjs/util';
+import { Player, Signer } from '@signarank/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@hooks/useAppContext';
 import { useSignumLedger } from '@hooks/useSignumLedger';
 import { useAppSelector } from '@states/hooks';
@@ -20,6 +22,7 @@ export const useConstructAttack = (): UseConstructAttackResult => {
     const { Wallet } = useAppContext();
     const ledger = useSignumLedger();
     const connectedAccount = useAppSelector(selectConnectedAccount);
+    const queryClient = useQueryClient();
 
     const reset = useCallback(() => {
         setLastResult(null);
@@ -39,38 +42,44 @@ export const useConstructAttack = (): UseConstructAttackResult => {
         setLastResult(null);
 
         try {
-            const { contractId, signaAmount, tokens = [] } = params;
+            const { contractId, signaAmount } = params;
 
-            // Convert SIGNA to Planck
-            const amountPlanck = Amount.fromSigna(signaAmount).getPlanck();
-            const feePlanck = Amount.fromSigna('0.02').getPlanck(); // 0.02 SIGNA fee
+            const signer: Signer = {
+                getPublicKey: async () => connectedAccount,
+                sign: async (unsignedTransactionBytes: string) => {
+                    const confirmed = await Wallet.Extension.confirm(unsignedTransactionBytes);
+                    return {
+                        fullHash: confirmed.fullHash,
+                        transaction: confirmed.transactionId,
+                    } as any;
+                },
+            };
 
-            // Build unsigned transaction
-            // For simple SIGNA transfer to contract
-            const unsignedTx = await ledger.transaction.sendAmountToSingleRecipient({
-                recipientId: contractId,
-                amountPlanck,
-                feePlanck,
-                senderPublicKey: connectedAccount,
+            const player = new Player({
+                Ledger: ledger,
+                Signer: signer,
+                accountId: connectedAccount,
             });
 
-            // TODO: Handle token attachments when sending with assets
-            // This requires using the multi-asset transfer or contract call with assets
-            // For now, we only support SIGNA-only attacks
-            if (tokens.length > 0) {
-                console.warn('Token attachments not yet implemented - sending SIGNA only');
-            }
-
-            // Use wallet extension to sign and broadcast
-            const signedTx = await Wallet.Extension.confirm(
-                unsignedTx.unsignedTransactionBytes
-            );
+            const txResult = await player.attackConstruct({
+                targetConstruct: contractId,
+                force: Amount.fromSigna(signaAmount),
+                powerUps: [],
+            });
 
             const result: AttackResult = {
                 success: true,
-                txId: signedTx.transactionId,
+                txId: (txResult as any).transaction || (txResult as any).transactionId,
             };
             setLastResult(result);
+
+            // Invalidate queries after a short delay to let the tx propagate
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['pendingAttacks'] });
+                queryClient.invalidateQueries({ queryKey: ['attackHistory'] });
+                queryClient.invalidateQueries({ queryKey: ['construct'] });
+            }, 3000);
+
             return result;
 
         } catch (e) {
@@ -84,7 +93,7 @@ export const useConstructAttack = (): UseConstructAttackResult => {
         } finally {
             setAttacking(false);
         }
-    }, [ledger, connectedAccount, Wallet]);
+    }, [ledger, connectedAccount, Wallet, queryClient]);
 
     return { attack, attacking, lastResult, reset };
 };

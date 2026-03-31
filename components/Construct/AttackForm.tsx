@@ -8,6 +8,8 @@ import { useAppSelector } from '@states/hooks';
 import { selectConnectedAccount } from '@states/appState';
 import { TokenSelector, TokenSelection } from './TokenSelector';
 import { CooldownTimer } from './CooldownTimer';
+import { Address } from '@signumjs/core';
+import { Amount } from '@signumjs/util';
 
 interface AttackFormProps {
     construct: ConstructData;
@@ -24,6 +26,16 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
     const connectedAccount = useAppSelector(selectConnectedAccount);
     const { attack, attacking, lastResult, reset } = useConstructAttack();
 
+    // Convert public key to account ID for balance lookups
+    const accountId = useMemo(() => {
+        if (!connectedAccount) return null;
+        try {
+            return Address.fromPublicKey(connectedAccount).getNumericId();
+        } catch {
+            return null;
+        }
+    }, [connectedAccount]);
+
     // Get attack token IDs from environment
     const attackTokenIds = useMemo(() => getAttackTokenIds(), []);
 
@@ -32,18 +44,31 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
     // Load user's balances
     const { balances, signaBalance, loading: balancesLoading } = useTokenBalances(
-        connectedAccount,
+        accountId,
         attackTokenIds
     );
 
     const isInCooldown = cooldownStatus?.isInCooldown ?? false;
+
+    // Activation amount in SIGNA (added on top of user's attack amount)
+    const activationSigna = useMemo(() => {
+        return parseFloat(Amount.fromPlanck(construct.minActivation).getSigna());
+    }, [construct.minActivation]);
+
+    const TX_FEE = 0.02;
+
+    // Total SIGNA required = attack amount + activation + fee
+    const totalRequired = useMemo(() => {
+        const attack = parseFloat(signaAmount) || 0;
+        return attack + activationSigna + TX_FEE;
+    }, [signaAmount, activationSigna]);
 
     const canAttack = useMemo(() => {
         if (!connectedAccount) return false;
         if (isInCooldown) return false;
         if (attacking) return false;
         if (!signaAmount || parseFloat(signaAmount) <= 0) return false;
-        if (parseFloat(signaAmount) > signaBalance) return false;
+        if (totalRequired > signaBalance) return false;
 
         // Check token balances for selected tokens
         for (const selection of tokenSelections) {
@@ -55,7 +80,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         }
 
         return true;
-    }, [connectedAccount, isInCooldown, attacking, signaAmount, signaBalance, tokenSelections, balances]);
+    }, [connectedAccount, isInCooldown, attacking, signaAmount, totalRequired, signaBalance, tokenSelections, balances]);
 
     const handleAttack = async () => {
         if (!canAttack) return;
@@ -179,6 +204,14 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                         onChange={e => setSignaAmount(e.target.value)}
                         disabled={attacking || isInCooldown}
                     />
+                    {signaAmount && parseFloat(signaAmount) > 0 && (
+                        <div
+                            className="mt-1.5 text-[0.6rem] text-[var(--text-faint)]"
+                            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                            Total: {totalRequired.toFixed(2)} SIGNA (attack + {activationSigna} activation + {TX_FEE} fee)
+                        </div>
+                    )}
                 </div>
 
                 {/* Token Selector */}

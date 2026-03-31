@@ -19,6 +19,8 @@ export interface ConstructData {
     rewardNftId: string | null;
     firstBloodAccount: string | null;
     finalBlowAccount: string | null;
+    /** Minimum activation amount in Planck needed to trigger the contract */
+    minActivation: string;
 }
 
 export interface ConstructMeta {

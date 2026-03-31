@@ -19,7 +19,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                 <img
                     src={construct.imageUrl}
                     alt={construct.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                 />
                 {construct.isDefeated && (
                     <div className="absolute inset-0 bg-black/70 flex justify-center items-center">

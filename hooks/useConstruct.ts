@@ -28,9 +28,10 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
 
             const player = new ReadOnlyPlayer({ledger, accountId: ''});
             const contractService = player.constructService.with(contractId);
-            const [metadata, status] = await Promise.all([
+            const [metadata, status, contract] = await Promise.all([
                 contractService.getMetadata(),
                 contractService.getStatus(),
+                contractService.getContract(),
             ]);
 
             const imageUrl = metadata.avatar
@@ -54,6 +55,7 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 rewardNftId: status.rewardNftId || null,
                 firstBloodAccount: status.firstBloodAccount || null,
                 finalBlowAccount: status.finalBlowAccount || null,
+                minActivation: contract.minActivation,
             };
 
             ConstructCache.setConstructMeta(contractId, {
