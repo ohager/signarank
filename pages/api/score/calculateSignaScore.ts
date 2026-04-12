@@ -115,6 +115,7 @@ export async function calculateScore(accountId: string) {
     let sentMultiouts = [];
     let receivedMessages = [];
     let sentMessages = [];
+    let receivedMessageContent: number[][][] = [];
     let cached = false;
     let error = false;
     let name = '';
@@ -419,6 +420,47 @@ export async function calculateScore(accountId: string) {
                                                         score += step.points;
                                                     }
                                                 })
+                                                break;
+                                            case 'own_xp_token_balance':
+                                                // Sum balances across a list of XP token IDs (e.g. from multiple games/seasons)
+                                                runOnlyOnce(i, () => {
+                                                    // @ts-ignore
+                                                    const tokenIds: string[] = step.params.tokenIds || [];
+                                                    const totalBalance = tokenIds.reduce((sum: number, id: string) => {
+                                                        const ab = account.assetBalances?.find((ab: any) => ab.asset === id);
+                                                        return sum + (ab ? Number(ab.balanceQNT) : 0);
+                                                    }, 0);
+                                                    // @ts-ignore
+                                                    if (totalBalance >= step.params.minBalance) {
+                                                        markStepCompleted(j, k, l);
+                                                        score += step.points;
+                                                    }
+                                                })
+                                                break;
+                                            case 'receive_message_content':
+                                                // Count received messages containing a specific text (e.g. "VICTORY", "FIRST BLOOD")
+                                                {
+                                                    // @ts-ignore
+                                                    const msgText = transactions[i].attachment?.message || '';
+                                                    // @ts-ignore
+                                                    if (msgText.includes(step.params.content)) {
+                                                        if (!receivedMessageContent[j]) {
+                                                            receivedMessageContent[j] = [] as Array<Array<number>>;
+                                                        }
+                                                        if (!receivedMessageContent[j][k]) {
+                                                            receivedMessageContent[j][k] = [];
+                                                        }
+                                                        if (!receivedMessageContent[j][k][l]) {
+                                                            receivedMessageContent[j][k][l] = 0;
+                                                        }
+                                                        receivedMessageContent[j][k][l]++;
+                                                        // @ts-ignore
+                                                        if (receivedMessageContent[j][k][l] === step.params.count) {
+                                                            markStepCompleted(j, k, l);
+                                                            score += step.points;
+                                                        }
+                                                    }
+                                                }
                                                 break;
                                             default:
                                                 break;

@@ -559,5 +559,117 @@
         ]
       }
     ]
+  },
+  {
+    "name": "The Warrior",
+    "slug": "the-warrior",
+    "points": 500,
+    "goals": [
+      {
+        "name": "Earn 500 XP from battles",
+        "slug": "battle-xp",
+        "category": "gaming",
+        "points": 80,
+        "steps": [
+          {
+            "name": "Earn >= 100 XP",
+            "points": 10,
+            "type": "own_xp_token_balance",
+            "params": {
+              "tokenIds": ["17598645928467159302"],
+              "minBalance": 100
+            }
+          },
+          {
+            "name": "Earn >= 500 XP",
+            "points": 15,
+            "type": "own_xp_token_balance",
+            "params": {
+              "tokenIds": ["17598645928467159302"],
+              "minBalance": 500
+            }
+          },
+          {
+            "name": "Earn >= 2000 XP",
+            "points": 25,
+            "type": "own_xp_token_balance",
+            "params": {
+              "tokenIds": ["17598645928467159302"],
+              "minBalance": 2000
+            }
+          },
+          {
+            "name": "Earn >= 5000 XP",
+            "points": 30,
+            "type": "own_xp_token_balance",
+            "params": {
+              "tokenIds": ["17598645928467159302"],
+              "minBalance": 5000
+            }
+          }
+        ]
+      },
+      {
+        "name": "Defeat 5 Constructs",
+        "slug": "construct-slayer",
+        "category": "gaming",
+        "points": 125,
+        "steps": [
+          {
+            "name": "Defeat 1 Construct",
+            "points": 10,
+            "type": "receive_message_content",
+            "params": {
+              "content": "VICTORY",
+              "count": 1
+            }
+          },
+          {
+            "name": "Defeat 2 Constructs",
+            "points": 35,
+            "type": "receive_message_content",
+            "params": {
+              "content": "VICTORY",
+              "count": 2
+            }
+          },
+          {
+            "name": "Defeat 3 Constructs",
+            "points": 50,
+            "type": "receive_message_content",
+            "params": {
+              "content": "VICTORY",
+              "count": 3
+            }
+          }
+        ]
+      },
+      {
+        "name": "Draw First Blood 3 times",
+        "slug": "first-blood",
+        "category": "gaming",
+        "points": 75,
+        "steps": [
+          {
+            "name": "Draw First Blood",
+            "points": 25,
+            "type": "receive_message_content",
+            "params": {
+              "content": "FIRST BLOOD",
+              "count": 1
+            }
+          },
+          {
+            "name": "Draw First Blood 3 times",
+            "points": 50,
+            "type": "receive_message_content",
+            "params": {
+              "content": "FIRST BLOOD",
+              "count": 3
+            }
+          }
+        ]
+      }
+    ]
   }
 ]
