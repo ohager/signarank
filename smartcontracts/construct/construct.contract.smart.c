@@ -88,6 +88,7 @@ long isDefeated;
 long firstBloodAccount;
 long finalBlowAccount;
 long hpTokenId;
+long totalDamageDealt;
 
 // basic tx iteration struct
 struct TX {
@@ -147,7 +148,7 @@ void main() {
     }
 
     currentTx.height =  getCurrentBlockheight();
-    if(isActive == 1 && getAssetBalance(xpTokenId) < getCurrentHitpoints()){
+    if(isActive == 1 && getAssetBalance(xpTokenId) + totalDamageDealt < maxHp){
         messageBuffer[] = "XP Token Shortage";
         sendMessage(messageBuffer, getCreator());
         isActive = 0;
@@ -287,6 +288,8 @@ void runAttackerRound() {
         isDefeated = 1;
         effectiveDamage = currentHP; // we cannot do more damage
     }
+
+    totalDamageDealt += effectiveDamage;
 
     if(getAssetBalance(xpTokenId) < effectiveDamage){
         messageBuffer[] = "Insufficient XP Tokens!";
