@@ -4,6 +4,7 @@ import {ConstructCache} from '@lib/construct/cache';
 import {R2_CDN_BASE, POLLING_INTERVALS} from '@lib/construct/constants';
 import {useSignumLedger} from './useSignumLedger';
 import {ReadOnlyPlayer} from "@signarank/client"
+import {Amount} from "@signumjs/util"
 
 interface UseConstructResult {
     construct: ConstructData | null;
@@ -38,6 +39,12 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 ? `${R2_CDN_BASE}/${metadata.avatar.ipfsCid}`
                 : '';
 
+            const playersRewardPercent = status.rewardDistribution?.players ?? 85;
+            const contractBalance = contract.balanceNQT ?? '0';
+            const rewardPot = Amount.fromPlanck(contractBalance)
+                .multiply(playersRewardPercent / 100)
+                .getSigna();
+
             const data: ConstructData = {
                 contractId,
                 name: metadata.name,
@@ -56,6 +63,11 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 firstBloodAccount: status.firstBloodAccount || null,
                 finalBlowAccount: status.finalBlowAccount || null,
                 minActivation: contract.minActivation,
+                contractBalance,
+                playersRewardPercent,
+                rewardPot,
+                debuffDamageReduction: status.debuff?.damageReduction ?? 0,
+                debuffMaxStack: status.debuff?.maxStack ?? 0,
             };
 
             ConstructCache.setConstructMeta(contractId, {

@@ -40,7 +40,7 @@ export const usePendingAttacks = (contractId: string | null): UsePendingAttacksR
             const results: PendingAttack[] = [];
 
             // Unconfirmed transactions to this contract = "pending"
-            const ConfirmationsRequired = 2;
+            const ConfirmationsRequired = 1;
             const unconfirmedTxs = unconfirmedResult.unconfirmedTransactions || [];
             for (const tx of unconfirmedTxs) {
                 if (tx.recipient === contractId) {

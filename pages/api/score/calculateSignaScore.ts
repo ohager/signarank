@@ -7,6 +7,7 @@ import {
     LedgerClientFactory,
     TransactionArbitrarySubtype, TransactionList,
     TransactionPaymentSubtype,
+    TransactionSmartContractSubtype,
     TransactionType
 } from '@signumjs/core';
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
@@ -116,6 +117,7 @@ export async function calculateScore(accountId: string) {
     let receivedMessages = [];
     let sentMessages = [];
     let receivedMessageContent: number[][][] = [];
+    let receivedContractShortMessage: number[][][] = [];
     let cached = false;
     let error = false;
     let name = '';
@@ -456,6 +458,40 @@ export async function calculateScore(accountId: string) {
                                                         receivedMessageContent[j][k][l]++;
                                                         // @ts-ignore
                                                         if (receivedMessageContent[j][k][l] === step.params.count) {
+                                                            markStepCompleted(j, k, l);
+                                                            score += step.points;
+                                                        }
+                                                    }
+                                                }
+                                                break;
+                                            case 'receive_contract_short_message':
+                                                // Count hex-encoded short messages emitted by smart contracts
+                                                // (type=22 SmartContract, subtype=1 SmartContractPayment) whose
+                                                // decoded UTF-8 payload contains step.params.content.
+                                                // Used for first-blood / final-blow detection from Construct contracts.
+                                                if (transactions[i].type === TransactionType.SmartContract &&
+                                                    transactions[i].subtype === TransactionSmartContractSubtype.SmartContractPayment &&
+                                                    transactions[i].recipient === accountId
+                                                ) {
+                                                    // @ts-ignore
+                                                    const hex: string = transactions[i].attachment?.message || '';
+                                                    const decoded = /^[0-9a-fA-F]*$/.test(hex)
+                                                        ? Buffer.from(hex, 'hex').toString('utf8').replace(/\0+/g, '')
+                                                        : hex;
+                                                    // @ts-ignore
+                                                    if (decoded.includes(step.params.content)) {
+                                                        if (!receivedContractShortMessage[j]) {
+                                                            receivedContractShortMessage[j] = [] as Array<Array<number>>;
+                                                        }
+                                                        if (!receivedContractShortMessage[j][k]) {
+                                                            receivedContractShortMessage[j][k] = [];
+                                                        }
+                                                        if (!receivedContractShortMessage[j][k][l]) {
+                                                            receivedContractShortMessage[j][k][l] = 0;
+                                                        }
+                                                        receivedContractShortMessage[j][k][l]++;
+                                                        // @ts-ignore
+                                                        if (receivedContractShortMessage[j][k][l] === step.params.count) {
                                                             markStepCompleted(j, k, l);
                                                             score += step.points;
                                                         }

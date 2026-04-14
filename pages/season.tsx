@@ -41,7 +41,7 @@ const SeasonPage = () => {
 
                 {/* Construct Cards Grid */}
                 <div className="section-label">Constructs</div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6 max-md:grid-cols-1">
+                <div className="grid justify-center grid-cols-[repeat(auto-fit,300px)] gap-6 max-md:grid-cols-[repeat(auto-fit,220px)] max-md:gap-4">
                     {constructs.map((constructConfig) => (
                         <ConstructSeasonCard
                             key={constructConfig.contractId}
@@ -69,15 +69,15 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, na
     if (isLocked) {
         return (
             <div className="glass-static overflow-hidden opacity-50 cursor-not-allowed">
-                <div className="w-full aspect-video flex flex-col justify-center items-center gap-2 border-b border-[var(--glass-border)]" style={{background: 'linear-gradient(135deg, rgba(30,28,36,0.8), rgba(20,18,26,0.8))'}}>
-                    <div className="text-5xl opacity-30">&#128274;</div>
+                <div className="w-full aspect-[3/4] flex flex-col justify-center items-center gap-2 border-b border-[var(--glass-border)] p-3" style={{background: 'linear-gradient(135deg, rgba(30,28,36,0.8), rgba(20,18,26,0.8))'}}>
+                    <div className="text-5xl opacity-30 max-md:text-4xl">&#128274;</div>
                     <div
-                        className="text-[var(--text-faint)] font-bold uppercase text-[0.75rem] tracking-widest"
+                        className="text-[var(--text-faint)] font-bold uppercase text-[0.75rem] tracking-widest text-center max-md:text-[0.65rem]"
                         style={{fontFamily: "'IBM Plex Mono', monospace"}}
                     >
                         Coming Soon
                     </div>
-                    <div className="text-[var(--text-faint)] text-xs mt-1" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
+                    <div className="text-[var(--text-faint)] text-xs mt-1 max-md:text-[0.6rem]" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                         #{order}
                     </div>
                 </div>
@@ -107,7 +107,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, na
                 }`}
                 style={isActive ? {borderColor: 'rgba(197,164,78,0.4)', boxShadow: '0 4px 20px rgba(197,164,78,0.15)'} : isDefeated ? {opacity: 0.7, borderColor: 'rgba(232,93,58,0.3)'} : {}}
             >
-                <div className="relative w-full aspect-video overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover">
+                <div className="relative w-full aspect-[3/4] overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover [&_img]:object-center">
                     <img src={construct.imageUrl} alt={construct.name}/>
                     {isActive && (
                         <div
@@ -134,23 +134,23 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, na
                         </div>
                     )}
                 </div>
-                <div className="p-5">
+                <div className="p-5 max-md:p-3">
                     <h3
-                        className="text-[1rem] font-semibold tracking-[0.06em] mb-3 text-[var(--text)]"
+                        className="text-[1rem] font-semibold tracking-[0.06em] mb-3 text-[var(--text)] max-md:text-[0.85rem] max-md:mb-2 leading-tight"
                         style={{fontFamily: "'Cinzel', serif"}}
                     >
                         {construct.name}
                     </h3>
 
                     {/* HP Bar */}
-                    <div className="mb-3">
-                        <div className="flex justify-between text-[0.7rem] mb-1.5" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
+                    <div className="mb-3 max-md:mb-2">
+                        <div className="flex justify-between text-[0.7rem] mb-1.5 max-md:text-[0.6rem] max-md:mb-1" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
                             <span className="text-[var(--text-dim)]">HP</span>
-                            <span className="text-[var(--text-faint)]">
+                            <span className="text-[var(--text-faint)] truncate ml-2">
                                 {construct.currentHp.toLocaleString()} / {construct.maxHp.toLocaleString()}
                             </span>
                         </div>
-                        <div className="h-2 bg-[rgba(255,255,255,0.06)] rounded-sm overflow-hidden">
+                        <div className="h-2 bg-[rgba(255,255,255,0.06)] rounded-sm overflow-hidden max-md:h-1.5">
                             <div
                                 className="h-full rounded-sm transition-[width] duration-300"
                                 style={{
@@ -168,7 +168,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, na
 
                     {isActive && (
                         <div
-                            className="text-[var(--gold)] font-semibold text-[0.8rem] text-center mt-3 tracking-wide"
+                            className="text-[var(--gold)] font-semibold text-[0.8rem] text-center mt-3 tracking-wide max-md:text-[0.7rem] max-md:mt-2"
                             style={{fontFamily: "'Cinzel', serif"}}
                         >
                             Attack Now &rarr;
@@ -176,7 +176,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, na
                     )}
                     {isDefeated && construct.finalBlowAccount && (
                         <div
-                            className="text-[var(--text-faint)] text-xs text-center mt-2"
+                            className="text-[var(--text-faint)] text-xs text-center mt-2 truncate max-md:text-[0.6rem]"
                             style={{fontFamily: "'IBM Plex Mono', monospace"}}
                         >
                             Victor: {construct.finalBlowAccount.slice(0, 10)}...

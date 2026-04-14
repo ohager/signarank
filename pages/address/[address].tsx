@@ -114,7 +114,8 @@ const Address = ({address, score, rank, progress, error, name, explorerBaseUrl}:
         'social',
         'finance',
         'collecting',
-        'technology'];
+        'technology',
+        'gaming'];
 
     const categoryData = categories.map((category, i) => {
         const percentCompleted = getPercentCategoryCompleted(category);

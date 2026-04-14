@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ConstructData } from '@lib/construct/types';
 import { useAttackerData } from '@hooks/useAttackerData';
 
@@ -11,15 +11,39 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
     const firstBloodAttacker = useAttackerData(construct.firstBloodAccount);
     const hpPercent = construct.currentHp / construct.maxHp;
     const hpColor = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+    useEffect(() => {
+        if (!isLightboxOpen) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsLightboxOpen(false);
+        };
+        window.addEventListener('keydown', onKey);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [isLightboxOpen]);
+
+    const formattedRewardPot = Number(construct.rewardPot).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+    });
 
     return (
-        <div className="glass-static overflow-hidden">
-            {/* Image */}
-            <div className="relative w-full aspect-[2.5/1] overflow-hidden max-md:aspect-[2/1]">
+        <div className="glass-static overflow-hidden grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] max-md:grid-cols-1">
+            {/* Image (portrait) */}
+            <button
+                type="button"
+                onClick={() => setIsLightboxOpen(true)}
+                aria-label={`View full image of ${construct.name}`}
+                className="relative w-full aspect-[3/4] overflow-hidden max-md:aspect-auto max-md:h-[45vh] max-md:min-h-[280px] group cursor-zoom-in p-0 border-0 bg-transparent"
+            >
                 <img
                     src={construct.imageUrl}
                     alt={construct.name}
-                    className="w-full h-full object-cover object-top"
+                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
                 />
                 {construct.isDefeated && (
                     <div className="absolute inset-0 bg-black/70 flex justify-center items-center">
@@ -35,10 +59,10 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                         </span>
                     </div>
                 )}
-            </div>
+            </button>
 
             {/* Content */}
-            <div className="py-4 px-5 max-md:py-3 max-md:px-4">
+            <div className="py-4 px-5 max-md:py-3 max-md:px-4 flex flex-col">
                 <h2
                     className="text-xl text-[var(--text)] m-0 mb-1 max-md:text-lg"
                     style={{ fontFamily: "'Cinzel', serif", fontWeight: 600 }}
@@ -79,6 +103,29 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                                 }}
                             />
                         </div>
+                    </div>
+
+                    {/* Reward Pot */}
+                    <div
+                        className="flex justify-between items-baseline gap-2 py-2 px-3 rounded-sm border border-[rgba(212,175,55,0.25)] bg-[rgba(212,175,55,0.06)] max-sm:py-1.5 max-sm:px-2.5"
+                    >
+                        <span
+                            className="text-[0.65rem] text-[var(--text-faint)] uppercase tracking-[0.14em] max-sm:text-[0.6rem]"
+                            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                            Reward Pot
+                        </span>
+                        <span
+                            className="text-[1rem] text-[var(--gold)] max-md:text-[0.9rem] max-sm:text-[0.8rem] truncate"
+                            style={{
+                                fontFamily: "'IBM Plex Mono', monospace",
+                                fontWeight: 600,
+                                textShadow: '0 0 8px rgba(212,175,55,0.3)',
+                            }}
+                            title={`${construct.playersRewardPercent}% of contract balance distributed to players`}
+                        >
+                            {formattedRewardPot} SIGNA
+                        </span>
                     </div>
 
                     {/* Stats Row */}
@@ -171,6 +218,32 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                     </div>
                 )}
             </div>
+
+            {isLightboxOpen && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`${construct.name} full image`}
+                    onClick={() => setIsLightboxOpen(false)}
+                    className="fixed inset-0 z-[1000] flex justify-center items-center p-6 max-md:p-3 bg-black/85 backdrop-blur-md cursor-zoom-out animate-[fadeIn_0.2s_ease-out]"
+                    style={{ animation: 'fadeIn 0.2s ease-out' }}
+                >
+                    <img
+                        src={construct.imageUrl}
+                        alt={construct.name}
+                        onClick={(e) => e.stopPropagation()}
+                        className="max-w-[min(90vw,900px)] max-h-[90vh] object-contain rounded-sm shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setIsLightboxOpen(false)}
+                        aria-label="Close"
+                        className="fixed top-4 right-4 w-10 h-10 flex justify-center items-center rounded-full bg-black/60 border border-white/20 text-white text-xl hover:bg-black/80 transition-colors"
+                    >
+                        &times;
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

@@ -103,7 +103,7 @@
             "points": 10,
             "type": "send_signa_amount",
             "params": {
-              "amount": 1000000
+              "amount": 100000
             }
           },
           {
@@ -566,7 +566,7 @@
     "points": 500,
     "goals": [
       {
-        "name": "Earn 500 XP from battles",
+        "name": "Earn 5000 XP from battles",
         "slug": "battle-xp",
         "category": "gaming",
         "points": 80,
@@ -618,7 +618,7 @@
           {
             "name": "Defeat 1 Construct",
             "points": 10,
-            "type": "receive_message_content",
+            "type": "receive_contract_short_message",
             "params": {
               "content": "VICTORY",
               "count": 1
@@ -627,7 +627,7 @@
           {
             "name": "Defeat 2 Constructs",
             "points": 35,
-            "type": "receive_message_content",
+            "type": "receive_contract_short_message",
             "params": {
               "content": "VICTORY",
               "count": 2
@@ -636,7 +636,7 @@
           {
             "name": "Defeat 3 Constructs",
             "points": 50,
-            "type": "receive_message_content",
+            "type": "receive_contract_short_message",
             "params": {
               "content": "VICTORY",
               "count": 3
@@ -653,7 +653,7 @@
           {
             "name": "Draw First Blood",
             "points": 25,
-            "type": "receive_message_content",
+            "type": "receive_contract_short_message",
             "params": {
               "content": "FIRST BLOOD",
               "count": 1
@@ -662,7 +662,7 @@
           {
             "name": "Draw First Blood 3 times",
             "points": 50,
-            "type": "receive_message_content",
+            "type": "receive_contract_short_message",
             "params": {
               "content": "FIRST BLOOD",
               "count": 3

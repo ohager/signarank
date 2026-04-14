@@ -21,6 +21,16 @@ export interface ConstructData {
     finalBlowAccount: string | null;
     /** Minimum activation amount in Planck needed to trigger the contract */
     minActivation: string;
+    /** Contract SIGNA balance in Planck */
+    contractBalance: string;
+    /** Percentage of the contract balance distributed to players (e.g. 85) */
+    playersRewardPercent: number;
+    /** Current reward pot in SIGNA (balance × playersRewardPercent / 100) */
+    rewardPot: string;
+    /** Debuff damage reduction per stack (percent) */
+    debuffDamageReduction: number;
+    /** Debuff maximum stack count */
+    debuffMaxStack: number;
 }
 
 export interface ConstructMeta {

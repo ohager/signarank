@@ -3,8 +3,10 @@ import Page from '@components/Page';
 import {ConstructCard} from '@components/Construct/ConstructCard';
 import {AttackForm} from '@components/Construct/AttackForm';
 import {AttackHistory} from '@components/Construct/AttackHistory';
+import {PlayerStatusPanel} from '@components/Construct/PlayerStatusPanel';
 import {useConstruct} from '@hooks/useConstruct';
 import {useUserCooldown} from '@hooks/useUserCooldown';
+import {usePlayerConstructStats} from '@hooks/usePlayerConstructStats';
 import {useAppSelector} from '@states/hooks';
 import {selectConnectedAccount} from '@states/appState';
 import {singleQueryString} from '@lib/singleQueryString';
@@ -33,6 +35,16 @@ const ConstructPage = () => {
         userAccountId,
         construct?.coolDownInBlocks ?? 0
     );
+
+    // Player per-construct stats (damage, XP, debuff)
+    const {stats: playerStats, loading: playerStatsLoading} = usePlayerConstructStats({
+        contractId: contractId || null,
+        userAccountId,
+        hpTokenId: construct?.hpTokenId ?? null,
+        xpTokenId: construct?.xpTokenId ?? null,
+        debuffDamageReduction: construct?.debuffDamageReduction ?? 0,
+        debuffMaxStack: construct?.debuffMaxStack ?? 0,
+    });
 
     if (loading) {
         return (
@@ -84,10 +96,20 @@ const ConstructPage = () => {
     return (
         <Page title={`${construct.name} - SIGNArank`}>
             <div className="content-area">
-                <div className="grid grid-cols-2 gap-8 items-start max-lg:grid-cols-1 max-lg:gap-6">
-                    {/* Left Column: Card + Attack Form */}
+                <div className="grid grid-cols-2 gap-8 items-start max-lg:grid-cols-1 max-lg:gap-6 max-md:gap-4">
+                    {/* Left Column: Card + Player Status + Attack Form */}
                     <div className="flex flex-col gap-5">
                         <ConstructCard construct={construct}/>
+
+                        {/* Player Status Panel — only when wallet connected */}
+                        {userAccountId && (
+                            <PlayerStatusPanel
+                                construct={construct}
+                                userAccountId={userAccountId}
+                                stats={playerStats}
+                                loading={playerStatsLoading}
+                            />
+                        )}
 
                         {/* Attack Form Section */}
                         {!construct.isDefeated && construct.isActive && (
