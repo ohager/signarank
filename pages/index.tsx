@@ -1,5 +1,6 @@
 import Page from '../components/Page'
 import {memo, useEffect, useState} from 'react';
+import {useRouter} from 'next/router';
 import {User} from '@lib/User.interface'
 import {ConnectButton} from '@components/ConnectButton';
 import {Address} from '@signumjs/core';
@@ -109,7 +110,7 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
                             <span className="text-[var(--gold)]">♛</span> Top Ranks
                         </div>
                         {leaders.map((user: User, i: number) => (
-                            <Entry key={i} rank={i + 1} address={user.address} score={user.score} explorerBaseUrl={explorerBaseUrl}/>
+                            <Entry key={i} rank={i + 1} address={user.address} score={user.score} title={user.title} explorerBaseUrl={explorerBaseUrl}/>
                         ))}
                     </div>
 
@@ -119,7 +120,7 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
                             <span className="text-[var(--gold)]">⚡</span> Latest Scores
                         </div>
                         {latestUsers.map((user: User, i: number) => (
-                            <Entry key={i} address={user.address} score={user.score} explorerBaseUrl={explorerBaseUrl}/>
+                            <Entry key={i} address={user.address} score={user.score} title={user.title} explorerBaseUrl={explorerBaseUrl}/>
                         ))}
                     </div>
                 </div>
@@ -134,23 +135,56 @@ interface EntryProps {
     score: number
     explorerBaseUrl: string
     rank?: number
+    title?: string
 }
 
-const Entry = memo<EntryProps>(({address, score, explorerBaseUrl, rank}) => {
+const Entry = memo<EntryProps>(({address, score, explorerBaseUrl, rank, title}) => {
+    const router = useRouter()
     const prefix = useAddressPrefix()
     const displayName = Address.fromNumericId(address, prefix).getReedSolomonAddress()
     const addressExplorerUrl = `${explorerBaseUrl}/address/${address}`
 
     const rankColors: Record<number, string> = {1: 'var(--gold-bright)', 2: '#c0c0c0', 3: '#cd7f32'}
 
+    const handleRowClick = () => {
+        router.push(`/address/${address}`)
+    }
+
+    const handleGlobeClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
+    }
+
     return (
-        <div className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[36px_1fr_auto] items-center gap-2 md:gap-4 px-3 md:px-6 py-3 border-b border-[rgba(255,255,255,0.03)] transition-colors hover:bg-[rgba(255,255,255,0.03)] cursor-pointer">
+        <div
+            role="link"
+            tabIndex={0}
+            onClick={handleRowClick}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleRowClick() }}
+            className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[36px_1fr_auto] items-center gap-2 md:gap-4 px-3 md:px-6 py-3 border-b border-[rgba(255,255,255,0.03)] transition-colors hover:bg-[rgba(255,255,255,0.03)] cursor-pointer focus:outline-none focus:bg-[rgba(255,255,255,0.04)]"
+        >
             <span className="text-[0.7rem] md:text-[0.8rem] font-semibold" style={{fontFamily: "'IBM Plex Mono', monospace", color: rank ? (rankColors[rank] || 'var(--text-faint)') : 'var(--text-faint)'}}>
                 {rank ? `#${rank}` : '—'}
             </span>
-            <span className="text-[0.65rem] md:text-[0.8rem] truncate min-w-0" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
-                <a href={addressExplorerUrl} target="_blank" rel="noreferrer noopener" className="mr-1 opacity-50 hover:opacity-100 transition-opacity hidden md:inline" title="Open in Explorer">🌐</a>
-                <a href={`/address/${address}`} className="hover:text-[var(--gold)] transition-colors">{displayName}</a>
+            <span className="min-w-0 flex flex-col gap-0.5">
+                <span className="text-[0.65rem] md:text-[0.8rem] truncate" style={{fontFamily: "'IBM Plex Mono', monospace"}}>
+                    <a
+                        href={addressExplorerUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        onClick={handleGlobeClick}
+                        className="mr-1 opacity-50 hover:opacity-100 transition-opacity hidden md:inline"
+                        title="Open in Explorer"
+                    >🌐</a>
+                    <span className="hover:text-[var(--gold)] transition-colors">{displayName}</span>
+                </span>
+                {title && (
+                    <span
+                        className="text-[0.65rem] md:text-[0.72rem] font-semibold tracking-[0.15em] uppercase truncate"
+                        style={{fontFamily: "'Cinzel', serif", color: 'var(--gold-bright)'}}
+                    >
+                        {title}
+                    </span>
+                )}
             </span>
             <span className="text-[0.8rem] md:text-[0.95rem] font-bold text-[var(--gold)]" style={{fontFamily: "'Cinzel', serif"}}>{score}</span>
         </div>

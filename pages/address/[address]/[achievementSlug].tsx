@@ -1,13 +1,13 @@
 import {useRouter} from 'next/router'
 import achievements from '@lib/achievements.signa.json';
 import Link from 'next/link';
-import {AddressProps} from "../[address]"
+import {AddressProps} from "./index"
 import ProgressBar from '../../../components/ProgressBar';
 import Score from '../../../components/Score';
 import {GetStaticProps, GetStaticPaths} from 'next';
 import Page from '../../../components/Page';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
-import {calculateScore} from '../../api/score/calculateSignaScore';
+import {calculateScore} from '@api/score/calculateSignaScore';
 import {singleQueryString} from '@lib/singleQueryString';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 

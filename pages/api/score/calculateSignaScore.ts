@@ -14,6 +14,7 @@ import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
 import {ExceptionInactiveAccount} from './exceptionInactiveAccount';
 import {Amount, ChainTime} from '@signumjs/util';
 import {NftService} from './nftService';
+import {getCategoryScoresFromProgress, getTitle} from '@lib/titles';
 
 async function fetchCachedAddress(accountId: string) {
     const cacheAddress = await prisma.address.findFirst({
@@ -591,6 +592,9 @@ export async function calculateScore(accountId: string) {
             });
             rank = cachedAddress?.ranking || 0;
         }
+        const categoryScores = getCategoryScoresFromProgress(progress);
+        const title = getTitle(categoryScores, rank, accountId);
+
         return {
             props: {
                 address: accountId,
@@ -600,7 +604,9 @@ export async function calculateScore(accountId: string) {
                 rank,
                 progress,
                 error,
-                name
+                name,
+                title,
+                categoryScores
             }
         }
     } catch (e: any) {
@@ -612,7 +618,9 @@ export async function calculateScore(accountId: string) {
                 rank: -1,
                 progress: [],
                 error: e.message,
-                name: ''
+                name: '',
+                title: '',
+                categoryScores: {}
             }
         }
     }

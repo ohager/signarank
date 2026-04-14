@@ -1,14 +1,14 @@
 import {useRouter} from 'next/router'
 import achievements from '@lib/achievements.signa.json';
 import Link from 'next/link';
-import ProgressBar from '../../components/ProgressBar';
-import Score from '../../components/Score';
+import ProgressBar from '@components/ProgressBar';
+import Score from '@components/Score';
 import {useEffect} from 'react';
 import {GetStaticProps, GetStaticPaths} from 'next';
 import 'chart.js/auto';
 import {Radar} from 'react-chartjs-2';
-import Page from '../../components/Page';
-import {calculateScore} from '../api/score/calculateSignaScore';
+import Page from '@components/Page';
+import {calculateScore} from '@api/score/calculateSignaScore';
 import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {singleQueryString} from '@lib/singleQueryString';
 import {prisma} from '@lib/prisma';
@@ -42,10 +42,12 @@ export interface AddressProps {
     progress: Array<string>,
     error: boolean | string,
     name?: string,
+    title?: string,
+    categoryScores?: Record<string, number>,
     explorerBaseUrl?: string
 }
 
-const Address = ({address, score, rank, progress, error, name, explorerBaseUrl}: AddressProps) => {
+const Index = ({address, score, rank, progress, error, name, title, explorerBaseUrl}: AddressProps) => {
     const router = useRouter()
     const displayAddress = useReedSolomonAddress(address)
 
@@ -212,6 +214,18 @@ const Address = ({address, score, rank, progress, error, name, explorerBaseUrl}:
                     >
                         {name || 'Account Profile'}
                     </h1>
+                    {title && (
+                        <div
+                            className="text-[0.78rem] tracking-[0.22em] uppercase mb-2"
+                            style={{
+                                fontFamily: "'Cinzel', serif",
+                                color: 'var(--gold-bright)',
+                                letterSpacing: '0.22em'
+                            }}
+                        >
+                            {title}
+                        </div>
+                    )}
                     <div className="flex items-center justify-center gap-3">
                         <span
                             className="text-[0.85rem] text-[var(--text-dim)]"
@@ -328,4 +342,4 @@ const Address = ({address, score, rank, progress, error, name, explorerBaseUrl}:
     );
 }
 
-export default Address
+export default Index
