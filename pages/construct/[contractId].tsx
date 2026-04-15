@@ -11,11 +11,73 @@ import {useAppSelector} from '@states/hooks';
 import {selectConnectedAccount} from '@states/appState';
 import {singleQueryString} from '@lib/singleQueryString';
 import {Address} from '@signumjs/core';
+import {createReadOnlyClient} from '@signumjs/core/createReadOnlyClient';
+import {ConstructInstanceReadService} from '@signarank/client';
+import {R2_CDN_BASE} from '@lib/construct/constants';
+import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import Link from 'next/link';
+import type {GetStaticPaths, GetStaticProps} from 'next';
 
-const ConstructPage = () => {
+interface ConstructPreview {
+    contractId: string;
+    name: string;
+    description: string;
+    imageUrl: string;
+}
+
+interface ConstructPageProps {
+    preview: ConstructPreview | null;
+}
+
+const SITE_URL = 'https://signarank.club';
+
+export const getStaticPaths: GetStaticPaths = async () => {
+    return {
+        paths: [],
+        fallback: 'blocking'
+    };
+};
+
+const toStringArray = (csv: string = ''): string[] => csv.split(',').filter(Boolean);
+
+export const getStaticProps: GetStaticProps<ConstructPageProps> = async ({params}) => {
+    const contractId = singleQueryString(params?.contractId);
+
+    if (!contractId) {
+        return {props: {preview: null}, revalidate: ISR_REVALIDATE_SECONDS};
+    }
+
+    try {
+        const ledger = createReadOnlyClient({
+            nodeHost: process.env.NEXT_PUBLIC_SIGNUM_DEFAULT_NODE || '',
+            reliableNodeHosts: toStringArray(process.env.NEXT_PUBLIC_SIGNUM_RELIABLE_NODES)
+        });
+
+        const service = new ConstructInstanceReadService({ledger, contractCodeHash: '', greenContractReference: ''}, contractId);
+        const metadata = await service.getMetadata();
+
+        const imageUrl = metadata.getCustomField('xav') as string ?? `${R2_CDN_BASE}/${metadata.avatar.ipfsCid}` ?? ''
+
+        return {
+            props: {
+                preview: {
+                    contractId,
+                    name: metadata.name || 'Unknown Construct',
+                    description: metadata.description || 'A Signum on-chain construct. Attack to deal damage and earn rewards.',
+                    imageUrl
+                }
+            },
+            revalidate: ISR_REVALIDATE_SECONDS
+        };
+    } catch (e) {
+        console.error('construct getStaticProps failed', contractId, e);
+        return {props: {preview: null}, revalidate: ISR_REVALIDATE_SECONDS};
+    }
+};
+
+const ConstructPage = ({preview}: ConstructPageProps) => {
     const router = useRouter();
-    const contractId = singleQueryString(router.query.contractId);
+    const contractId = singleQueryString(router.query.contractId) || preview?.contractId || '';
     const connectedAccount = useAppSelector(selectConnectedAccount);
     const {construct, loading, error} = useConstruct(contractId || null);
 
@@ -46,9 +108,19 @@ const ConstructPage = () => {
         debuffMaxStack: construct?.debuffMaxStack ?? 0,
     });
 
+    const previewTitle = preview ? `${preview.name} - SIGNArank` : 'Loading Construct - SIGNArank';
+    const previewOgImage = preview?.imageUrl || undefined;
+    const previewDescription = preview?.description || undefined;
+    const previewOgUrl = preview ? `${SITE_URL}/construct/${preview.contractId}` : undefined;
+
     if (loading) {
         return (
-            <Page title="Loading Construct - SIGNArank">
+            <Page
+                title={previewTitle}
+                description={previewDescription}
+                ogImage={previewOgImage}
+                ogUrl={previewOgUrl}
+            >
                 <div className="content-area">
                     <div className="glass-static p-12 flex justify-center items-center min-h-[300px]">
                         <span
@@ -65,7 +137,12 @@ const ConstructPage = () => {
 
     if (error || !construct) {
         return (
-            <Page title="Construct Not Found - SIGNArank">
+            <Page
+                title={previewTitle}
+                description={previewDescription}
+                ogImage={previewOgImage}
+                ogUrl={previewOgUrl}
+            >
                 <div className="content-area">
                     <div className="glass-static p-12 flex flex-col justify-center items-center min-h-[300px] text-center gap-4">
                         <h2
@@ -94,7 +171,12 @@ const ConstructPage = () => {
     }
 
     return (
-        <Page title={`${construct.name} - SIGNArank`}>
+        <Page
+            title={`${construct.name} - SIGNArank`}
+            description={construct.description || previewDescription}
+            ogImage={construct.imageUrl || previewOgImage}
+            ogUrl={previewOgUrl || `${SITE_URL}/construct/${construct.contractId}`}
+        >
             <div className="content-area">
                 <div className="grid grid-cols-2 gap-8 items-start max-lg:grid-cols-1 max-lg:gap-6 max-md:gap-4">
                     {/* Left Column: Card + Player Status + Attack Form */}

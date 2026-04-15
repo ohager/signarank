@@ -38,7 +38,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                 type="button"
                 onClick={() => setIsLightboxOpen(true)}
                 aria-label={`View full image of ${construct.name}`}
-                className="relative w-full aspect-[3/4] overflow-hidden max-md:aspect-auto max-md:h-[45vh] max-md:min-h-[280px] group cursor-zoom-in p-0 border-0 bg-transparent"
+                className="relative w-full h-full min-h-[360px] overflow-hidden max-md:h-[45vh] max-md:min-h-[280px] group cursor-zoom-in p-0 border-0 bg-transparent"
             >
                 <img
                     src={construct.imageUrl}
@@ -209,7 +209,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                                 >
                                     <span className="text-[var(--ember)]">First Blood:</span>{' '}
                                     <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.75rem' }}>
-                                        {firstBloodAttacker.attacker ? `[${firstBloodAttacker.attackerName}] ` : ''}
+                                        {firstBloodAttacker.attackerName ? `[${firstBloodAttacker.attackerName}] ` : ''}
                                         {firstBloodAttacker.attacker} ({firstBloodAttacker.attackerXp} XP)
                                     </span>
                                 </p>

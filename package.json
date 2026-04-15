@@ -17,7 +17,7 @@
     "@hapi/boom": "^9.1.4",
     "@prisma/client": "^5.12.1",
     "@reduxjs/toolkit": "^1.8.0",
-    "@signarank/client": "^0.0.2",
+    "@signarank/client": "^0.0.3",
     "@signumjs/core": "^3.0.7",
     "@signumjs/crypto": "^3.0.7",
     "@signumjs/http": "^3.0.7",
