@@ -62,7 +62,7 @@ export const usePendingAttacks = (contractId: string | null): UsePendingAttacksR
                 if (
                     tx.recipient === contractId &&
                     tx.confirmations !== undefined &&
-                    tx.confirmations <= ConfirmationsRequired
+                    tx.confirmations < ConfirmationsRequired
                 ) {
                     results.push({
                         txId: tx.transaction,

@@ -31,6 +31,12 @@ export interface ConstructData {
     debuffDamageReduction: number;
     /** Debuff maximum stack count */
     debuffMaxStack: number;
+    /** Season this construct belongs to (e.g. "frostfest") */
+    seasonName: string | null;
+    /** HP restored per regen tick (0 = no regen) */
+    regenHitpoints: number;
+    /** Blocks between regen ticks (0 = no regen) */
+    regenBlockInterval: number;
 }
 
 export interface ConstructMeta {
@@ -93,4 +99,5 @@ export interface AttackResult {
     success: boolean;
     txId?: string;
     error?: string;
+    cancelled?: boolean;
 }

@@ -31,6 +31,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
         maximumFractionDigits: 2,
     });
 
+
     return (
         <div className="glass-static overflow-hidden grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] max-md:grid-cols-1">
             {/* Image (portrait) */}
@@ -159,6 +160,55 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                             </span>
                         </div>
                     </div>
+
+                    {/* Trait Badges */}
+                    {(() => {
+                        const traits: { label: string }[] = [];
+
+                        const hp = construct.maxHp;
+                        if (hp >= 50000) traits.push({ label: '☽ Primordial' });
+                        else if (hp >= 30000) traits.push({ label: '⬡ Archon' });
+                        else if (hp >= 20000) traits.push({ label: '◈ Titan' });
+                        else if (hp >= 10000) traits.push({ label: '⚑ Warlord' });
+
+                        if (construct.regenHitpoints > 0 && construct.regenBlockInterval > 0)
+                            traits.push({ label: '↺ Regenerates' });
+                        if (construct.debuffDamageReduction > 0)
+                            traits.push({ label: '✦ Curses' });
+                        if (construct.rewardNftId && construct.rewardNftId !== '0')
+                            traits.push({ label: '◆ Drops NFT' });
+                        if (construct.breachLimit >= 20)
+                            traits.push({ label: '⬡ Fortified' });
+
+                        if (traits.length === 0) return null;
+
+                        return (
+                            <div>
+                                <span
+                                    className="block text-[0.6rem] text-[var(--text-faint)] uppercase tracking-[0.12em] mb-1.5"
+                                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                                >
+                                    Traits
+                                </span>
+                                <div className="flex gap-1.5 flex-wrap">
+                                    {traits.map(t => (
+                                        <span
+                                            key={t.label}
+                                            className="text-[0.6rem] font-semibold uppercase tracking-[0.08em] py-0.5 px-2 rounded-sm"
+                                            style={{
+                                                fontFamily: "'IBM Plex Mono', monospace",
+                                                color: 'var(--gold)',
+                                                background: 'rgba(197,164,78,0.08)',
+                                                border: '1px solid rgba(197,164,78,0.2)',
+                                            }}
+                                        >
+                                            {t.label}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Status Badges */}
                     <div className="flex gap-2 mt-1">

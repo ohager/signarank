@@ -2,14 +2,18 @@ import React, { useState, useMemo } from 'react';
 import { ConstructData } from '@lib/construct/types';
 import { getAttackTokenIds } from '@lib/construct/constants';
 import { useConstructAttack } from '@hooks/useConstructAttack';
+import { PlayerConstructStats } from '@hooks/usePlayerConstructStats';
 import { useTokenMeta } from '@hooks/useTokenMeta';
 import { useTokenBalances } from '@hooks/useTokenBalances';
 import { useAppSelector } from '@states/hooks';
 import { selectConnectedAccount } from '@states/appState';
+import { computeNarrationTags } from '@lib/narration/computeTags';
 import { TokenSelector, TokenSelection } from './TokenSelector';
+import { NarrationBanner } from './NarrationBanner';
 import { CooldownTimer } from './CooldownTimer';
 import { Address } from '@signumjs/core';
 import { Amount } from '@signumjs/util';
+import { getExplorerBaseUrl } from '@lib/explorerUrl';
 
 interface AttackFormProps {
     construct: ConstructData;
@@ -17,11 +21,14 @@ interface AttackFormProps {
         isInCooldown: boolean;
         blocksRemaining: number;
     };
+    playerStats?: PlayerConstructStats | null;
 }
 
-export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatus }) => {
+export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatus, playerStats }) => {
     const [signaAmount, setSignaAmount] = useState('');
     const [tokenSelections, setTokenSelections] = useState<TokenSelection[]>([]);
+    const [narration, setNarration] = useState<string | null>(null);
+    const [narrationLoading, setNarrationLoading] = useState(false);
 
     const connectedAccount = useAppSelector(selectConnectedAccount);
     const { attack, attacking, lastResult, reset } = useConstructAttack();
@@ -82,6 +89,41 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         return true;
     }, [connectedAccount, isInCooldown, attacking, signaAmount, totalRequired, signaBalance, tokenSelections, balances]);
 
+    const fetchNarration = async (tokens: { tokenId: string; quantity: string }[]) => {
+        const seasonName = construct.seasonName;
+        if (!seasonName) return;
+
+        setNarrationLoading(true);
+        try {
+            const tags = computeNarrationTags({
+                signaAmount,
+                tokens: tokens.map(t => ({ tokenId: t.tokenId, quantity: parseFloat(t.quantity) })),
+                construct,
+                playerStats: playerStats ?? null,
+            });
+
+            const res = await fetch('/api/narrations/pick', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    seasonName,
+                    constructName: construct.name,
+                    locale: 'en',
+                    tags,
+                }),
+            });
+
+            if (res.status === 200) {
+                const body = await res.json();
+                setNarration(body.text);
+            }
+        } catch {
+            // narration is non-critical; silently ignore
+        } finally {
+            setNarrationLoading(false);
+        }
+    };
+
     const handleAttack = async () => {
         if (!canAttack) return;
 
@@ -96,9 +138,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         });
 
         if (result.success) {
-            // Reset form on success
-            setSignaAmount('');
-            setTokenSelections([]);
+            fetchNarration(tokens);
         }
     };
 
@@ -126,51 +166,122 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         );
     }
 
+    const header = (
+        <div className="px-5 py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5">
+            <span className="text-[var(--ember)]">⚔</span>
+            <span
+                className="text-[0.7rem] text-[var(--text)] uppercase tracking-[0.15em]"
+                style={{ fontFamily: "'Cinzel', serif", fontWeight: 600 }}
+            >
+                Attack
+            </span>
+        </div>
+    );
+
+    // Success view — replaces the form after a signed attack
+    if (lastResult?.success) {
+        const explorerHref = lastResult.txId
+            ? `${getExplorerBaseUrl()}/tx/${lastResult.txId}`
+            : null;
+
+        const handleAttackAgain = () => {
+            setNarration(null);
+            reset();
+        };
+
+        return (
+            <div className="glass-static overflow-hidden">
+                {header}
+                <div className="p-5 max-md:p-4">
+                    <div
+                        className="mb-4 py-3 px-4 rounded-sm flex items-center gap-3"
+                        style={{
+                            background: 'rgba(74, 222, 128, 0.06)',
+                            border: '1px solid rgba(74,222,128,0.2)',
+                        }}
+                    >
+                        <span style={{ color: '#4ade80', fontSize: '1.1rem' }}>✓</span>
+                        <div className="flex-1 min-w-0">
+                            <span
+                                className="text-[0.8rem] block"
+                                style={{ fontFamily: "'Cinzel', serif", color: '#4ade80' }}
+                            >
+                                Attack Launched
+                            </span>
+                            {explorerHref && (
+                                <a
+                                    href={explorerHref}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[0.7rem] underline truncate block mt-0.5"
+                                    style={{
+                                        fontFamily: "'IBM Plex Mono', monospace",
+                                        color: 'rgba(74,222,128,0.7)',
+                                    }}
+                                >
+                                    View transaction ↗
+                                </a>
+                            )}
+                        </div>
+                    </div>
+
+                    <NarrationBanner text={narration} loading={narrationLoading} />
+
+                    <div
+                        className="mt-4 py-2.5 px-3 rounded-sm text-center"
+                        style={{
+                            background: 'rgba(197,164,78,0.04)',
+                            border: '1px solid rgba(197,164,78,0.12)',
+                        }}
+                    >
+                        <p
+                            className="text-[0.75rem] text-[var(--text-faint)] m-0 mb-3"
+                            style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}
+                        >
+                            You must wait {construct.coolDownInBlocks} block{construct.coolDownInBlocks !== 1 ? 's' : ''} before attacking again.
+                        </p>
+                        <button
+                            onClick={handleAttackAgain}
+                            className="py-2 px-5 border rounded-sm text-[0.75rem] uppercase tracking-[0.1em] cursor-pointer transition-all duration-200 hover:bg-[rgba(197,164,78,0.08)]"
+                            style={{
+                                fontFamily: "'Cinzel', serif",
+                                color: 'var(--gold)',
+                                borderColor: 'rgba(197,164,78,0.3)',
+                                background: 'transparent',
+                            }}
+                        >
+                            Attack Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="glass-static overflow-hidden">
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-[var(--glass-border)] flex items-center gap-2.5">
-                <span className="text-[var(--ember)]">⚔</span>
-                <span
-                    className="text-[0.7rem] text-[var(--text)] uppercase tracking-[0.15em]"
-                    style={{ fontFamily: "'Cinzel', serif", fontWeight: 600 }}
-                >
-                    Attack
-                </span>
-            </div>
+            {header}
 
             <div className="p-5 max-md:p-4">
-                {/* Success/Error Messages */}
-                {lastResult && (
+                {/* Error message */}
+                {lastResult && !lastResult.success && (
                     <div
                         className="flex items-center justify-between mb-4 py-2.5 px-3 rounded-sm"
                         style={{
-                            background: lastResult.success
-                                ? 'rgba(74, 222, 128, 0.08)'
-                                : 'rgba(239, 68, 68, 0.08)',
-                            border: `1px solid ${lastResult.success ? 'rgba(74,222,128,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            border: '1px solid rgba(239,68,68,0.2)',
                         }}
                     >
                         <span
                             className="text-[0.8rem]"
-                            style={{
-                                fontFamily: "'IBM Plex Mono', monospace",
-                                color: lastResult.success ? '#4ade80' : '#ef4444',
-                            }}
+                            style={{ fontFamily: "'IBM Plex Mono', monospace", color: '#ef4444' }}
                         >
-                            {lastResult.success ? (
-                                <>Attack sent! TX: {lastResult.txId?.slice(0, 12)}...</>
-                            ) : (
-                                <>Error: {lastResult.error}</>
-                            )}
+                            Error: {lastResult.error}
                         </span>
                         <button
                             onClick={reset}
                             className="bg-transparent border-none cursor-pointer text-[0.75rem] underline"
-                            style={{
-                                fontFamily: "'IBM Plex Mono', monospace",
-                                color: lastResult.success ? '#4ade80' : '#ef4444',
-                            }}
+                            style={{ fontFamily: "'IBM Plex Mono', monospace", color: '#ef4444' }}
                         >
                             Dismiss
                         </button>

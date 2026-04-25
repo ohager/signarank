@@ -44,10 +44,30 @@ export const useConstructAttack = (): UseConstructAttackResult => {
         try {
             const { contractId, signaAmount } = params;
 
+            const controller = new AbortController();
+
             const signer: Signer = {
                 getPublicKey: async () => connectedAccount,
-                sign: async (unsignedTransactionBytes: string) => {
-                    const confirmed = await Wallet.Extension.confirm(unsignedTransactionBytes);
+                sign: async (unsignedTransactionBytes: string, signal?: AbortSignal) => {
+                    if (signal?.aborted) throw new DOMException('cancelled', 'AbortError');
+
+                    let confirmed: any;
+                    try {
+                        confirmed = await Wallet.Extension.confirm(unsignedTransactionBytes);
+                    } catch (e) {
+                        const name: string = (e as any)?.name ?? '';
+                        const msg: string  = (e as any)?.message ?? (e as any)?.error ?? '';
+                        const isUserDenial = name === 'NotGrantedWalletError'
+                            || /cancel|reject|denied|abort|not.granted/i.test(msg);
+                        if (isUserDenial) controller.abort();
+                        throw new DOMException(isUserDenial ? 'cancelled' : (msg || 'Signing failed'), 'AbortError');
+                    }
+
+                    if (!confirmed) {
+                        controller.abort();
+                        throw new DOMException('cancelled', 'AbortError');
+                    }
+
                     return {
                         fullHash: confirmed.fullHash,
                         transaction: confirmed.transactionId,
@@ -65,6 +85,7 @@ export const useConstructAttack = (): UseConstructAttackResult => {
                 targetConstruct: contractId,
                 force: Amount.fromSigna(signaAmount),
                 powerUps: [],
+                signal: controller.signal,
             });
 
             const result: AttackResult = {
@@ -83,6 +104,11 @@ export const useConstructAttack = (): UseConstructAttackResult => {
             return result;
 
         } catch (e) {
+            const isCancelled = e instanceof DOMException && e.name === 'AbortError';
+            if (isCancelled) {
+                setLastResult(null);
+                return { success: false, cancelled: true };
+            }
             const errorMessage = e instanceof Error ? e.message : 'Attack failed';
             const result: AttackResult = {
                 success: false,

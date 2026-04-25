@@ -1,19 +1,22 @@
 import {useEffect} from 'react';
 import {useRouter} from 'next/router';
-import {getActiveConstructId} from '@lib/construct/constants';
+import {getCurrentSeasonConstructs} from '@lib/construct/seasonConstructs';
 import Page from '@components/Page';
 
 const ConstructIndexPage = () => {
     const router = useRouter();
-    const activeContractId = getActiveConstructId();
+    const liveConstructs = getCurrentSeasonConstructs().filter(c => !c.locked);
+    const firstConstructId = liveConstructs[0]?.contractId ?? null;
 
     useEffect(() => {
-        if (activeContractId) {
-            router.replace(`/construct/${activeContractId}`);
+        if (liveConstructs.length > 1) {
+            router.replace('/season');
+        } else if (firstConstructId) {
+            router.replace(`/construct/${firstConstructId}`);
         }
-    }, [activeContractId, router]);
+    }, [router]);
 
-    if (!activeContractId) {
+    if (liveConstructs.length === 0) {
         return (
             <Page title="No Active Construct - SIGNArank">
                 <div className="content-area">
@@ -44,7 +47,7 @@ const ConstructIndexPage = () => {
                         className="text-[var(--text-dim)] text-lg"
                         style={{fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic'}}
                     >
-                        Redirecting to active construct...
+                        Redirecting...
                     </span>
                 </div>
             </div>

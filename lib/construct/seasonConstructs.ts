@@ -1,45 +1,55 @@
 /**
  * Season Constructs Configuration
- * Defines all constructs for each season
+ *
+ * Three env vars drive the season construct list, displayed in this order:
+ *   NEXT_PUBLIC_SEASON_PAST_CONSTRUCT_IDS    – defeated constructs (real IDs)
+ *   NEXT_PUBLIC_SEASON_CONSTRUCT_IDS         – active/current constructs (real IDs)
+ *   NEXT_PUBLIC_SEASON_FUTURE_CONSTRUCT_IDS  – upcoming slots (any placeholder string, shown as "Coming Soon")
  */
 
 export interface SeasonConstruct {
     contractId: string;
-    name: string;
-    order: number; // Display order in the season
+    order: number;
+    locked: boolean; // true = coming soon, don't fetch from chain
 }
 
-// Fallback for development when env var is not set
-const FALLBACK_CONSTRUCT_ID = '12345678901234567890';
-
-export const SEASON_CONSTRUCTS: Record<string, SeasonConstruct[]> = {
-    frostfest: [
-        {
-            contractId: process.env.NEXT_PUBLIC_CONSTRUCT_CONTRACT_ID || FALLBACK_CONSTRUCT_ID,
-            name: 'CT000001',
-            order: 1,
-        },
-        // Add more constructs as they become available
-        // These will be shown as "locked" until they're active or defeated
-        {
-            contractId: 'TBD_002',
-            name: '???',
-            order: 2,
-        },
-        {
-            contractId: 'TBD_003',
-            name: '???',
-            order: 3,
-        },
-    ],
-};
-
-export function getSeasonConstructs(seasonKey: string): SeasonConstruct[] {
-    return SEASON_CONSTRUCTS[seasonKey] || [];
+function splitIds(raw: string | undefined): string[] {
+    return (raw || '')
+        .split(',')
+        .map(id => id.trim())
+        .filter(id => id.length > 0);
 }
 
 export function getCurrentSeasonConstructs(): SeasonConstruct[] {
-    // For now, hardcoded to frostfest
-    // In the future, this would read from the current season
-    return getSeasonConstructs('frostfest');
+    const past = splitIds(process.env.NEXT_PUBLIC_SEASON_PAST_CONSTRUCT_IDS);
+    const current = splitIds(process.env.NEXT_PUBLIC_SEASON_CONSTRUCT_IDS);
+    const future = splitIds(process.env.NEXT_PUBLIC_SEASON_FUTURE_CONSTRUCT_IDS);
+
+    // Fallback: single-construct setup via the legacy var
+    if (past.length === 0 && current.length === 0 && future.length === 0) {
+        const activeId = process.env.NEXT_PUBLIC_CONSTRUCT_CONTRACT_ID;
+        if (!activeId) return [];
+        return [{ contractId: activeId, order: 1, locked: false }];
+    }
+
+    const all: SeasonConstruct[] = [];
+    let order = 1;
+
+    for (const id of past)    { all.push({ contractId: id, order: order++, locked: false }); }
+    for (const id of current) { all.push({ contractId: id, order: order++, locked: false }); }
+    for (const id of future)  { all.push({ contractId: id, order: order++, locked: true  }); }
+
+    return all;
+}
+
+export function getSeasonNameForContract(contractId: string): string | null {
+    const past    = splitIds(process.env.NEXT_PUBLIC_SEASON_PAST_CONSTRUCT_IDS);
+    const current = splitIds(process.env.NEXT_PUBLIC_SEASON_CONSTRUCT_IDS);
+
+    if (past.includes(contractId) || current.includes(contractId)) return 'frostfest';
+
+    const activeId = process.env.NEXT_PUBLIC_CONSTRUCT_CONTRACT_ID;
+    if (activeId && contractId === activeId) return 'frostfest';
+
+    return null;
 }

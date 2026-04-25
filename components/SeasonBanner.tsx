@@ -2,13 +2,12 @@ import React from 'react';
 import Link from 'next/link';
 import { useSeasonInfo } from '@hooks/useSeasonInfo';
 import { useConstruct } from '@hooks/useConstruct';
-import { getActiveConstructId } from '@lib/construct/constants';
+import { getCurrentSeasonConstructs } from '@lib/construct/seasonConstructs';
 
 export const SeasonBanner: React.FC = () => {
     const { name, isCurrent, description } = useSeasonInfo();
-    const activeConstructId = getActiveConstructId();
-    const constructId = activeConstructId || '12345678901234567890';
-    const { construct, loading } = useConstruct(constructId);
+    const firstConstructId = getCurrentSeasonConstructs().find(c => !c.locked)?.contractId ?? null;
+    const { construct, loading } = useConstruct(firstConstructId);
 
     if (!isCurrent || !name) {
         return null;
@@ -64,23 +63,14 @@ export const SeasonBanner: React.FC = () => {
                     </div>
 
                     {/* Links */}
-                    <div className="flex gap-2 pt-3 border-t border-[var(--glass-border)]">
+                    <div className="pt-3 border-t border-[var(--glass-border)]">
                         <Link
                             href="/season"
-                            className="flex-1 text-center py-2 text-[0.6rem] tracking-[0.1em] uppercase text-[var(--gold)] border border-[var(--gold-dim)] rounded-sm hover:bg-[var(--gold)] hover:text-[#080610] transition-all duration-200"
+                            className="block text-center py-2 text-[0.6rem] tracking-[0.1em] uppercase text-[var(--gold)] border border-[var(--gold-dim)] rounded-sm hover:bg-[var(--gold)] hover:text-[#080610] transition-all duration-200"
                             style={{fontFamily: "'Cinzel', serif", fontWeight: 600}}
                         >
                             Season Details
                         </Link>
-                        {!loading && construct && !construct.isDefeated && construct.isActive && (
-                            <Link
-                                href={`/construct/${construct.contractId}`}
-                                className="flex-1 text-center py-2 text-[0.6rem] tracking-[0.1em] uppercase text-white rounded-sm transition-all duration-200 hover:shadow-[0_0_20px_rgba(232,93,58,0.3)]"
-                                style={{fontFamily: "'Cinzel', serif", fontWeight: 600, background: 'linear-gradient(135deg, var(--ember), #c44a2a)'}}
-                            >
-                                Fight {construct.name}
-                            </Link>
-                        )}
                     </div>
                 </div>
             </div>

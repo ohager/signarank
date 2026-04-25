@@ -110,6 +110,7 @@ const ConstructPageBody = ({initialContractId}: ConstructPageBodyProps) => {
                             <AttackForm
                                 construct={construct}
                                 cooldownStatus={cooldownStatus ?? undefined}
+                                playerStats={playerStats}
                             />
                         </div>
                     )}

@@ -5,6 +5,7 @@ import {R2_CDN_BASE, POLLING_INTERVALS} from '@lib/construct/constants';
 import {useSignumLedger} from './useSignumLedger';
 import {ReadOnlyPlayer} from "@signarank/client"
 import {Amount} from "@signumjs/util"
+import {getSeasonNameForContract} from '@lib/construct/seasonConstructs'
 
 interface UseConstructResult {
     construct: ConstructData | null;
@@ -68,6 +69,9 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 rewardPot,
                 debuffDamageReduction: status.debuff?.damageReduction ?? 0,
                 debuffMaxStack: status.debuff?.maxStack ?? 0,
+                regenHitpoints: status.regeneration?.hitpoints ?? 0,
+                regenBlockInterval: status.regeneration?.blockInterval ?? 0,
+                seasonName: getSeasonNameForContract(contractId),
             };
 
             ConstructCache.setConstructMeta(contractId, {

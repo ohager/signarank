@@ -1,13 +1,20 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import Page from '@components/Page';
 import {useSeasonInfo} from '@hooks/useSeasonInfo';
 import {useConstruct} from '@hooks/useConstruct';
 import {getCurrentSeasonConstructs} from '@lib/construct/seasonConstructs';
 import Link from 'next/link';
 
+const CARD_WIDTH = 280 + 20; // card width + gap
+
 const SeasonPage = () => {
     const seasonInfo = useSeasonInfo();
     const constructs = getCurrentSeasonConstructs();
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const scroll = (dir: 'left' | 'right') => {
+        scrollRef.current?.scrollBy({ left: dir === 'right' ? CARD_WIDTH : -CARD_WIDTH, behavior: 'smooth' });
+    };
 
     return (
         <Page title={`${seasonInfo.name} Season - SIGNArank`}>
@@ -39,15 +46,36 @@ const SeasonPage = () => {
                     </p>
                 </div>
 
-                {/* Construct Cards Grid */}
-                <div className="section-label">Constructs</div>
-                <div className="grid justify-center grid-cols-[repeat(auto-fit,300px)] gap-6 max-md:grid-cols-[repeat(auto-fit,220px)] max-md:gap-4">
+                {/* Construct Cards Carousel */}
+                <div className="flex items-center gap-2 mb-3">
+                    <div className="section-label !mb-0">Constructs</div>
+                    <div className="flex gap-1 ml-auto">
+                        {(['left', 'right'] as const).map(dir => (
+                            <button
+                                key={dir}
+                                onClick={() => scroll(dir)}
+                                className="w-8 h-8 flex items-center justify-center rounded-sm border transition-all duration-150 hover:brightness-125 active:scale-95"
+                                style={{
+                                    background: 'rgba(197,164,78,0.06)',
+                                    borderColor: 'rgba(197,164,78,0.2)',
+                                    color: 'var(--gold)',
+                                }}
+                            >
+                                {dir === 'left' ? '‹' : '›'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div
+                    ref={scrollRef}
+                    className="flex gap-5 overflow-x-auto pb-3 max-md:gap-3 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
                     {constructs.map((constructConfig) => (
                         <ConstructSeasonCard
                             key={constructConfig.contractId}
                             contractId={constructConfig.contractId}
-                            name={constructConfig.name}
                             order={constructConfig.order}
+                            locked={constructConfig.locked}
                         />
                     ))}
                 </div>
@@ -58,17 +86,16 @@ const SeasonPage = () => {
 
 interface ConstructSeasonCardProps {
     contractId: string;
-    name: string;
     order: number;
+    locked: boolean;
 }
 
-const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, name, order}) => {
-    const isLocked = contractId.startsWith('TBD_');
-    const {construct, loading} = useConstruct(isLocked ? null : contractId);
+const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, order, locked}) => {
+    const {construct, loading} = useConstruct(locked ? null : contractId);
 
-    if (isLocked) {
+    if (locked) {
         return (
-            <div className="glass-static overflow-hidden opacity-50 cursor-not-allowed">
+            <div className="glass-static overflow-hidden opacity-50 cursor-not-allowed shrink-0 w-[280px] max-md:w-[200px] snap-start">
                 <div className="w-full aspect-[3/4] flex flex-col justify-center items-center gap-2 border-b border-[var(--glass-border)] p-3" style={{background: 'linear-gradient(135deg, rgba(30,28,36,0.8), rgba(20,18,26,0.8))'}}>
                     <div className="text-5xl opacity-30 max-md:text-4xl">&#128274;</div>
                     <div
@@ -87,7 +114,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, na
 
     if (loading || !construct) {
         return (
-            <div className="glass-static overflow-hidden">
+            <div className="glass-static overflow-hidden shrink-0 w-[280px] max-md:w-[200px] snap-start">
                 <div className="p-8 text-center text-[var(--text-faint)]" style={{fontFamily: "'Cormorant Garamond', serif"}}>
                     Loading...
                 </div>
@@ -100,9 +127,9 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, na
     const isDefeated = construct.isDefeated;
 
     return (
-        <Link href={`/construct/${construct.contractId}`} style={{textDecoration: 'none'}}>
+        <Link href={`/construct/${construct.contractId}`} style={{textDecoration: 'none'}} className="shrink-0 w-[280px] max-md:w-[200px] snap-start">
             <div
-                className={`glass-static overflow-hidden transition-all duration-200 cursor-pointer hover:-translate-y-1 ${
+                className={`glass-static overflow-hidden transition-all duration-200 cursor-pointer hover:-translate-y-1 h-full ${
                     isActive ? 'hover:shadow-[0_8px_30px_rgba(197,164,78,0.2)]' : ''
                 }`}
                 style={isActive ? {borderColor: 'rgba(197,164,78,0.4)', boxShadow: '0 4px 20px rgba(197,164,78,0.15)'} : isDefeated ? {opacity: 0.7, borderColor: 'rgba(232,93,58,0.3)'} : {}}
