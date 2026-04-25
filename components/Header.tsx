@@ -35,6 +35,7 @@ const Header = () => {
                     <Link href="/" className="text-[0.7rem] font-semibold tracking-[0.18em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors" style={{fontFamily: "'Cinzel', serif"}}>Home</Link>
                     <Link href="/season" className="text-[0.7rem] font-semibold tracking-[0.18em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors" style={{fontFamily: "'Cinzel', serif"}}>Season</Link>
                     <Link href="/leaderboard" className="text-[0.7rem] font-semibold tracking-[0.18em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors" style={{fontFamily: "'Cinzel', serif"}}>Leaderboard</Link>
+                    <Link href="/rules" className="text-[0.7rem] font-semibold tracking-[0.18em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors" style={{fontFamily: "'Cinzel', serif"}}>Rules</Link>
                 </nav>
 
                 {/* Desktop Wallet */}
@@ -60,6 +61,7 @@ const Header = () => {
                         <Link href="/" className="py-3 text-[0.75rem] font-semibold tracking-[0.15em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors border-b border-[var(--glass-border)]" style={{fontFamily: "'Cinzel', serif"}}>Home</Link>
                         <Link href="/season" className="py-3 text-[0.75rem] font-semibold tracking-[0.15em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors border-b border-[var(--glass-border)]" style={{fontFamily: "'Cinzel', serif"}}>Season</Link>
                         <Link href="/leaderboard" className="py-3 text-[0.75rem] font-semibold tracking-[0.15em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors border-b border-[var(--glass-border)]" style={{fontFamily: "'Cinzel', serif"}}>Leaderboard</Link>
+                        <Link href="/rules" className="py-3 text-[0.75rem] font-semibold tracking-[0.15em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors border-b border-[var(--glass-border)]" style={{fontFamily: "'Cinzel', serif"}}>Rules</Link>
                     </nav>
                     <div className="px-4 py-4 border-t border-[var(--glass-border)] flex justify-center">
                         <ConnectButton/>

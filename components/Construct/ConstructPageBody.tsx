@@ -91,6 +91,16 @@ const ConstructPageBody = ({initialContractId}: ConstructPageBodyProps) => {
 
     return (
         <div className="content-area">
+            <div className="flex justify-end mb-4">
+                <Link
+                    href="/rules"
+                    className="inline-flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[var(--text-faint)] hover:text-[var(--gold)] transition-colors"
+                    style={{fontFamily: "'IBM Plex Mono', monospace"}}
+                >
+                    <span>How to Play</span>
+                    <span className="text-[var(--gold-dim)]">→</span>
+                </Link>
+            </div>
             <div className="grid grid-cols-2 gap-8 items-start max-lg:grid-cols-1 max-lg:gap-6 max-md:gap-4">
                 {/* Left Column: Card + Player Status + Attack Form */}
                 <div className="flex flex-col gap-5">

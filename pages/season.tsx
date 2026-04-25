@@ -44,6 +44,23 @@ const SeasonPage = () => {
                     >
                         {seasonInfo.description}
                     </p>
+                    <div className="mt-5">
+                        <Link
+                            href="/rules"
+                            className="inline-flex items-center gap-2 py-2 px-5 rounded-sm text-[0.7rem] font-semibold uppercase tracking-[0.15em] transition-all duration-200 hover:brightness-110 active:scale-95"
+                            style={{
+                                fontFamily: "'Cinzel', serif",
+                                background: 'rgba(6,4,10,0.75)',
+                                border: '1px solid rgba(197,164,78,0.6)',
+                                color: 'var(--gold)',
+                                boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+                                backdropFilter: 'blur(8px)',
+                            }}
+                        >
+                            <span>How to Play</span>
+                            <span>→</span>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Construct Cards Carousel */}
