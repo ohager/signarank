@@ -3,13 +3,7 @@ import {ReactNode} from 'react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 import VideoBackground from '../components/VideoBackground'
-import FallingIcons from './FallingIcons'
 import seasonsData from '../lib/seasons.json'
-
-export const seasons = [
-    'achievements_season1',
-    'achievements_season2'
-];
 
 interface PageProps {
     children: ReactNode,
@@ -35,7 +29,6 @@ const Page = (props: PageProps) => {
     return (
         <>
             {videoUrl && <VideoBackground videoUrl={videoUrl} />}
-            <FallingIcons emojis={['🌼','🌺', '🌸']} />
 
             <div className="relative z-10 min-h-screen flex flex-col">
                 <Head>

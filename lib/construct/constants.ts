@@ -61,11 +61,6 @@ export function getAttackTokenIds(): string[] {
         .filter(id => id.length > 0);
 }
 
-// Get active construct contract ID from environment variable
-export function getActiveConstructId(): string | null {
-    return process.env.NEXT_PUBLIC_CONSTRUCT_CONTRACT_ID || null;
-}
-
 export function getSignaRankTokenId(): string {
     return process.env.NEXT_PUBLIC_SRANK_ID || '';
 }
