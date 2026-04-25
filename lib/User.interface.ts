@@ -2,5 +2,6 @@ export interface User {
     address: string,
     score: number,
     rank: number,
-    name?: string
+    name?: string,
+    title?: string
 }

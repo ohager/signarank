@@ -121,4 +121,6 @@ dist
 
 # Custom
 .idea
+.DS_Store
+
 

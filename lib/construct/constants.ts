@@ -47,9 +47,9 @@ export const BLOCK_TIME_MS = 4 * 60 * 1000;
 
 // Polling intervals
 export const POLLING_INTERVALS = {
-    currentHp: 30 * 1000,       // 30 seconds
-    attackHistory: 60 * 1000,   // 1 minute
-    userCooldown: 30 * 1000,    // 30 seconds
+    currentHp: 30 * 1000,
+    attackHistory: 30 * 1000,
+    userCooldown: 30 * 1000,
 } as const;
 
 // Parse attack token IDs from environment variable
@@ -59,11 +59,6 @@ export function getAttackTokenIds(): string[] {
         .split(',')
         .map(id => id.trim())
         .filter(id => id.length > 0);
-}
-
-// Get active construct contract ID from environment variable
-export function getActiveConstructId(): string | null {
-    return process.env.NEXT_PUBLIC_CONSTRUCT_CONTRACT_ID || null;
 }
 
 export function getSignaRankTokenId(): string {

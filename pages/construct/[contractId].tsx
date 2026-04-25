@@ -1,96 +1,80 @@
-import { useRouter } from 'next/router';
+import type {GetStaticPaths, GetStaticProps} from 'next';
 import Page from '@components/Page';
-import { ConstructCard } from '@components/Construct/ConstructCard';
-import { AttackForm } from '@components/Construct/AttackForm';
-import { AttackHistory } from '@components/Construct/AttackHistory';
-import { useConstruct } from '@hooks/useConstruct';
-import { useUserCooldown } from '@hooks/useUserCooldown';
-import { useAppSelector } from '@states/hooks';
-import { selectConnectedAccount } from '@states/appState';
-import { singleQueryString } from '@lib/singleQueryString';
-import { Address } from '@signumjs/core';
-import styles from '@styles/Construct.module.scss';
-import Link from 'next/link';
+import ConstructPageBody from '@components/Construct/ConstructPageBody';
+import {createReadOnlyClient} from '@signumjs/core/createReadOnlyClient';
+import {ConstructInstanceReadService} from '@signarank/client';
+import {singleQueryString} from '@lib/singleQueryString';
+import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
+import {R2_CDN_BASE} from '@lib/construct/constants';
 
-const ConstructPage = () => {
-    const router = useRouter();
-    const contractId = singleQueryString(router.query.contractId);
-    const connectedAccount = useAppSelector(selectConnectedAccount);
-    const { construct, loading, error } = useConstruct(contractId || null);
+interface ConstructPreview {
+    contractId: string;
+    name: string;
+    description: string;
+    imageUrl: string;
+}
 
-    // Convert public key to account ID for cooldown check
-    let userAccountId: string | null = null;
-    if (connectedAccount) {
-        try {
-            userAccountId = Address.fromPublicKey(connectedAccount).getNumericId();
-        } catch {
-            // Invalid public key
-        }
+interface ConstructPageProps {
+    preview: ConstructPreview | null;
+}
+
+const SITE_URL = 'https://signarank.club';
+
+export const getStaticPaths: GetStaticPaths = async () => ({
+    paths: [],
+    fallback: 'blocking',
+});
+
+const toStringArray = (csv: string = ''): string[] => csv.split(',').filter(Boolean);
+
+export const getStaticProps: GetStaticProps<ConstructPageProps> = async ({params}) => {
+    const contractId = singleQueryString(params?.contractId);
+    if (!contractId) {
+        return {props: {preview: null}, revalidate: ISR_REVALIDATE_SECONDS};
     }
 
-    // Check cooldown status
-    const cooldownStatus = useUserCooldown(
-        contractId || null,
-        userAccountId,
-        construct?.coolDownInBlocks ?? 0
-    );
+    try {
+        const ledger = createReadOnlyClient({
+            nodeHost: process.env.NEXT_PUBLIC_SIGNUM_DEFAULT_NODE || '',
+            reliableNodeHosts: toStringArray(process.env.NEXT_PUBLIC_SIGNUM_RELIABLE_NODES),
+        });
 
-    if (loading) {
-        return (
-            <Page title="Loading Construct - SIGNArank">
-                <div className={styles.constructPage}>
-                    <div className={styles.loadingContainer}>
-                        Loading construct data...
-                    </div>
-                </div>
-            </Page>
+        const service = new ConstructInstanceReadService(
+            {ledger, contractCodeHash: '', greenContractReference: ''},
+            contractId,
         );
-    }
+        const metadata = await service.getMetadata();
 
-    if (error || !construct) {
-        return (
-            <Page title="Construct Not Found - SIGNArank">
-                <div className={styles.constructPage}>
-                    <div className={styles.errorContainer}>
-                        <h2>Failed to load construct</h2>
-                        <p>{error || 'Construct not found'}</p>
-                        <Link href="/">
-                            <a>Return to Home</a>
-                        </Link>
-                    </div>
-                </div>
-            </Page>
-        );
+        const customImage = metadata.getCustomField('xav') as string | undefined;
+        const avatarImage = metadata.avatar ? `${R2_CDN_BASE}/${metadata.avatar.ipfsCid}` : '';
+        const imageUrl = customImage || avatarImage || '';
+
+        return {
+            props: {
+                preview: {
+                    contractId,
+                    name: metadata.name || 'Unknown Construct',
+                    description: metadata.description || 'A Signum on-chain construct. Attack to deal damage and earn rewards.',
+                    imageUrl,
+                },
+            },
+            revalidate: ISR_REVALIDATE_SECONDS,
+        };
+    } catch (e) {
+        console.error('construct getStaticProps failed', contractId, e);
+        return {props: {preview: null}, revalidate: ISR_REVALIDATE_SECONDS};
     }
+};
+
+const ConstructPage = ({preview}: ConstructPageProps) => {
+    const title = preview ? `${preview.name} - SIGNArank` : 'Construct - SIGNArank';
+    const description = preview?.description;
+    const ogImage = preview?.imageUrl || undefined;
+    const ogUrl = preview ? `${SITE_URL}/construct/${preview.contractId}` : undefined;
 
     return (
-        <Page title={`${construct.name} - SIGNArank`}>
-            <div className={`${styles.constructPage} content`}>
-                <div className={styles.twoColumnLayout}>
-                    {/* Left Column: Card + Attack Form */}
-                    <div className={styles.leftColumn}>
-                        <ConstructCard construct={construct} />
-
-                        {/* Attack Form Section */}
-                        {!construct.isDefeated && construct.isActive && (
-                            <div className={styles.attackSection}>
-                                <AttackForm
-                                    construct={construct}
-                                    cooldownStatus={cooldownStatus ?? undefined}
-                                />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right Column: Attack History */}
-                    <div className={styles.rightColumn}>
-                        <AttackHistory
-                            contractId={construct.contractId}
-                            xpTokenId={construct.xpTokenId}
-                        />
-                    </div>
-                </div>
-            </div>
+        <Page title={title} description={description} ogImage={ogImage} ogUrl={ogUrl}>
+            <ConstructPageBody initialContractId={preview?.contractId}/>
         </Page>
     );
 };

@@ -7,12 +7,14 @@ import {
     LedgerClientFactory,
     TransactionArbitrarySubtype, TransactionList,
     TransactionPaymentSubtype,
+    TransactionSmartContractSubtype,
     TransactionType
 } from '@signumjs/core';
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
 import {ExceptionInactiveAccount} from './exceptionInactiveAccount';
 import {Amount, ChainTime} from '@signumjs/util';
 import {NftService} from './nftService';
+import {getCategoryScoresFromProgress, getTitle} from '@lib/titles';
 
 async function fetchCachedAddress(accountId: string) {
     const cacheAddress = await prisma.address.findFirst({
@@ -115,6 +117,8 @@ export async function calculateScore(accountId: string) {
     let sentMultiouts = [];
     let receivedMessages = [];
     let sentMessages = [];
+    let receivedMessageContent: number[][][] = [];
+    let receivedContractShortMessage: number[][][] = [];
     let cached = false;
     let error = false;
     let name = '';
@@ -420,6 +424,81 @@ export async function calculateScore(accountId: string) {
                                                     }
                                                 })
                                                 break;
+                                            case 'own_xp_token_balance':
+                                                // Sum balances across a list of XP token IDs (e.g. from multiple games/seasons)
+                                                runOnlyOnce(i, () => {
+                                                    // @ts-ignore
+                                                    const tokenIds: string[] = step.params.tokenIds || [];
+                                                    const totalBalance = tokenIds.reduce((sum: number, id: string) => {
+                                                        const ab = account.assetBalances?.find((ab: any) => ab.asset === id);
+                                                        return sum + (ab ? Number(ab.balanceQNT) : 0);
+                                                    }, 0);
+                                                    // @ts-ignore
+                                                    if (totalBalance >= step.params.minBalance) {
+                                                        markStepCompleted(j, k, l);
+                                                        score += step.points;
+                                                    }
+                                                })
+                                                break;
+                                            case 'receive_message_content':
+                                                // Count received messages containing a specific text (e.g. "VICTORY", "FIRST BLOOD")
+                                                {
+                                                    // @ts-ignore
+                                                    const msgText = transactions[i].attachment?.message || '';
+                                                    // @ts-ignore
+                                                    if (msgText.includes(step.params.content)) {
+                                                        if (!receivedMessageContent[j]) {
+                                                            receivedMessageContent[j] = [] as Array<Array<number>>;
+                                                        }
+                                                        if (!receivedMessageContent[j][k]) {
+                                                            receivedMessageContent[j][k] = [];
+                                                        }
+                                                        if (!receivedMessageContent[j][k][l]) {
+                                                            receivedMessageContent[j][k][l] = 0;
+                                                        }
+                                                        receivedMessageContent[j][k][l]++;
+                                                        // @ts-ignore
+                                                        if (receivedMessageContent[j][k][l] === step.params.count) {
+                                                            markStepCompleted(j, k, l);
+                                                            score += step.points;
+                                                        }
+                                                    }
+                                                }
+                                                break;
+                                            case 'receive_contract_short_message':
+                                                // Count hex-encoded short messages emitted by smart contracts
+                                                // (type=22 SmartContract, subtype=1 SmartContractPayment) whose
+                                                // decoded UTF-8 payload contains step.params.content.
+                                                // Used for first-blood / final-blow detection from Construct contracts.
+                                                if (transactions[i].type === TransactionType.SmartContract &&
+                                                    transactions[i].subtype === TransactionSmartContractSubtype.SmartContractPayment &&
+                                                    transactions[i].recipient === accountId
+                                                ) {
+                                                    // @ts-ignore
+                                                    const hex: string = transactions[i].attachment?.message || '';
+                                                    const decoded = /^[0-9a-fA-F]*$/.test(hex)
+                                                        ? Buffer.from(hex, 'hex').toString('utf8').replace(/\0+/g, '')
+                                                        : hex;
+                                                    // @ts-ignore
+                                                    if (decoded.includes(step.params.content)) {
+                                                        if (!receivedContractShortMessage[j]) {
+                                                            receivedContractShortMessage[j] = [] as Array<Array<number>>;
+                                                        }
+                                                        if (!receivedContractShortMessage[j][k]) {
+                                                            receivedContractShortMessage[j][k] = [];
+                                                        }
+                                                        if (!receivedContractShortMessage[j][k][l]) {
+                                                            receivedContractShortMessage[j][k][l] = 0;
+                                                        }
+                                                        receivedContractShortMessage[j][k][l]++;
+                                                        // @ts-ignore
+                                                        if (receivedContractShortMessage[j][k][l] === step.params.count) {
+                                                            markStepCompleted(j, k, l);
+                                                            score += step.points;
+                                                        }
+                                                    }
+                                                }
+                                                break;
                                             default:
                                                 break;
                                         }
@@ -513,6 +592,9 @@ export async function calculateScore(accountId: string) {
             });
             rank = cachedAddress?.ranking || 0;
         }
+        const categoryScores = getCategoryScoresFromProgress(progress);
+        const title = getTitle(categoryScores, rank, accountId);
+
         return {
             props: {
                 address: accountId,
@@ -522,7 +604,9 @@ export async function calculateScore(accountId: string) {
                 rank,
                 progress,
                 error,
-                name
+                name,
+                title,
+                categoryScores
             }
         }
     } catch (e: any) {
@@ -534,7 +618,9 @@ export async function calculateScore(accountId: string) {
                 rank: -1,
                 progress: [],
                 error: e.message,
-                name: ''
+                name: '',
+                title: '',
+                categoryScores: {}
             }
         }
     }

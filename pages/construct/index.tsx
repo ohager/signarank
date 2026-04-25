@@ -1,26 +1,38 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { getActiveConstructId } from '@lib/construct/constants';
+import {useEffect} from 'react';
+import {useRouter} from 'next/router';
+import {getCurrentSeasonConstructs} from '@lib/construct/seasonConstructs';
 import Page from '@components/Page';
-import styles from '@styles/Construct.module.scss';
 
 const ConstructIndexPage = () => {
     const router = useRouter();
-    const activeContractId = getActiveConstructId();
+    const liveConstructs = getCurrentSeasonConstructs().filter(c => !c.locked);
+    const firstConstructId = liveConstructs[0]?.contractId ?? null;
 
     useEffect(() => {
-        if (activeContractId) {
-            router.replace(`/construct/${activeContractId}`);
+        if (liveConstructs.length > 1) {
+            router.replace('/season');
+        } else if (firstConstructId) {
+            router.replace(`/construct/${firstConstructId}`);
         }
-    }, [activeContractId, router]);
+    }, [router]);
 
-    if (!activeContractId) {
+    if (liveConstructs.length === 0) {
         return (
             <Page title="No Active Construct - SIGNArank">
-                <div className={styles.constructPage}>
-                    <div className={styles.errorContainer}>
-                        <h2>No Active Construct</h2>
-                        <p>No construct is currently configured.</p>
+                <div className="content-area">
+                    <div className="glass-static p-12 flex flex-col justify-center items-center min-h-[300px] text-center gap-4">
+                        <h2
+                            className="text-[1.4rem] font-semibold text-[var(--ember)]"
+                            style={{fontFamily: "'Cinzel', serif"}}
+                        >
+                            No Active Construct
+                        </h2>
+                        <p
+                            className="text-[var(--text-dim)]"
+                            style={{fontFamily: "'Cormorant Garamond', serif"}}
+                        >
+                            No construct is currently configured.
+                        </p>
                     </div>
                 </div>
             </Page>
@@ -29,9 +41,14 @@ const ConstructIndexPage = () => {
 
     return (
         <Page title="Redirecting... - SIGNArank">
-            <div className={styles.constructPage}>
-                <div className={styles.loadingContainer}>
-                    Redirecting to active construct...
+            <div className="content-area">
+                <div className="glass-static p-12 flex justify-center items-center min-h-[300px]">
+                    <span
+                        className="text-[var(--text-dim)] text-lg"
+                        style={{fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic'}}
+                    >
+                        Redirecting...
+                    </span>
                 </div>
             </div>
         </Page>

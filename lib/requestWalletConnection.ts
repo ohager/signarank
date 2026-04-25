@@ -1,4 +1,4 @@
-import {MobileWallet} from '@signumjs/wallets';
+import type {MobileWallet} from '@signumjs/wallets';
 
 export const requestWalletConnection = () => {
     window.dispatchEvent(new Event("connect-wallet"));

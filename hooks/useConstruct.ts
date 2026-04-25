@@ -1,9 +1,11 @@
-import {useQuery} from 'react-query';
+import {useQuery} from '@tanstack/react-query';
 import {ConstructData} from '@lib/construct/types';
 import {ConstructCache} from '@lib/construct/cache';
 import {R2_CDN_BASE, POLLING_INTERVALS} from '@lib/construct/constants';
 import {useSignumLedger} from './useSignumLedger';
 import {ReadOnlyPlayer} from "@signarank/client"
+import {Amount} from "@signumjs/util"
+import {getSeasonNameForContract} from '@lib/construct/seasonConstructs'
 
 interface UseConstructResult {
     construct: ConstructData | null;
@@ -15,9 +17,9 @@ interface UseConstructResult {
 export const useConstruct = (contractId: string | null): UseConstructResult => {
     const ledger = useSignumLedger();
 
-    const {data: construct, isLoading: loading, error: queryError, refetch} = useQuery(
-        ['construct', contractId],
-        async () => {
+    const {data: construct, isLoading: loading, error: queryError, refetch} = useQuery({
+        queryKey: ['construct', contractId],
+        queryFn: async () => {
             if (!contractId) return null;
             if (!ledger) return null;
 
@@ -28,15 +30,22 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
 
             const player = new ReadOnlyPlayer({ledger, accountId: ''});
             const contractService = player.constructService.with(contractId);
-            const [metadata, status] = await Promise.all([
+            const [metadata, status, contract] = await Promise.all([
                 contractService.getMetadata(),
                 contractService.getStatus(),
+                contractService.getContract(),
             ]);
 
             const imageUrl = metadata.avatar
                 ? `${R2_CDN_BASE}/${metadata.avatar.ipfsCid}`
                 : '';
-            
+
+            const playersRewardPercent = status.rewardDistribution?.players ?? 85;
+            const contractBalance = contract.balanceNQT ?? '0';
+            const rewardPot = Amount.fromPlanck(contractBalance)
+                .multiply(playersRewardPercent / 100)
+                .getSigna();
+
             const data: ConstructData = {
                 contractId,
                 name: metadata.name,
@@ -54,6 +63,15 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 rewardNftId: status.rewardNftId || null,
                 firstBloodAccount: status.firstBloodAccount || null,
                 finalBlowAccount: status.finalBlowAccount || null,
+                minActivation: contract.minActivation,
+                contractBalance,
+                playersRewardPercent,
+                rewardPot,
+                debuffDamageReduction: status.debuff?.damageReduction ?? 0,
+                debuffMaxStack: status.debuff?.maxStack ?? 0,
+                regenHitpoints: status.regeneration?.hitpoints ?? 0,
+                regenBlockInterval: status.regeneration?.blockInterval ?? 0,
+                seasonName: getSeasonNameForContract(contractId),
             };
 
             ConstructCache.setConstructMeta(contractId, {
@@ -77,14 +95,12 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
 
             return data;
         },
-        {
-            enabled: !!contractId && !!ledger,
-            staleTime: 20 * 1000,
-            refetchInterval: POLLING_INTERVALS.currentHp,
-            refetchOnWindowFocus: false,
-            keepPreviousData: true,
-        }
-    );
+        enabled: !!contractId && !!ledger,
+        staleTime: 20 * 1000,
+        refetchInterval: POLLING_INTERVALS.currentHp,
+        refetchOnWindowFocus: false,
+        placeholderData: (prev: any) => prev,
+    });
 
     return {
         construct: construct ?? null,

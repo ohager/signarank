@@ -30,3 +30,16 @@ model Address {
   @@index([updatedAt])
   @@index([active, score])
 }
+
+model AttackNarration {
+  id             Int      @id @default(autoincrement())
+  text           String   @db.Text
+  tags           String[]
+  locale         String   @default("en") @db.VarChar(5)
+  seasonName     String   @db.VarChar(100)
+  constructName  String   @db.VarChar(255)
+  createdAt      DateTime @default(now())
+
+  @@index([seasonName, constructName])
+  @@index([locale])
+}

@@ -1,0 +1,31 @@
+{
+  "secondaryThreshold": 0.3,
+  "epithets": [
+    { "maxRank": 1,  "words": ["Grand", "Sovereign", "Supreme", "Paramount", "Imperial", "Almighty"] },
+    { "maxRank": 3,  "words": ["Exalted", "Illustrious", "Transcendent", "Peerless", "Majestic", "Resplendent"] },
+    { "maxRank": 10, "words": ["Ascendant", "Eminent", "Noble", "Vaunted", "Distinguished", "Honored", "Lauded", "Revered"] }
+  ],
+  "aspirant": "Aspirant",
+  "categories": {
+    "gaming": {
+      "nouns": ["Warlord", "Berserker", "Conqueror", "Vanquisher", "Slayer", "Juggernaut", "Warbringer", "Doombringer"],
+      "adjectives": ["Ruthless", "Savage", "Merciless", "Iron-Fisted", "Unyielding", "Warborn", "Bloodsworn", "Unbroken"]
+    },
+    "finance": {
+      "nouns": ["Tycoon", "Magnate", "Baron", "Oligarch", "Patron", "Financier", "Vaultkeeper", "Coinlord"],
+      "adjectives": ["Opulent", "Gilded", "Prosperous", "Lavish", "Affluent", "Golden-Handed", "Bountiful", "Resplendent"]
+    },
+    "collecting": {
+      "nouns": ["Curator", "Hoarder", "Archivist", "Relicseeker", "Treasurer", "Keeper", "Cataloguer", "Gatherer"],
+      "adjectives": ["Relentless", "Insatiable", "Meticulous", "Unending", "Thorough", "Avid", "Patient", "Indefatigable"]
+    },
+    "social": {
+      "nouns": ["Envoy", "Herald", "Diplomat", "Emissary", "Orator", "Luminary", "Chronicler", "Ambassador"],
+      "adjectives": ["Venerated", "Beloved", "Renowned", "Storied", "Celebrated", "Eloquent", "Revered", "Gracious"]
+    },
+    "technology": {
+      "nouns": ["Artificer", "Architect", "Savant", "Inventor", "Mechanist", "Arcanist", "Technomancer", "Tinkerer"],
+      "adjectives": ["Ingenious", "Cunning", "Inventive", "Astute", "Visionary", "Masterful", "Erudite", "Enlightened"]
+    }
+  }
+}

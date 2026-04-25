@@ -3,12 +3,30 @@
     "isCurrent": false,
     "name": "Frostfest",
     "background": "https://r2.signarank.club/seasons/frostfest/xqVCJqfhajEn9nPZY9NyY_ea0a7c7511664e988ef6449a03b4d70e.mp4",
-    "description": "Something is brewing in the frozen depths of the blockchain... A smart contract-based game is about to begin. Prepare yourself. Only a few days left before it begins..."
+    "description": "Something is brewing in the frozen depths of the blockchain... A smart contract-based game is about to begin. Prepare yourself. Only a few days left before it begins...",
+    "pastConstructs": {
+      "testnet": [],
+      "mainnet": []
+    },
+    "constructs": {
+      "testnet": ["9386099853473333948"],
+      "mainnet": []
+    },
+    "futureConstructs": []
   },
   "bloombrawl": {
     "isCurrent": true,
     "name": "Bloombrawl",
     "background": "https://r2.signarank.club/seasons/bloombrawl/Z1-r_OO5u2NSlzgP7b2ef_d7f1db267b614f189f65168448263469.mp4",
-    "description": "Spring has arrived and new life stirs beneath the soil of the blockchain... Bloom Brawl has begun — a season of new awakenings, fierce competition, and untamed growth. The roots remember!"
+    "description": "Spring has arrived and new life stirs beneath the soil of the blockchain... Bloom Brawl has begun — a season of new awakenings, fierce competition, and untamed growth. The roots remember!",
+    "pastConstructs": {
+      "testnet": ["9386099853473333948"],
+      "mainnet": []
+    },
+    "constructs": {
+      "testnet": ["8366565611413730873", "12996457512312423436"],
+      "mainnet": []
+    },
+    "futureConstructs": ["TBD_1", "TBD_2"]
   }
 }

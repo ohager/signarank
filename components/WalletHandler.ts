@@ -16,6 +16,8 @@ export const WalletHandler = () => {
     useEffect(() => {
         function handleDisconnectWallet() {
             listenerRef.current?.unlisten();
+            listenerRef.current = null;
+            connectionRef.current = null;
             dispatch(appActions.setConnectedAccount(null));
             Wallet.Extension = new ExtensionWallet();
         }

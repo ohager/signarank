@@ -22,7 +22,7 @@
 
 // helper
 #define MAP_SET_FLAG 1024
-#define TRANSFER_NFT_METHOD_HASH 7174296962751784077
+#define TRANSFER_NFT_METHOD_HASH -8011735560658290665
 #define NFT_FEES_PLANCK 32000000
 
 // Maps
@@ -88,6 +88,7 @@ long isDefeated;
 long firstBloodAccount;
 long finalBlowAccount;
 long hpTokenId;
+long totalDamageDealt;
 
 // basic tx iteration struct
 struct TX {
@@ -147,11 +148,6 @@ void main() {
     }
 
     currentTx.height =  getCurrentBlockheight();
-    if(isActive == 1 && getAssetBalance(xpTokenId) < getCurrentHitpoints()){
-        messageBuffer[] = "XP Token Shortage";
-        sendMessage(messageBuffer, getCreator());
-        isActive = 0;
-    }
 
     while ((currentTx.txId = getNextTx()) != ZERO) {
         currentTx.sender = getSender(currentTx.txId);
@@ -288,11 +284,11 @@ void runAttackerRound() {
         effectiveDamage = currentHP; // we cannot do more damage
     }
 
-    if(getAssetBalance(xpTokenId) < effectiveDamage){
-        messageBuffer[] = "Insufficient XP Tokens!";
-        sendMessage(messageBuffer, getCreator());
+    totalDamageDealt += effectiveDamage;
+
+    if(effectiveDamage > ZERO){
+        sendQuantity(effectiveDamage, xpTokenId, currentTx.sender);
     }
-    sendQuantity(effectiveDamage, xpTokenId, currentTx.sender);
     sendQuantity(effectiveDamage, hpTokenId, currentTx.sender);
 
     if (firstBloodAccount == ZERO) {
