@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import Page from '@components/Page';
+import { useTokenMeta } from '@hooks/useTokenMeta';
+import {getAttackTokenIds, getSignumSwapUrl} from '@lib/construct/constants';
+
+const getTokenAcquisitionUrl = (tokenId: string) => {
+    return getSignumSwapUrl() + '/tokens/' + tokenId
+}
+
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({title, children}) => (
     <div className="glass-static p-7 max-md:p-5">
@@ -43,6 +50,109 @@ const ExternalLink: React.FC<{ href: string; children: React.ReactNode }> = ({hr
         {children}
     </a>
 );
+
+const AttackTokensSection = () => {
+    const attackTokenIds = useMemo(() => getAttackTokenIds(), []);
+    const { tokens, loading } = useTokenMeta(attackTokenIds);
+
+    if (attackTokenIds.length === 0) return null;
+
+    return (
+        <Section title="Attack Tokens">
+            <p>
+                Attack Tokens are optional power-ups you can include with your attack to deal bonus damage
+                beyond the base SIGNA rate. Each token type has a specific multiplier or addition configured
+                directly in the Construct&apos;s smart contract. Keep in mind that a Construct reacts differently to each token type.
+            </p>
+            <div className="mt-4 flex flex-col gap-3">
+                {loading ? (
+                    Array.from({ length: attackTokenIds.length }).map((_, i) => (
+                        <div
+                            key={i}
+                            className="h-14 rounded-sm"
+                            style={{
+                                background: 'linear-gradient(90deg, rgba(197,164,78,0.04) 25%, rgba(197,164,78,0.09) 50%, rgba(197,164,78,0.04) 75%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'shimmer 1.5s infinite',
+                            }}
+                        />
+                    ))
+                ) : (
+                    tokens.map(token => (
+                        <div
+                            key={token.tokenId}
+                            className="flex items-center gap-4 py-3 px-4 rounded-sm"
+                            style={{
+                                background: 'rgba(197,164,78,0.03)',
+                                border: '1px solid rgba(197,164,78,0.12)',
+                            }}
+                        >
+                            {token.iconUrl ? (
+                                <img
+                                    src={token.iconUrl}
+                                    alt={token.name}
+                                    className="w-9 h-9 rounded-full shrink-0"
+                                    style={{ background: 'rgba(255,255,255,0.06)' }}
+                                />
+                            ) : (
+                                <div
+                                    className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center"
+                                    style={{ background: 'rgba(197,164,78,0.08)' }}
+                                >
+                                    <span style={{ fontFamily: "'Cinzel', serif", color: 'var(--gold)', fontSize: '0.85rem' }}>
+                                        {token.name.charAt(0).toUpperCase()}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span
+                                        className="text-[var(--text)] text-[0.95rem] font-semibold"
+                                        style={{ fontFamily: "'Cinzel', serif" }}
+                                    >
+                                        {token.name}
+                                    </span>
+                                    {token.symbol && (
+                                        <span
+                                            className="text-[0.6rem] uppercase tracking-[0.08em] py-0.5 px-2 rounded-sm"
+                                            style={{
+                                                fontFamily: "'IBM Plex Mono', monospace",
+                                                color: 'var(--gold)',
+                                                background: 'rgba(197,164,78,0.08)',
+                                                border: '1px solid rgba(197,164,78,0.2)',
+                                            }}
+                                        >
+                                            {token.symbol}
+                                        </span>
+                                    )}
+                                </div>
+                                {token.description && (
+                                    <p className="m-0 mt-0.5 text-[0.85rem] text-[var(--text-dim)]">
+                                        {token.description}
+                                    </p>
+                                )}
+                            </div>
+                            <a
+                                href={getTokenAcquisitionUrl(token.tokenId)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 py-1.5 px-3 rounded-sm text-[0.65rem] uppercase tracking-[0.1em] transition-all duration-200 hover:brightness-110"
+                                style={{
+                                    fontFamily: "'Cinzel', serif",
+                                    background: 'rgba(197,164,78,0.08)',
+                                    border: '1px solid rgba(197,164,78,0.25)',
+                                    color: 'var(--gold)',
+                                }}
+                            >
+                                Acquire
+                            </a>
+                        </div>
+                    ))
+                )}
+            </div>
+        </Section>
+    );
+};
 
 const RulesPage = () => (
     <Page title="Rules - SIGNArank" description="How SIGNArank works: attack mechanics, construct behavior, traits, rewards, and ranking.">
@@ -137,6 +247,9 @@ const RulesPage = () => (
                         whoever reduces HP to zero. Both are recorded permanently in the contract.
                     </p>
                 </Section>
+
+                {/* Attack Tokens */}
+                <AttackTokensSection />
 
                 {/* Construct Behavior */}
                 <Section title="Construct Behavior">

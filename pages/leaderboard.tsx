@@ -5,7 +5,7 @@ import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {Address} from '@signumjs/core';
 import {GetStaticProps} from 'next';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
-import {getExplorerBaseUrl} from '@lib/explorerUrl';
+import {getExplorerBaseUrl} from '@lib/construct/constants';
 import {memo} from 'react';
 
 

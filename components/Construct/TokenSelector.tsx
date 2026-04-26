@@ -1,5 +1,6 @@
 import React from 'react';
 import { TokenMeta } from '@lib/construct/types';
+import { getSignumSwapUrl } from '@lib/construct/constants';
 
 export interface TokenSelection {
     tokenId: string;
@@ -99,10 +100,22 @@ export const TokenSelector: React.FC<TokenSelectorProps> = ({
                                     {token.name}
                                 </div>
                                 <div
-                                    className="text-[var(--text-faint)] text-[0.65rem]"
+                                    className="flex items-center gap-2"
                                     style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                                 >
-                                    Balance: {formattedBalance}
+                                    <span className="text-[var(--text-faint)] text-[0.65rem]">
+                                        Balance: {formattedBalance}
+                                    </span>
+                                    <a
+                                        href={`${getSignumSwapUrl()}/tokens/${token.tokenId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[0.6rem] uppercase tracking-[0.06em] transition-colors hover:text-[var(--gold)]"
+                                        style={{ color: 'rgba(197,164,78,0.6)' }}
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        Buy ↗
+                                    </a>
                                 </div>
                             </div>
                             <input

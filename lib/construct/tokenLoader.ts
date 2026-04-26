@@ -1,16 +1,23 @@
-/**
- * Token metadata loader using @signumjs/standards
- *
- * NOTE: Requires @signumjs/standards package:
- * npm install @signumjs/standards@^1.0.0-rc.75
- */
+import {type Asset, Ledger} from '@signumjs/core';
+import {TokenMeta} from './types';
+import {ConstructCache} from './cache';
+import {src44} from "@signumjs/standards"
+import {Config} from "@components/contexts/AppContext";
 
-import { Ledger } from '@signumjs/core';
-import { TokenMeta } from './types';
-import { ConstructCache } from './cache';
-
-// TODO: Uncomment when @signumjs/standards is installed
-// import { SRC44, SRC44Resolver } from '@signumjs/standards';
+function getTokenDescriptor(asset: Asset) {
+    try {
+        const descriptor = src44.DescriptorData.parse(asset.description, false);
+        return {
+            description: descriptor.description,
+            iconUrl: descriptor.avatar?.ipfsCid ? Config.Ipfs.Gateway + '/' + descriptor.avatar.ipfsCid : undefined,
+        }
+    } catch {
+        return {
+            description: asset.description,
+            iconUrl: undefined,
+        }
+    }
+}
 
 export async function loadTokenMeta(ledger: Ledger, tokenId: string): Promise<TokenMeta> {
     // Check cache first
@@ -20,26 +27,17 @@ export async function loadTokenMeta(ledger: Ledger, tokenId: string): Promise<To
     }
 
     try {
-        // Fetch asset info from blockchain
-        const asset = await ledger.asset.getAsset({ assetId: tokenId });
-
-        // TODO: When @signumjs/standards is installed, use SRC44 to get token branding
-        // const resolver = new SRC44Resolver(ledger);
-        // const descriptor = await resolver.resolveAsset(tokenId);
-        // const iconUrl = descriptor?.avatar?.url;
-
+        const asset = await ledger.asset.getAsset({assetId: tokenId});
+        const {description, iconUrl} = getTokenDescriptor(asset)
         const meta: TokenMeta = {
             tokenId,
             name: asset.name,
             symbol: asset.name, // Use name as symbol for now
             decimals: asset.decimals,
-            description: asset.description,
-            iconUrl: undefined, // Will be populated from SRC44 branding
+            description,
+            iconUrl,
         };
-
-        // Cache the result
         ConstructCache.setTokenMeta(tokenId, meta);
-
         return meta;
     } catch (error) {
         console.error(`Failed to load token metadata for ${tokenId}:`, error);

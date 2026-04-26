@@ -3,19 +3,7 @@ import {ExtensionWallet, MobileWallet} from '@signumjs/wallets';
 
 const toStringArray = (csv: any = ""): Array<string> => csv.length ? csv.split(",") :[];
 
-export interface AppContextType {
-  Wallet: {
-    Extension: ExtensionWallet;
-    Mobile: MobileWallet;
-  };
-  Ledger: {
-    ReliableNodes: string[];
-    DefaultNode: string;
-    Network: string;
-  };
-}
-
-const config: AppContextType = {
+export const Config = {
   Wallet: {
     Extension: new ExtensionWallet(),
     Mobile: new MobileWallet()
@@ -25,12 +13,17 @@ const config: AppContextType = {
     ReliableNodes: toStringArray(process.env.NEXT_PUBLIC_SIGNUM_RELIABLE_NODES || ""),
     Network: process.env.NEXT_PUBLIC_SIGNUM_NETWORK || "Signum-TESTNET",
   },
+  Ipfs:{
+    Gateway: process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://ipfs.io/ipfs",
+  }
 };
 
-console.debug('Config', JSON.stringify(config))
+export type AppContextType = typeof Config;
 
-export const AppContext = createContext<AppContextType>(config);
+console.debug('Config', JSON.stringify(Config))
+
+export const AppContext = createContext<AppContextType>(Config);
 
 export const AppContextProvider: FC<PropsWithChildren> = ({ children }) => {
-  return <AppContext.Provider value={config}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={Config}>{children}</AppContext.Provider>;
 };

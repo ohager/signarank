@@ -2,7 +2,7 @@ import React from 'react';
 import { useAttackHistory } from '@hooks/useAttackHistory';
 import { usePendingAttacks } from '@hooks/usePendingAttacks';
 import { Amount, ChainTime } from '@signumjs/util';
-import { getExplorerBaseUrl } from '@lib/explorerUrl';
+import { getExplorerBaseUrl } from '@lib/construct/constants';
 
 interface AttackHistoryProps {
     contractId: string;

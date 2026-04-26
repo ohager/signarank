@@ -92,7 +92,7 @@ export interface UserCooldownStatus {
 export interface AttackParams {
     contractId: string;
     signaAmount: string;
-    tokens?: Array<{ tokenId: string; quantity: string }>;
+    tokens?: Array<{ tokenId: string; quantity: string; decimals: number }>;
 }
 
 export interface AttackResult {

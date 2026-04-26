@@ -1,11 +1,13 @@
-import { useState, useCallback } from 'react';
-import { Amount } from '@signumjs/util';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { Amount, ChainValue } from '@signumjs/util';
 import { Player, Signer } from '@signarank/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@hooks/useAppContext';
 import { useSignumLedger } from '@hooks/useSignumLedger';
 import { useAppSelector } from '@states/hooks';
 import { selectConnectedAccount } from '@states/appState';
+import { useIsMobile } from '@hooks/useIsMobile';
 import { AttackParams, AttackResult } from '@lib/construct/types';
 
 interface UseConstructAttackResult {
@@ -19,10 +21,35 @@ export const useConstructAttack = (): UseConstructAttackResult => {
     const [attacking, setAttacking] = useState(false);
     const [lastResult, setLastResult] = useState<AttackResult | null>(null);
 
-    const { Wallet } = useAppContext();
+    const { Wallet, Ledger } = useAppContext();
     const ledger = useSignumLedger();
     const connectedAccount = useAppSelector(selectConnectedAccount);
     const queryClient = useQueryClient();
+    const isMobile = useIsMobile();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!router.isReady) return;
+        const { mobileAttackStatus, mobileAttackTxId } = router.query;
+        if (!mobileAttackStatus) return;
+
+        if (mobileAttackStatus === 'success') {
+            setLastResult({
+                success: true,
+                txId: typeof mobileAttackTxId === 'string' ? mobileAttackTxId : undefined,
+            });
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['pendingAttacks'] });
+                queryClient.invalidateQueries({ queryKey: ['attackHistory'] });
+                queryClient.invalidateQueries({ queryKey: ['construct'] });
+            }, 3000);
+        } else if (mobileAttackStatus !== 'rejected') {
+            setLastResult({ success: false, error: 'Mobile signing failed' });
+        }
+
+        const { mobileAttackStatus: _s, mobileAttackTxId: _t, ...restQuery } = router.query;
+        router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true });
+    }, [router.isReady]);
 
     const reset = useCallback(() => {
         setLastResult(null);
@@ -50,6 +77,14 @@ export const useConstructAttack = (): UseConstructAttackResult => {
                 getPublicKey: async () => connectedAccount,
                 sign: async (unsignedTransactionBytes: string, signal?: AbortSignal) => {
                     if (signal?.aborted) throw new DOMException('cancelled', 'AbortError');
+
+                    if (isMobile) {
+                        const network = Ledger.Network.toLowerCase().includes('testnet') ? 'testnet' : 'mainnet';
+                        const returnUrl = window.location.pathname + window.location.search;
+                        const callbackUrl = `${window.location.origin}/wallet/signed?returnUrl=${encodeURIComponent(returnUrl)}`;
+                        Wallet.Mobile.sign({ unsignedTransactionBytes, callbackUrl, network });
+                        return new Promise<never>(() => {});
+                    }
 
                     let confirmed: any;
                     try {
@@ -81,10 +116,15 @@ export const useConstructAttack = (): UseConstructAttackResult => {
                 accountId: connectedAccount,
             });
 
+            const powerUps = (params.tokens ?? []).map(t => ({
+                assetId: t.tokenId,
+                value: ChainValue.create(t.decimals).setCompound(t.quantity),
+            }));
+
             const txResult = await player.attackConstruct({
                 targetConstruct: contractId,
                 force: Amount.fromSigna(signaAmount),
-                powerUps: [],
+                powerUps,
                 signal: controller.signal,
             });
 
@@ -119,7 +159,7 @@ export const useConstructAttack = (): UseConstructAttackResult => {
         } finally {
             setAttacking(false);
         }
-    }, [ledger, connectedAccount, Wallet, queryClient]);
+    }, [ledger, connectedAccount, Wallet, Ledger, queryClient, isMobile]);
 
     return { attack, attacking, lastResult, reset };
 };

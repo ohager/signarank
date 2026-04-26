@@ -8,7 +8,7 @@ import {useAddressPrefix} from '@hooks/useAddressPrefix';
 import {fetchLeaderboard} from './api/leaderboard/fetchLeaderboard';
 import {GetStaticProps} from 'next';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
-import {getExplorerBaseUrl} from '@lib/explorerUrl';
+import {getExplorerBaseUrl} from '@lib/construct/constants';
 
 export const getStaticProps: GetStaticProps = async () => {
     const {leaderboard, latestScores} = await fetchLeaderboard();

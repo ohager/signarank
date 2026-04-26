@@ -21,6 +21,7 @@
     "@signumjs/core": "^3.1.0",
     "@signumjs/crypto": "^3.1.0",
     "@signumjs/http": "^3.1.0",
+    "@signumjs/standards": "^3.1.0",
     "@signumjs/util": "^3.1.0",
     "@signumjs/wallets": "^3.1.0",
     "@tailwindcss/postcss": "^4.2.2",

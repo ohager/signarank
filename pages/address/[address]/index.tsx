@@ -13,7 +13,7 @@ import {useReedSolomonAddress} from '@hooks/useReedSolomonAddress';
 import {singleQueryString} from '@lib/singleQueryString';
 import {prisma} from '@lib/prisma';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
-import {getExplorerBaseUrl} from '@lib/explorerUrl';
+import {getExplorerBaseUrl} from '@lib/construct/constants';
 
 export const getStaticPaths: GetStaticPaths = async () => {
     return {

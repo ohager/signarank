@@ -64,3 +64,9 @@ export function getAttackTokenIds(): string[] {
 export function getSignaRankTokenId(): string {
     return process.env.NEXT_PUBLIC_SRANK_ID || '';
 }
+
+export const getExplorerBaseUrl = () =>
+    process.env.NEXT_PUBLIC_SIGNUM_EXPLORER || 'https://explorer.signum.network';
+
+
+export const getSignumSwapUrl = () => process.env.NEXT_PUBLIC_SIGNUMSWAP_URL || 'https://signumswap.com';

@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ConstructData } from '@lib/construct/types';
-import { getAttackTokenIds } from '@lib/construct/constants';
+import { getAttackTokenIds, getExplorerBaseUrl } from '@lib/construct/constants';
 import { useConstructAttack } from '@hooks/useConstructAttack';
 import { PlayerConstructStats } from '@hooks/usePlayerConstructStats';
 import { useTokenMeta } from '@hooks/useTokenMeta';
@@ -11,9 +11,9 @@ import { computeNarrationTags } from '@lib/narration/computeTags';
 import { TokenSelector, TokenSelection } from './TokenSelector';
 import { NarrationBanner } from './NarrationBanner';
 import { CooldownTimer } from './CooldownTimer';
+import { AttackEffect } from './AttackEffect';
 import { Address } from '@signumjs/core';
 import { Amount } from '@signumjs/util';
-import { getExplorerBaseUrl } from '@lib/explorerUrl';
 
 interface AttackFormProps {
     construct: ConstructData;
@@ -32,6 +32,13 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
     const connectedAccount = useAppSelector(selectConnectedAccount);
     const { attack, attacking, lastResult, reset } = useConstructAttack();
+    const [showEffect, setShowEffect] = useState(false);
+
+    useEffect(() => {
+        if (lastResult?.success) setShowEffect(true);
+    }, [lastResult?.success]);
+
+    const handleEffectDone = useCallback(() => setShowEffect(false), []);
 
     // Convert public key to account ID for balance lookups
     const accountId = useMemo(() => {
@@ -129,7 +136,10 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
         const tokens = tokenSelections
             .filter(s => parseFloat(s.quantity) > 0)
-            .map(s => ({ tokenId: s.tokenId, quantity: s.quantity }));
+            .map(s => {
+                const meta = tokenMetas.find(t => t.tokenId === s.tokenId);
+                return { tokenId: s.tokenId, quantity: s.quantity, decimals: meta?.decimals ?? 0 };
+            });
 
         const result = await attack({
             contractId: construct.contractId,
@@ -190,7 +200,9 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         };
 
         return (
-            <div className="glass-static overflow-hidden">
+            <>
+                {showEffect && <AttackEffect onDone={handleEffectDone} />}
+                <div className="glass-static overflow-hidden">
                 {header}
                 <div className="p-5 max-md:p-4">
                     <div
@@ -254,7 +266,8 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                         </button>
                     </div>
                 </div>
-            </div>
+                </div>
+            </>
         );
     }
 
