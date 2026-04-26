@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ConstructData } from '@lib/construct/types';
 import { useAttackerData } from '@hooks/useAttackerData';
+import { getExplorerBaseUrl } from '@lib/construct/constants';
 
 interface ConstructCardProps {
     construct: ConstructData;
@@ -237,6 +238,17 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                         )}
                     </div>
                 </div>
+
+                {/* Explorer link */}
+                <a
+                    href={`${getExplorerBaseUrl()}/address/${construct.contractId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-auto pt-3 self-start inline-flex items-center gap-1.5 text-[0.6rem] uppercase tracking-[0.12em] text-[var(--text-faint)] hover:text-[var(--gold)] transition-colors"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                    View full history on Explorer ↗
+                </a>
 
                 {/* Defeated Info */}
                 {construct.isDefeated && finalBlowAttacker && (
