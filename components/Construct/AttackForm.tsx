@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { ConstructData } from '@lib/construct/types';
 import { getAttackTokenIds, getExplorerBaseUrl } from '@lib/construct/constants';
 import { useConstructAttack } from '@hooks/useConstructAttack';
@@ -8,6 +8,7 @@ import { useTokenBalances } from '@hooks/useTokenBalances';
 import { useAppSelector } from '@states/hooks';
 import { selectConnectedAccount } from '@states/appState';
 import { computeNarrationTags } from '@lib/narration/computeTags';
+import { useIsMobile } from '@hooks/useIsMobile';
 import { TokenSelector, TokenSelection } from './TokenSelector';
 import { NarrationBanner } from './NarrationBanner';
 import { CooldownTimer } from './CooldownTimer';
@@ -33,10 +34,20 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
     const connectedAccount = useAppSelector(selectConnectedAccount);
     const { attack, attacking, lastResult, reset } = useConstructAttack();
     const [showEffect, setShowEffect] = useState(false);
+    const isMobile = useIsMobile();
+    const successRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (lastResult?.success) setShowEffect(true);
     }, [lastResult?.success]);
+
+    useEffect(() => {
+        if (!lastResult?.success || !isMobile) return;
+        const t = setTimeout(() => {
+            successRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+        return () => clearTimeout(t);
+    }, [lastResult?.success, isMobile]);
 
     const handleEffectDone = useCallback(() => setShowEffect(false), []);
 
@@ -218,7 +229,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         return (
             <>
                 {showEffect && <AttackEffect onDone={handleEffectDone} />}
-                <div className="glass-static overflow-hidden">
+                <div ref={successRef} className="glass-static overflow-hidden">
                 {header}
                 <div className="p-5 max-md:p-4">
                     <div
