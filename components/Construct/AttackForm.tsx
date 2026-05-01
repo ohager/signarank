@@ -96,14 +96,14 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         return true;
     }, [connectedAccount, isInCooldown, attacking, signaAmount, totalRequired, signaBalance, tokenSelections, balances]);
 
-    const fetchNarration = async (tokens: { tokenId: string; quantity: string }[]) => {
+    const fetchNarration = async (tokens: { tokenId: string; quantity: string }[], attackSignaAmount: string) => {
         const seasonName = construct.seasonName;
         if (!seasonName) return;
 
         setNarrationLoading(true);
         try {
             const tags = computeNarrationTags({
-                signaAmount,
+                signaAmount: attackSignaAmount,
                 tokens: tokens.map(t => ({ tokenId: t.tokenId, quantity: parseFloat(t.quantity) })),
                 construct,
                 playerStats: playerStats ?? null,
@@ -131,6 +131,19 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         }
     };
 
+    useEffect(() => {
+        if (!lastResult?.success) return;
+        const raw = localStorage.getItem('signarank_pending_attack');
+        if (!raw) return;
+        try {
+            const { signaAmount: savedSigna, tokens: savedTokens } = JSON.parse(raw);
+            localStorage.removeItem('signarank_pending_attack');
+            fetchNarration(savedTokens, savedSigna);
+        } catch {
+            localStorage.removeItem('signarank_pending_attack');
+        }
+    }, [lastResult?.success]);
+
     const handleAttack = async () => {
         if (!canAttack) return;
 
@@ -141,6 +154,8 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                 return { tokenId: s.tokenId, quantity: s.quantity, decimals: meta?.decimals ?? 0 };
             });
 
+        localStorage.setItem('signarank_pending_attack', JSON.stringify({ signaAmount, tokens }));
+
         const result = await attack({
             contractId: construct.contractId,
             signaAmount,
@@ -148,7 +163,8 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         });
 
         if (result.success) {
-            fetchNarration(tokens);
+            localStorage.removeItem('signarank_pending_attack');
+            fetchNarration(tokens, signaAmount);
         }
     };
 
