@@ -18,6 +18,7 @@ export const WalletHandler = () => {
             listenerRef.current?.unlisten();
             listenerRef.current = null;
             connectionRef.current = null;
+            localStorage.removeItem('signarank_mobile_account');
             dispatch(appActions.setConnectedAccount(null));
             Wallet.Extension = new ExtensionWallet();
         }
@@ -44,6 +45,7 @@ export const WalletHandler = () => {
                     appName: "signarank.io",
                     networkName: Ledger.Network,
                 });
+                localStorage.removeItem('signarank_mobile_account');
                 dispatch(appActions.setConnectedAccount(connection.publicKey));
 
                 listenerRef.current = connection.listen({

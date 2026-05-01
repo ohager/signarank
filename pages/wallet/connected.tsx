@@ -17,6 +17,7 @@ const WalletConnectedPage = () => {
             const returnUrl = (router.query.returnUrl as string) || '/';
 
             if (publicKey) {
+                localStorage.setItem('signarank_mobile_account', publicKey);
                 dispatch(appActions.setConnectedAccount(publicKey));
                 router.replace(returnUrl);
             } else if (status === 'rejected') {
