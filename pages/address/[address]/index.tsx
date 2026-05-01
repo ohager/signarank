@@ -26,6 +26,10 @@ export const getStaticProps: GetStaticProps = async ({params}) => {
     const address = singleQueryString(params?.address);
     const result = await calculateScore(address);
 
+    if (result.props.error) {
+        return {notFound: true, revalidate: ISR_REVALIDATE_SECONDS};
+    }
+
     return {
         props: {
             ...result.props,

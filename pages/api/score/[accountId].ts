@@ -12,6 +12,10 @@ export default async function handler(
     try {
         const {accountId} = req.query;
         const {props} = await calculateScore(singleQueryString(accountId));
+        if (props.error) {
+            res.status(404).json({error: props.error});
+            return;
+        }
         const {score, rank} = props;
         res.setHeader('Access-Control-Allow-Origin', '*')
         res.setHeader('Access-Control-Allow-Methods', 'GET')
