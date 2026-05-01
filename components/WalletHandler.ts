@@ -14,6 +14,11 @@ export const WalletHandler = () => {
     const { Ledger, Wallet } = useAppContext();
 
     useEffect(() => {
+        const mobileAccount = localStorage.getItem('signarank_mobile_account');
+        if (mobileAccount) {
+            dispatch(appActions.setConnectedAccount(mobileAccount));
+        }
+
         function handleDisconnectWallet() {
             listenerRef.current?.unlisten();
             listenerRef.current = null;
