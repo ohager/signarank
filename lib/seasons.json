@@ -25,8 +25,8 @@
     },
     "constructs": {
       "testnet": ["8366565611413730873", "12996457512312423436"],
-      "mainnet": []
+      "mainnet": ["14370811576880379895"]
     },
-    "futureConstructs": ["TBD_1", "TBD_2"]
+    "futureConstructs": ["8811246917341673382", "TBD_2", "TBD_3", "TBD_4"]
   }
 }

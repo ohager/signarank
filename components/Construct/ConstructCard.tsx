@@ -167,10 +167,10 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                         const traits: { label: string }[] = [];
 
                         const hp = construct.maxHp;
-                        if (hp >= 50000) traits.push({ label: '☽ Primordial' });
-                        else if (hp >= 30000) traits.push({ label: '⬡ Archon' });
-                        else if (hp >= 20000) traits.push({ label: '◈ Titan' });
-                        else if (hp >= 10000) traits.push({ label: '⚑ Warlord' });
+                        if (hp >= 25000) traits.push({ label: '☽ Primordial' });
+                        else if (hp >= 15000) traits.push({ label: '⬡ Archon' });
+                        else if (hp >= 10000) traits.push({ label: '◈ Titan' });
+                        else if (hp >= 7500) traits.push({ label: '⚑ Warlord' });
 
                         if (construct.regenHitpoints > 0 && construct.regenBlockInterval > 0)
                             traits.push({ label: '↺ Regenerates' });
