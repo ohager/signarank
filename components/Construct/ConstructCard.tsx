@@ -164,7 +164,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
 
                     {/* Trait Badges */}
                     {(() => {
-                        const traits: { label: string }[] = [];
+                        const traits: { label: string; href?: string }[] = [];
 
                         const hp = construct.maxHp;
                         if (hp >= 25000) traits.push({ label: '☽ Primordial' });
@@ -177,11 +177,19 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                         if (construct.debuffDamageReduction > 0)
                             traits.push({ label: '✦ Curses' });
                         if (construct.rewardNftId && construct.rewardNftId !== '0')
-                            traits.push({ label: '◆ Drops NFT' });
+                            traits.push({ label: '◆ Drops NFT', href: `https://www.signumart.io/item/${construct.rewardNftId}` });
                         if (construct.breachLimit >= 20)
                             traits.push({ label: '⬡ Fortified' });
 
                         if (traits.length === 0) return null;
+
+                        const badgeStyle = {
+                            fontFamily: "'IBM Plex Mono', monospace",
+                            color: 'var(--gold)',
+                            background: 'rgba(197,164,78,0.08)',
+                            border: '1px solid rgba(197,164,78,0.2)',
+                        };
+                        const badgeClass = 'text-[0.6rem] font-semibold uppercase tracking-[0.08em] py-0.5 px-2 rounded-sm';
 
                         return (
                             <div>
@@ -192,16 +200,22 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                                     Traits
                                 </span>
                                 <div className="flex gap-1.5 flex-wrap">
-                                    {traits.map(t => (
+                                    {traits.map(t => t.href ? (
+                                        <a
+                                            key={t.label}
+                                            href={t.href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`${badgeClass} hover:opacity-80 transition-opacity`}
+                                            style={badgeStyle}
+                                        >
+                                            {t.label} ↗
+                                        </a>
+                                    ) : (
                                         <span
                                             key={t.label}
-                                            className="text-[0.6rem] font-semibold uppercase tracking-[0.08em] py-0.5 px-2 rounded-sm"
-                                            style={{
-                                                fontFamily: "'IBM Plex Mono', monospace",
-                                                color: 'var(--gold)',
-                                                background: 'rgba(197,164,78,0.08)',
-                                                border: '1px solid rgba(197,164,78,0.2)',
-                                            }}
+                                            className={badgeClass}
+                                            style={badgeStyle}
                                         >
                                             {t.label}
                                         </span>
