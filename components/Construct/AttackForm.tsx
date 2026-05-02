@@ -88,11 +88,13 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         return attack + activationSigna + TX_FEE;
     }, [signaAmount, activationSigna]);
 
+    const MIN_SIGNA_ATTACK = 10;
+
     const canAttack = useMemo(() => {
         if (!connectedAccount) return false;
         if (isInCooldown) return false;
         if (attacking) return false;
-        if (!signaAmount || parseFloat(signaAmount) <= 0) return false;
+        if (!signaAmount || parseFloat(signaAmount) < MIN_SIGNA_ATTACK) return false;
         if (totalRequired > signaBalance) return false;
 
         // Check token balances for selected tokens
@@ -355,7 +357,15 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                         onChange={e => setSignaAmount(e.target.value)}
                         disabled={attacking || isInCooldown}
                     />
-                    {signaAmount && parseFloat(signaAmount) > 0 && (
+                    {signaAmount && parseFloat(signaAmount) > 0 && parseFloat(signaAmount) < MIN_SIGNA_ATTACK && (
+                        <div
+                            className="mt-1.5 text-[0.6rem]"
+                            style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--ember)' }}
+                        >
+                            Minimum attack is {MIN_SIGNA_ATTACK} SIGNA — 1 HP per 10 SIGNA (per the rules)
+                        </div>
+                    )}
+                    {signaAmount && parseFloat(signaAmount) >= MIN_SIGNA_ATTACK && (
                         <div
                             className="mt-1.5 text-[0.6rem] text-[var(--text-faint)]"
                             style={{ fontFamily: "'IBM Plex Mono', monospace" }}
