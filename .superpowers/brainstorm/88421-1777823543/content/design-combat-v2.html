@@ -1,0 +1,78 @@
+<h2>Design: Abschnitt 2/4 — Attribute & Kampfmechanik (v2)</h2>
+<p class="subtitle">Construct liest Attribute direkt aus Character-KKV — kein Message-Format-Änderung</p>
+
+<div class="section">
+  <h3>Angriffs-Flow (unverändert wie heute)</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:2">
+    <span style="color:#7ec8e3">Spieler-Wallet</span>
+    <span style="color:#888"> ──TX (SIGNA + opt. 1 Token)──▶ </span>
+    <span style="color:#c5a44e">Character Contract</span>
+    <br>
+    <span style="color:#c5a44e">Character</span>
+    <span style="color:#888"> ──forward (SIGNA + opt. Token, gleiche Logik)──▶ </span>
+    <span style="color:#e85d3a">Construct</span>
+    <br>
+    <span style="color:#e85d3a">Construct</span>
+    <span style="color:#888"> ──</span><span style="color:#c5a44e">getCodeHashOf(sender) == CHAR_HASH?</span><span style="color:#888">──</span>
+    <br>
+    <span style="color:#888">  ja → </span><span style="color:#e85d3a">Construct liest Attribute aus Character-KKV</span>
+    <br>
+    <span style="color:#888">  nein → normale Angriffs-Logik (wie heute)</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>KKV-Schlüssel (geteilte Konstanten)</h3>
+  <p style="font-size:0.85em;color:#888;margin-bottom:0.75rem">Beide Contracts nutzen dieselben Map-Schlüssel — Construct kann direkt lesen:</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem">
+    <span style="color:#c5a44e">#define MAP_CHAR_STRENGTH    100</span><br>
+    <span style="color:#c5a44e">#define MAP_CHAR_STAMINA     101</span><br>
+    <span style="color:#c5a44e">#define MAP_CHAR_DEXTERITY   102</span><br>
+    <span style="color:#c5a44e">#define MAP_CHAR_LUCK        103</span><br>
+    <span style="color:#c5a44e">#define MAP_CHAR_WILLPOWER   104</span><br>
+    <span style="color:#888">// Construct liest: getMapValue(senderAccountId, MAP_CHAR_STRENGTH)</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Schadensberechnung mit Attributen</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem">
+    <span style="color:#888">// Bestehende Logik</span><br>
+    <span style="color:#7ec8e3">long damage = applyTokenModifiers(calculateSignaDamage());</span><br><br>
+    <span style="color:#888">// Neu: Character-Attribut-Modifier</span><br>
+    <span style="color:#7ec8e3">if (getCodeHashOf(sender) == KNOWN_CHAR_HASH) {</span><br>
+    <span style="color:#7ec8e3">  long str = getMapValue(sender, MAP_CHAR_STRENGTH);</span><br>
+    <span style="color:#7ec8e3">  long dex = getMapValue(sender, MAP_CHAR_DEXTERITY);</span><br>
+    <span style="color:#7ec8e3">  long lck = getMapValue(sender, MAP_CHAR_LUCK);</span><br>
+    <span style="color:#7ec8e3">  damage = applyCharacterModifiers(damage, str, dex, lck);</span><br>
+    <span style="color:#7ec8e3">}</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Attribut-Effekte</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.85em">
+    <div style="padding:0.75rem;background:rgba(232,93,58,0.08);border:1px solid rgba(232,93,58,0.3);border-radius:4px">
+      <p class="label" style="color:#e85d3a">STÄRKE</p>
+      <p style="margin:0"><strong>+X% Schaden pro Punkt</strong><br><span style="color:#888;font-size:0.9em">Schwelle 5 → Crit-Chance</span></p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(126,200,227,0.08);border:1px solid rgba(126,200,227,0.3);border-radius:4px">
+      <p class="label" style="color:#7ec8e3">AUSDAUER</p>
+      <p style="margin:0"><strong>+X max HP pro Punkt</strong><br><span style="color:#888;font-size:0.9em">Schwelle 5 → Damage Resist</span></p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(100,200,100,0.08);border:1px solid rgba(100,200,100,0.3);border-radius:4px">
+      <p class="label" style="color:#64c864">GESCHICKLICHKEIT</p>
+      <p style="margin:0"><strong>–X Blöcke Cooldown pro Punkt</strong><br><span style="color:#888;font-size:0.9em">Schwelle 5 → Counter-Chance –30%</span></p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.3);border-radius:4px">
+      <p class="label" style="color:#c5a44e">GLÜCK</p>
+      <p style="margin:0"><strong>+X% Item-Drop-Chance pro Punkt</strong><br><span style="color:#888;font-size:0.9em">Schwelle 5 → Goldener Crit</span></p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(180,100,220,0.08);border:1px solid rgba(180,100,220,0.3);border-radius:4px;grid-column:span 2">
+      <p class="label" style="color:#b464dc">WILLENSKRAFT</p>
+      <p style="margin:0"><strong>–X% Debuff-Dauer, +X% Token-Effekt pro Punkt</strong><br><span style="color:#888;font-size:0.9em">Schwelle 5 → Iron Will (einmalige Freeze/Stun-Immunität)</span></p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1rem;color:#888;font-size:0.85em">Passt Abschnitt 2 jetzt? Dann weiter mit Abschnitt 3: Tod, Revival & Item-Drops.</p>

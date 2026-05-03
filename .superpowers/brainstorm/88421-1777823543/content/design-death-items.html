@@ -1,0 +1,69 @@
+<h2>Design: Abschnitt 3/4 — Tod, Revival & Item-Drops</h2>
+<p class="subtitle">Character-Lebenszyklus und das Item-System</p>
+
+<div class="section">
+  <h3>Tod-Sequenz</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#e85d3a">Construct</span><span style="color:#888"> → sendet Counter-Attack-Message → </span><span style="color:#c5a44e">Character</span><br>
+    <span style="color:#c5a44e">Character</span><span style="color:#888">: CHAR_HP -= damageAmount</span><br>
+    <span style="color:#888">if CHAR_HP ≤ 0:</span><br>
+    <span style="color:#888">  CHAR_IS_DEAD = 1</span><br>
+    <span style="color:#888">  penalty: random 1–3 Skillpunkte von random Attributen abziehen</span><br>
+    <span style="color:#888">  Character nimmt keine Angriffs-TXs mehr an (refund)</span>
+  </div>
+  <p style="font-size:0.8em;color:#888;margin-top:0.5rem">Penalty-Randomness via <code>getWeakRandomNumber()</code> — kein Attribut kann unter 0 fallen.</p>
+</div>
+
+<div class="section">
+  <h3>Revival</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#7ec8e3">Owner</span><span style="color:#888"> → sendet Revival-Token an Character</span><br>
+    <span style="color:#c5a44e">Character</span><span style="color:#888">: prüft assetId == REVIVAL_TOKEN_ID</span><br>
+    <span style="color:#888">  CHAR_IS_DEAD = 0</span><br>
+    <span style="color:#888">  CHAR_HP = CHAR_MAX_HP (volle HP)</span><br>
+    <span style="color:#888">  Revival-Token wird konsumiert (gesendet an Burn-Adresse oder Creator)</span>
+  </div>
+  <p style="font-size:0.8em;color:#888;margin-top:0.5rem">Revival-Token ID ist beim Deploy konfigurierbar (ähnlich xpTokenId beim Construct).</p>
+</div>
+
+<div class="section">
+  <h3>Item-Drops</h3>
+  <p style="font-size:0.85em;color:#888;margin-bottom:0.75rem">Construct prüft nach erfolgreichem Character-Angriff ob ein Drop ausgelöst wird:</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#888">drop_chance = BASE_CHANCE + (luck * LUCK_BONUS_PER_POINT)</span><br>
+    <span style="color:#888">if getWeakRandomNumber() % 100 &lt; drop_chance:</span><br>
+    <span style="color:#888">  // welches Item?</span><br>
+    <span style="color:#c5a44e">  balance = getAssetBalance(this, dropTokenId)</span><br>
+    <span style="color:#888">  if balance > 0:</span><br>
+    <span style="color:#888">    sendQuantity(1, dropTokenId, characterSender)</span>
+  </div>
+  <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(197,164,78,0.08);border-left:3px solid #c5a44e;border-radius:4px;font-size:0.85em">
+    <strong>Construct kann mehrere Drop-Pools haben</strong> (KKV-Map: dropSlot → tokenId), konfigurierbar durch Creator. <code>getAssetBalance</code> prüft ob noch Vorrat vorhanden.
+  </div>
+</div>
+
+<div class="section">
+  <h3>Items verwenden / weiterhandeln</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.85em">
+    <div style="padding:0.75rem;background:rgba(100,200,100,0.08);border:1px solid rgba(100,200,100,0.3);border-radius:4px">
+      <p class="label" style="color:#64c864">Im Kampf einsetzen</p>
+      <p style="margin:0">Owner schickt Item-Token mit Angriffs-TX an Character → Character leitet es weiter an Construct (wie heutiger Damage-Modifier-Flow)</p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.3);border-radius:4px">
+      <p class="label" style="color:#c5a44e">Handeln</p>
+      <p style="margin:0">Owner ruft <code>COLLECT_ITEMS</code> auf Character auf → Character sendet alle (oder bestimmte) Item-Tokens an Owner-Wallet → DeFi-Trading</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Migration (vereinfacht)</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#7ec8e3">Owner</span><span style="color:#888"> → ruft MIGRATE(oldCharId) auf <strong>neuem</strong> Contract auf</span><br>
+    <span style="color:#c5a44e">Neuer Contract</span><span style="color:#888">: liest Attribute aus altem KKV → kopiert in eigene KKV</span><br>
+    <span style="color:#7ec8e3">Owner</span><span style="color:#888"> → Emergency Withdraw auf altem Contract → Tokens/SIGNA zurück</span><br>
+    <span style="color:#7ec8e3">Owner</span><span style="color:#888"> → lädt neuen Contract mit Tokens auf</span>
+  </div>
+</div>
+
+<p style="margin-top:1rem;color:#888;font-size:0.85em">Passt Abschnitt 3? Dann der letzte: Abschnitt 4 — Construct-Erweiterungen & Testing-Strategie.</p>

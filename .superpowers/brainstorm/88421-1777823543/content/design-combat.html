@@ -1,0 +1,69 @@
+<h2>Design: Abschnitt 2/4 — Attribute & Kampfmechanik</h2>
+<p class="subtitle">Wie Attribute den Kampf beeinflussen, plus Counter-Attack & Leveling</p>
+
+<div class="section">
+  <h3>Attribute-Effekte</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.85em">
+    <div style="padding:0.75rem;background:rgba(232,93,58,0.08);border:1px solid rgba(232,93,58,0.3);border-radius:4px">
+      <p class="label" style="color:#e85d3a">STÄRKE (Strength)</p>
+      <p style="margin:0.25rem 0"><strong>+2% Schaden pro Punkt</strong></p>
+      <p style="margin:0;color:#888;font-size:0.9em">Schwelle 5: "Berserk" — Crit-Chance +15%</p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(126,200,227,0.08);border:1px solid rgba(126,200,227,0.3);border-radius:4px">
+      <p class="label" style="color:#7ec8e3">AUSDAUER (Stamina)</p>
+      <p style="margin:0.25rem 0"><strong>+20 max HP pro Punkt</strong></p>
+      <p style="margin:0;color:#888;font-size:0.9em">Schwelle 5: "Fortified" — Damage-Received –20%</p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(100,200,100,0.08);border:1px solid rgba(100,200,100,0.3);border-radius:4px">
+      <p class="label" style="color:#64c864">GESCHICKLICHKEIT (Dexterity)</p>
+      <p style="margin:0.25rem 0"><strong>–1 Block Cooldown pro Punkt</strong></p>
+      <p style="margin:0;color:#888;font-size:0.9em">Schwelle 5: "Evasion" — Counter-Attack-Chance –30%</p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.3);border-radius:4px">
+      <p class="label" style="color:#c5a44e">GLÜCK (Luck)</p>
+      <p style="margin:0.25rem 0"><strong>+2% Item-Drop-Chance pro Punkt</strong></p>
+      <p style="margin:0;color:#888;font-size:0.9em">Schwelle 5: "Fortune" — Goldener Crit möglich (3× Schaden)</p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(180,100,220,0.08);border:1px solid rgba(180,100,220,0.3);border-radius:4px;grid-column:span 2">
+      <p class="label" style="color:#b464dc">WILLENSKRAFT (Willpower)</p>
+      <p style="margin:0.25rem 0"><strong>–10% Debuff-Dauer pro Punkt / +5% Token-Effekt-Stärke pro Punkt</strong></p>
+      <p style="margin:0;color:#888;font-size:0.9em">Schwelle 5: "Iron Will" — Immune gegen Freeze/Stun einmal pro Kampf</p>
+    </div>
+  </div>
+  <p style="font-size:0.8em;color:#666;margin-top:0.5rem">Konkrete Zahlenwerte sind konfigurierbar — das sind Vorschläge zum Diskutieren.</p>
+</div>
+
+<div class="section">
+  <h3>Angriffs-Message-Format (Character → Construct)</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem">
+    <span style="color:#7ec8e3">message[0]</span> = <span style="color:#c5a44e">STR | (STA &lt;&lt; 8) | (DEX &lt;&lt; 16) | (LCK &lt;&lt; 24)</span><br>
+    <span style="color:#7ec8e3">message[1]</span> = <span style="color:#c5a44e">WIL | (activeItemEffects &lt;&lt; 8)</span><br>
+    <span style="color:#7ec8e3">message[2]</span> = <span style="color:#c5a44e">characterLevel</span><br>
+    <span style="color:#7ec8e3">message[3]</span> = <span style="color:#c5a44e">0 (reserved)</span>
+  </div>
+  <p style="font-size:0.8em;color:#666;margin-top:0.5rem">Attribute werden bitgepacked in einen 64-bit Long — alle 5 passen in 2 message-slots.</p>
+</div>
+
+<div class="section">
+  <h3>Counter-Attack (Construct → Character)</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem">
+    <span style="color:#e85d3a">message[0]</span> = <span style="color:#c5a44e">COUNTER_ATTACK (magic code)</span><br>
+    <span style="color:#e85d3a">message[1]</span> = <span style="color:#c5a44e">damageAmount</span><br>
+    <span style="color:#e85d3a">message[2]</span> = <span style="color:#c5a44e">statusEffect (0=none, 1=frozen, 2=stunned, 3=weakened)</span><br>
+    <span style="color:#e85d3a">message[3]</span> = <span style="color:#c5a44e">statusDuration (in blocks)</span>
+  </div>
+  <p style="font-size:0.8em;color:#666;margin-top:0.5rem">Character reduziert HP-KKV, schreibt Status-Effekt-KKV. Bei HP ≤ 0: Tod-Sequenz.</p>
+</div>
+
+<div class="section">
+  <h3>Leveling</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem">
+    XP = <span style="color:#c5a44e">getAssetBalance(this, xpTokenId)</span><br><br>
+    Level-Tabelle: konfigurierbar via Admin-Funktion in Character-Contract<br>
+    Default: <span style="color:#7ec8e3">1000, 2000, 4000, 8000, 16000 ...</span> (×2 pro Stufe)<br><br>
+    LevelUp → <span style="color:#c5a44e">CHAR_SKILL_POINTS</span> KKV += 1<br>
+    Spieler verteilt Punkte via Owner-TX mit Attribut-Index in Message
+  </div>
+</div>
+
+<p style="margin-top:1rem;color:#888;font-size:0.85em">Passt Abschnitt 2? Dann weiter mit Abschnitt 3: Tod, Revival & Item-Drops.</p>

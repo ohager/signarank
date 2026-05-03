@@ -134,7 +134,7 @@ describe('Attack Mechanics', () => {
 
             const tx = testbed.getTransactions().filter(tx => tx.recipient === Context.SenderAccount1 && tx.sender === Context.ThisContract)
             expect(tx.length).toBe(2)
-            expect(tx[0].messageText).toMatch("Construct is not active!")
+            expect(tx[0].messageText).toMatch("Construct not ready yet!")
             expect(tx[0].amount).toBeLessThanOrEqual(1_0000_0000n); // 1 SIGNA attack
             expect(tx[1].tokens).toEqual([{asset: PowerUpTokenId, quantity: 5n}]);
         })

@@ -142,9 +142,10 @@ void init(){
 
 void main() {
 
+    long justMinted = ZERO;
     if(!isDefeated && hpTokenId != ZERO && getCurrentHitpoints() == ZERO) {
         mintAsset(maxHp, hpTokenId);
-        return; // Let mint finalize before processing transactions
+        justMinted = 1;
     }
 
     currentTx.height =  getCurrentBlockheight();
@@ -155,7 +156,7 @@ void main() {
         readAssets(currentTx.txId, currentTx.assetIds);
         if(currentTx.sender != getCreator() && isDefeated==ZERO){
 
-            if(isActive == 1) {
+            if(isActive == 1 && justMinted == ZERO) {
                 runAttackerRound();
             }else{
                 refund();
@@ -211,7 +212,7 @@ void main() {
 }
 
 void refund(){
-    messageBuffer[] = "Construct is not active!";
+    messageBuffer[] = "Construct not ready yet!";
     sendAmountAndMessage(getAmount(currentTx.txId), messageBuffer, currentTx.sender);
     if(currentTx.assetIds[0] != ZERO){
         sendQuantity(getQuantity(currentTx.txId, currentTx.assetIds[0]), currentTx.assetIds[0], currentTx.sender);

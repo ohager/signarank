@@ -104,13 +104,13 @@ long isCharacter = (getCodeHashOf(currentTx.sender) == knownCharacterHash);
 
 *Exact multiplier values (X) to be tuned during testing.*
 
-The Construct reads attributes directly from the Character's KKV:
+The Construct reads attributes directly from the Character's KKV via `getExtMapValue`:
 ```c
-long str = getMapValue(currentTx.sender, MAP_CHAR_STRENGTH);
-long dex = getMapValue(currentTx.sender, MAP_CHAR_DEXTERITY);
-long lck = getMapValue(currentTx.sender, MAP_CHAR_LUCK);
-long sta = getMapValue(currentTx.sender, MAP_CHAR_STAMINA);
-long wil = getMapValue(currentTx.sender, MAP_CHAR_WILLPOWER);
+long str = getExtMapValue(MAP_CHAR_STRENGTH, 0, currentTx.sender);
+long dex = getExtMapValue(MAP_CHAR_DEXTERITY, 0, currentTx.sender);
+long lck = getExtMapValue(MAP_CHAR_LUCK,      0, currentTx.sender);
+long sta = getExtMapValue(MAP_CHAR_STAMINA,   0, currentTx.sender);
+long wil = getExtMapValue(MAP_CHAR_WILLPOWER, 0, currentTx.sender);
 damage = applyCharacterModifiers(damage, str, dex, lck, sta, wil);
 ```
 
@@ -199,10 +199,10 @@ Owner sends Revival Token to Character:
 After a successful Character attack, the Construct checks for a drop:
 
 ```c
-long luck = getMapValue(currentTx.sender, MAP_CHAR_LUCK);
+long luck = getExtMapValue(MAP_CHAR_LUCK, 0, currentTx.sender);
 long dropChance = BASE_DROP_CHANCE + (luck * LUCK_BONUS_PER_POINT);
 if ((getWeakRandomNumber() >> 1) % 100 < dropChance) {
-    long balance = getAssetBalance(this, dropTokenId);
+    long balance = getAssetBalance(dropTokenId);  // THIS contract's balance
     if (balance > 0) {
         sendQuantity(1, dropTokenId, currentTx.sender);  // to Character
     }
@@ -396,8 +396,8 @@ Inventory count is maintained by the Character contract on every item receipt an
 When the Character receives an item token:
 
 ```c
-long limit   = getMapValue(REGISTRY_ID, REGISTRY_STACK_LIMIT, tokenId);
-long current = getAssetBalance(this, tokenId);
+long limit   = getExtMapValue(REGISTRY_STACK_LIMIT, tokenId, ITEM_REGISTRY_ID);
+long current = getAssetBalance(tokenId);  // THIS contract's (Character's) own balance
 long level   = MAP_CHAR_LEVEL;
 long minLvl  = getMapValue(REGISTRY_ID, REGISTRY_MIN_LEVEL, tokenId);
 long maxSlots = MAP_CHAR_MAX_INVENTORY_SLOTS;

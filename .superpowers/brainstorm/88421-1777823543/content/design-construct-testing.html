@@ -1,0 +1,87 @@
+<h2>Design: Abschnitt 4/4 — Construct-Erweiterungen & Testing</h2>
+<p class="subtitle">Änderungen am bestehenden Contract und Teststrategie</p>
+
+<div class="section">
+  <h3>Neue Methoden im Construct</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#c5a44e">#define SETCHARACTERHASH  13</span><span style="color:#888">  // signed long! kann negativ sein</span><br>
+    <span style="color:#c5a44e">#define SETDROPTOKEN      14</span><span style="color:#888">  // tokenId für Item-Drop-Pool</span><br>
+    <span style="color:#c5a44e">#define SETDROPCHANCE     15</span><span style="color:#888">  // base drop chance %</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Änderungen in runAttackerRound()</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#888">// NEU: Character-Detection</span><br>
+    <span style="color:#7ec8e3">long isCharacter = (getCodeHashOf(sender) == knownCharacterHash);</span><br><br>
+    <span style="color:#888">// bestehende Schadensberechnung unverändert</span><br>
+    <span style="color:#7ec8e3">long damage = applyTokenModifiers(calculateSignaDamage());</span><br><br>
+    <span style="color:#888">// NEU: Attribut-Modifier wenn Character</span><br>
+    <span style="color:#7ec8e3">if (isCharacter) {</span><br>
+    <span style="color:#7ec8e3">  damage = applyCharacterModifiers(damage, sender);</span><br>
+    <span style="color:#7ec8e3">}</span><br><br>
+    <span style="color:#888">// NEU: erweiterter Counter-Attack für Characters</span><br>
+    <span style="color:#7ec8e3">if (isCharacter &amp;&amp; shouldCounterAttack(preBreachDamage)) {</span><br>
+    <span style="color:#7ec8e3">  executeCharacterCounterAttack(sender);</span><br>
+    <span style="color:#7ec8e3">} else if (!isCharacter &amp;&amp; ...) {</span><br>
+    <span style="color:#7ec8e3">  executeCounterAttack(); // bestehende Logik</span><br>
+    <span style="color:#7ec8e3">}</span><br><br>
+    <span style="color:#888">// NEU: Item-Drop wenn Character</span><br>
+    <span style="color:#7ec8e3">if (isCharacter) { tryItemDrop(sender, luck); }</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Neuer Character-Contract: Methoden-Übersicht</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.82em">
+    <div style="padding:0.5rem 0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.2);border-radius:4px">
+      <span style="color:#c5a44e">ATTACK(constructId)</span><br>
+      <span style="color:#666">Leitet Angriff an Construct weiter</span>
+    </div>
+    <div style="padding:0.5rem 0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.2);border-radius:4px">
+      <span style="color:#c5a44e">ALLOCATE_SKILL(attrIndex)</span><br>
+      <span style="color:#666">Verteilt ungenutzte Skillpunkte</span>
+    </div>
+    <div style="padding:0.5rem 0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.2);border-radius:4px">
+      <span style="color:#c5a44e">COLLECT_ITEMS(tokenId)</span><br>
+      <span style="color:#666">Sendet Items an Owner-Wallet</span>
+    </div>
+    <div style="padding:0.5rem 0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.2);border-radius:4px">
+      <span style="color:#c5a44e">MIGRATE(oldCharId)</span><br>
+      <span style="color:#666">Kopiert Attribute aus altem Contract</span>
+    </div>
+    <div style="padding:0.5rem 0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.2);border-radius:4px">
+      <span style="color:#c5a44e">EMERGENCY_WITHDRAW</span><br>
+      <span style="color:#666">Owner zieht alle Tokens/SIGNA ab</span>
+    </div>
+    <div style="padding:0.5rem 0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.2);border-radius:4px">
+      <span style="color:#c5a44e">Incoming: COUNTER_ATTACK</span><br>
+      <span style="color:#666">HP-Reduktion + Status-Effekt</span>
+    </div>
+    <div style="padding:0.5rem 0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.2);border-radius:4px;grid-column:span 2">
+      <span style="color:#c5a44e">Incoming: ITEM_DROP / BUFF / DEBUFF</span><br>
+      <span style="color:#666">Schreibt KKV-Einträge für aktive Effekte</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Testing-Strategie (Prio: Contracts vor Frontend)</h3>
+  <div style="font-size:0.85em">
+    <div style="margin-bottom:0.75rem;padding:0.75rem;background:rgba(232,93,58,0.08);border-left:3px solid #e85d3a;border-radius:4px">
+      <strong>1. Unit Tests (Testbed-Modus)</strong><br>
+      <span style="color:#888">Für jede neue Funktion: applyCharacterModifiers, tryItemDrop, executeCharacterCounterAttack, ALLOCATE_SKILL, Tod-Sequenz, Revival</span>
+    </div>
+    <div style="margin-bottom:0.75rem;padding:0.75rem;background:rgba(197,164,78,0.08);border-left:3px solid #c5a44e;border-radius:4px">
+      <strong>2. Integration Tests (Character ↔ Construct)</strong><br>
+      <span style="color:#888">Angriff von Character wird erkannt, Attribute korrekt gelesen, Counter-Attack kommt an, Item-Drop landet im Character</span>
+    </div>
+    <div style="padding:0.75rem;background:rgba(126,200,227,0.08);border-left:3px solid #7ec8e3;border-radius:4px">
+      <strong>3. Migrations-Test</strong><br>
+      <span style="color:#888">Alter Character deployen, Attribute setzen, MIGRATE auf neuem Contract aufrufen, Werte vergleichen</span>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1rem;color:#888;font-size:0.85em">Das war der letzte Abschnitt. Passt das Gesamtdesign so?</p>

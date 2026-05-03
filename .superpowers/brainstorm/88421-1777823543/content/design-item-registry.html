@@ -1,0 +1,79 @@
+<h2>Item Registry — Design</h2>
+<p class="subtitle">Globaler Contract für Character-Items (Equipment & Consumables)</p>
+
+<div class="section">
+  <h3>Abgrenzung: was bleibt, was ist neu</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.85em">
+    <div style="padding:0.75rem;background:rgba(126,200,227,0.08);border:1px solid rgba(126,200,227,0.3);border-radius:4px">
+      <p class="label" style="color:#7ec8e3">Unverändert</p>
+      <p style="margin:0"><strong>Angriffs-Modifier-Tokens</strong> (Laser, Eis, Feuer)<br>→ bleiben in Construct-KKV<br>→ per-Construct konfigurierbar</p>
+    </div>
+    <div style="padding:0.75rem;background:rgba(197,164,78,0.08);border:1px solid rgba(197,164,78,0.3);border-radius:4px">
+      <p class="label" style="color:#c5a44e">Neu: Item Registry</p>
+      <p style="margin:0"><strong>Character-Items</strong> (Schattendolch, Heilpotion…)<br>→ globaler Registry-Contract<br>→ gelesen von Character + Construct</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Item Registry KKV-Struktur (key1=property, key2=tokenId)</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.78em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.9">
+    <span style="color:#c5a44e">PROP_ITEM_TYPE</span>    <span style="color:#888">1</span>  <span style="color:#666">// 1=equipment, 2=consumable</span><br>
+    <span style="color:#c5a44e">PROP_EFFECT_TARGET</span> <span style="color:#888">2</span>  <span style="color:#666">// 0=attack, 1=HP, 2=STR, 3=STA, 4=DEX, 5=LCK, 6=WIL</span><br>
+    <span style="color:#c5a44e">PROP_BONUS_ABS</span>     <span style="color:#888">3</span>  <span style="color:#666">// absoluter Bonus z.B. +50 HP, +1 Stärke</span><br>
+    <span style="color:#c5a44e">PROP_BONUS_REL</span>     <span style="color:#888">4</span>  <span style="color:#666">// relativer Bonus: 120=+20%, 90=–10% (Malus)</span><br>
+    <span style="color:#c5a44e">PROP_STACK_LIMIT</span>   <span style="color:#888">5</span>  <span style="color:#666">// max im Inventory: 1=unique, N=stackable</span><br>
+    <span style="color:#c5a44e">PROP_MIN_LEVEL</span>     <span style="color:#888">6</span>  <span style="color:#666">// Mindeststufe zum Tragen</span><br>
+    <span style="color:#c5a44e">PROP_IS_BURNABLE</span>   <span style="color:#888">7</span>  <span style="color:#666">// 1=wird nach Anwendung verbrannt (to Creator)</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Inventory = Token-Balance</h3>
+  <p style="font-size:0.85em;color:#888;margin-bottom:0.75rem">Kein separates KKV-Tracking nötig — <code>getAssetBalance(this, tokenId)</code> IS das Inventory.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#888">// Character empfängt Item-Token:</span><br>
+    <span style="color:#7ec8e3">long limit   = getMapValue(REGISTRY_ID, PROP_STACK_LIMIT, tokenId);</span><br>
+    <span style="color:#7ec8e3">long current = getAssetBalance(this, tokenId);</span><br>
+    <span style="color:#7ec8e3">long incoming = getQuantity(currentTx.txId, tokenId);</span><br>
+    <span style="color:#888">if (current &gt;= limit) → refund all</span><br>
+    <span style="color:#888">else if (current + incoming &gt; limit) → refund excess</span><br>
+    <span style="color:#888">else → behalten (bleibt als Token im Contract)</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Consumables (Burnable Items)</h3>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.8em;background:rgba(0,0,0,0.3);border-radius:6px;padding:1rem;line-height:1.8">
+    <span style="color:#888">Owner → USE_ITEM(tokenId) message an Character</span><br>
+    <span style="color:#7ec8e3">Character liest Registry:</span><br>
+    <span style="color:#888">  ITEM_TYPE == CONSUMABLE?</span><br>
+    <span style="color:#888">  EFFECT_TARGET + BONUS_ABS → wende Effekt an</span><br>
+    <span style="color:#888">  IS_BURNABLE == 1 → sendQuantity(1, tokenId, Creator)</span><br>
+    <span style="color:#888">Beispiel Heilpotion: MAP_CHAR_HP += BONUS_ABS (max MAX_HP)</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Equipment-Items: Wie werden sie applied?</h3>
+  <div class="options" style="margin-top:0.5rem">
+    <div class="option" data-choice="a" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Passive via Token-Balance</h3>
+        <p>Construct liest bei jedem Angriff: "Hat Character dieses Equipment-Token?" via <code>getAssetBalance(sender, tokenId)</code>. Liest dann Effekt aus Registry.</p>
+        <p style="color:#888;font-size:0.9em">Problem: Construct muss wissen welche tokenIds als Equipment existieren → braucht eine Liste</p>
+      </div>
+    </div>
+    <div class="option" data-choice="b" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Aktiv: Character schreibt aggregierten Bonus in KKV</h3>
+        <p>Wenn Character ein Equipment empfängt, liest er Registry und schreibt den aggregierten Effekt in seine KKV (z.B. <code>MAP_CHAR_EQUIP_ATK_BONUS</code>).</p>
+        <p style="color:#888;font-size:0.9em">Construct liest nur 1-2 KKV-Werte statt vieler Token-Balances. Einfacher für den Construct.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1rem;color:#888;font-size:0.85em">Meine Empfehlung: <strong>B</strong> — Character aggregiert Equipment-Boni in KKV, Construct liest nur die aggregierten Werte.</p>

@@ -1,0 +1,63 @@
+<h2>3 Architektur-Ansätze: Character Contract</h2>
+<p class="subtitle">Wie soll der Character Contract mit dem Construct interagieren?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Thin Character / Smart Construct <span style="color:#c5a44e;font-size:0.8em">★ Empfehlung</span></h3>
+      <p>Character ist einfacher Zustandsspeicher + Proxy. Construct bleibt das "Gehirn".</p>
+      <ul>
+        <li>Character speichert: Attribute, HP, Statuseffekte (KKV), Token-Inventory</li>
+        <li>Attack-Message enthält Attribute-Werte → Construct berechnet alles</li>
+        <li>Construct sendet Counter-Attack/Buff/Drop-Messages zurück</li>
+        <li>Character updated seinen Zustand basierend auf eingehenden Messages</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>Vorteile</h4><ul><li>Construct bleibt autoritativ</li><li>Character-Contract einfach &amp; klein</li><li>Bestehende Construct-Logik leicht erweiterbar</li></ul></div>
+        <div class="cons"><h4>Nachteile</h4><ul><li>Construct muss Character-Angriffe erkennen</li><li>Attribute könnten gefälscht werden (braucht Validierung)</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Fat Character / Dumb Construct</h3>
+      <p>Character hat volle Kampflogik, Construct wird vereinfacht.</p>
+      <ul>
+        <li>Character berechnet modifizierten Schaden selbst (mit Attributen)</li>
+        <li>Sendet berechneten Schaden + SIGNA an Construct</li>
+        <li>Construct vertraut dem Character-Ergebnis (nur Breach-Limit check)</li>
+        <li>Mehr Autonomie für Character</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>Vorteile</h4><ul><li>Klare Trennung: Character-Logik in Character</li><li>Construct bleibt einfach</li></ul></div>
+        <div class="cons"><h4>Nachteile</h4><ul><li>Zwei Contracts für Schadensberechnung schwer zu synchronisieren</li><li>Sicherheitsrisiko: Character könnte überhöhten Schaden melden</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Registry-validierter Character</h3>
+      <p>Zentraler Registry-Contract validiert alle Characters. Construct prüft Registry vor Annahme.</p>
+      <ul>
+        <li>Character Registry speichert: Typ A, deployer, creation-block</li>
+        <li>Construct prüft Registry: "Ist dieser Sender ein gültiger Character?"</li>
+        <li>Dann wie Ansatz A: Attribute in Message, Construct berechnet</li>
+        <li>Registry kann auch Level-Schwellenwerte &amp; Fähigkeits-Konfiguration speichern</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>Vorteile</h4><ul><li>Sicherheit: kein Fake-Character möglich</li><li>Registry kann konfigurierbare Level-Tabelle, Fähigkeiten etc. speichern</li><li>Zukunftssicher für neue Character-Typen</li></ul></div>
+        <div class="cons"><h4>Nachteile</h4><ul><li>Extra Contract = extra Deployment &amp; Kosten</li><li>Jeden Angriff muss Construct Registry abfragen (geht nicht on-chain, braucht Trick)</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:1.5rem;padding:1rem;background:rgba(197,164,78,0.1);border-left:3px solid #c5a44e;border-radius:4px">
+  <p class="label">Meine Empfehlung</p>
+  <p><strong>A + Teile von C:</strong> Character als Thin Proxy (A), aber mit einer einfachen Validierung: Construct prüft ob der Sender-Account in einer KKV-Map als "registrierter Character" eingetragen ist — kein eigener Registry-Contract nötig, nur eine Admin-Funktion im Construct.</p>
+</div>
