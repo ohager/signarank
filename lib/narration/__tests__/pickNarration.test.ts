@@ -1,17 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { pickNarration } from '../pickNarration';
-import { AttackNarration } from '@prisma/client';
+import { pickNarration, type Narration } from '../pickNarration';
 
-function makeNarration(id: number, tags: string[]): AttackNarration {
-    return {
-        id,
-        text: `Narration ${id}`,
-        tags,
-        locale: 'en',
-        seasonName: 'frostfest',
-        constructName: 'CT000001',
-        createdAt: new Date(),
-    };
+function makeNarration(id: number, tags: string[]): Narration {
+    return { id, text: `Narration ${id}`, tags };
 }
 
 describe('pickNarration', () => {

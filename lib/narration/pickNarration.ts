@@ -1,15 +1,19 @@
-import { AttackNarration } from '@prisma/client';
+export interface Narration {
+    id: number | string;
+    text: string;
+    tags: string[];
+}
 
 export function pickNarration(
-    candidates: AttackNarration[],
+    candidates: Narration[],
     desiredTags: string[]
-): AttackNarration | null {
+): Narration | null {
     if (candidates.length === 0) return null;
 
     const desiredSet = new Set(desiredTags);
 
     let bestScore = -1;
-    let bestCandidates: AttackNarration[] = [];
+    let bestCandidates: Narration[] = [];
 
     for (const candidate of candidates) {
         let score = 0;

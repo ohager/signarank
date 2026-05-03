@@ -122,18 +122,15 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                 playerStats: playerStats ?? null,
             });
 
-            const res = await fetch('/api/narrations/pick', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    seasonName,
-                    constructName: construct.name,
-                    locale: 'en',
-                    tags,
-                }),
+            const params = new URLSearchParams({
+                seasonName,
+                constructName: construct.name,
+                locale: 'en',
+                tags: tags.join(','),
             });
+            const res = await fetch(`/api/narrations/pick?${params}`);
 
-            if (res.status === 200) {
+            if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
                 const body = await res.json();
                 setNarration(body.text);
             }
