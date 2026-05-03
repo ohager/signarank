@@ -32,6 +32,16 @@ export const Context = {
         AttackerDebuff: 21n,
         TokenDecimalsInfo: 3n
     },
+    // Item Registry property keys (shared with item-registry contract)
+    ItemRegistryProps: {
+        ItemType:     1n,
+        EffectTarget: 2n,
+        BonusAbs:     3n,
+        BonusRel:     4n,
+        StackLimit:   5n,
+        MinLevel:     6n,
+        IsBurnable:   7n,
+    },
     Data: {
         name: 4n,
         xpTokenId: 5n,
