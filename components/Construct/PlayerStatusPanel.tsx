@@ -32,6 +32,11 @@ export const PlayerStatusPanel: React.FC<PlayerStatusPanelProps> = ({
             : 'Debuffed'
         : 'Normal';
 
+    const expectedReward =
+        stats && stats.damageDealt > 0 && construct.maxHp > 0
+            ? ((Number(construct.rewardPot) * stats.damageDealt) / construct.maxHp) * (construct.playersRewardPercent/100)
+            : null;
+
     return (
         <div className="glass-static py-4 px-5 max-md:py-3 max-md:px-4">
             <div className="flex justify-between items-center gap-3 mb-3">
@@ -79,11 +84,18 @@ export const PlayerStatusPanel: React.FC<PlayerStatusPanelProps> = ({
             </div>
 
             {/* Stats row */}
-            <div className="grid grid-cols-4 gap-3 max-sm:grid-cols-2 max-sm:gap-4">
+            <div className="grid grid-cols-5 gap-3 max-sm:grid-cols-2 max-sm:gap-4">
                 <div className="flex flex-col gap-0.5">
                     <span className={labelCls} style={monoStyle}>Damage</span>
                     <span className={valueCls} style={monoStyle}>
-                        {stats ? stats.damageDealt.toLocaleString() : '—'}
+                        {stats ? (
+                            <>
+                                {stats.damageDealt.toLocaleString()}
+                                <span className="text-[0.65rem] text-[var(--text-faint)] ml-1">
+                                    ({construct.maxHp > 0 ? ((stats.damageDealt / construct.maxHp) * 100).toFixed(2) : '0.00'}%)
+                                </span>
+                            </>
+                        ) : '—'}
                     </span>
                 </div>
                 <div className="flex flex-col gap-0.5">
@@ -113,6 +125,16 @@ export const PlayerStatusPanel: React.FC<PlayerStatusPanelProps> = ({
                         }
                     >
                         {debuffLabel}
+                    </span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                    <span className={labelCls} style={monoStyle}>Est. Reward</span>
+                    <span
+                        className={valueCls}
+                        style={{...monoStyle, color: 'var(--gold)'}}
+                        title={`rewardPot × (yourDamage / maxHp) = ${construct.rewardPot} × (${stats?.damageDealt ?? 0} / ${construct.maxHp})`}
+                    >
+                        {expectedReward !== null ? `${expectedReward.toFixed(2)} SIGNA` : '—'}
                     </span>
                 </div>
             </div>

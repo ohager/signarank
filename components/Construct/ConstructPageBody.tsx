@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {ConstructCard} from '@components/Construct/ConstructCard';
 import {AttackForm} from '@components/Construct/AttackForm';
 import {AttackHistory} from '@components/Construct/AttackHistory';
+import {ConstructRanking} from '@components/Construct/ConstructRanking';
 import {PlayerStatusPanel} from '@components/Construct/PlayerStatusPanel';
 import {useConstruct} from '@hooks/useConstruct';
 import {useUserCooldown} from '@hooks/useUserCooldown';
@@ -126,8 +127,14 @@ const ConstructPageBody = ({initialContractId}: ConstructPageBodyProps) => {
                     )}
                 </div>
 
-                {/* Right Column: Attack History */}
-                <div className="sticky top-8 max-lg:static">
+                {/* Right Column: Ranking + Attack History */}
+                <div className="sticky top-8 max-lg:static flex flex-col gap-5">
+                    <ConstructRanking
+                        contractId={construct.contractId}
+                        hpTokenId={construct.hpTokenId}
+                        maxHp={construct.maxHp}
+                        userAccountId={userAccountId}
+                    />
                     <AttackHistory
                         contractId={construct.contractId}
                         xpTokenId={construct.xpTokenId}

@@ -33,6 +33,8 @@ export const ConnectButton: React.FC<Props> = ({mode = 'inline', withAddressInpu
     const {Wallet, Ledger} = useAppContext()
     const router = useRouter()
 
+
+
     const onAddressChange = (e: any) => {
         setError('')
         setAddress(e.target.value)

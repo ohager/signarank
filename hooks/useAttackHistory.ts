@@ -27,14 +27,14 @@ export const useAttackHistory = (
                 assetId: xpTokenId,
                 accountId: contractId,
                 firstIndex: 0,
-                lastIndex: 50,
+                lastIndex: 99,
             });
 
             const attackRecords: AttackRecord[] = [];
             const signaRankTokenId = getSignaRankTokenId()
             for (const transfer of transfers.transfers || []) {
                 if (transfer.sender !== contractId) continue;
-                if (attackRecords.length >= 10) break;
+                if (attackRecords.length >= 50) break;
 
                 const resolved = await resolveAccount(ledger, transfer.recipient);
 
