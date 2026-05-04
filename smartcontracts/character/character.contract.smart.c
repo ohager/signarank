@@ -8,35 +8,32 @@
 
 #define METHOD_ALLOCATE_SKILL 1
 
-#define ATTR_STRENGTH  1
-#define ATTR_STAMINA   2
-#define ATTR_DEXTERITY 3
-#define ATTR_LUCK      4
-#define ATTR_WILLPOWER 5
-#define ATTR_MAX_VALUE 6   // sentinel: valid indices are 1..5
+#define ATTR_STRENGTH  0
+#define ATTR_STAMINA   1
+#define ATTR_DEXTERITY 2
+#define ATTR_LUCK      3
+#define ATTR_WILLPOWER 4
+#define ATTR_COUNT     5
 
-#define DEFAULT_HP           100
-#define DEFAULT_MAX_HP       100
-#define DEFAULT_LEVEL        1
-
-long hitpoints;
-long maxHitpoints;
-long level;
-long maxInvSlots;
 long itemRegistryId;
 long xpTokenId;
 long revivalTokenId;
 
-struct Attrs {
-    long strength;
-    long stamina;
-    long dexterity;
-    long luck;
-    long willpower;
-} attrs;
+/*
+0 - strength
+1 - stamina
+2 - dexterity
+3 - luck
+4 - willpower
+*/
+long attrs[5];
 
 // ---- Runtime state
-long skillPoints;
+long skillpoints;
+long hitpoints;
+long maxHitpoints;
+long level;
+long maxInvSlots;
 long isDead;
 long occupiedInvSlots;
 
@@ -49,11 +46,6 @@ const HP_PER_STAMINA = 10;
 
 // ---- Testbed equivalent of createInitialDataStack
 #ifdef TESTBED
-    const hitpoints          = 100;
-    const maxHitpoints       = DEFAULT_MAX_HP;
-    const level       = DEFAULT_LEVEL;
-    const charCreationPts = DEFAULT_CREATION_PTS;
-    const maxInvSlots = DEFAULT_INV_SLOTS;
     const itemRegistryId  = TESTBED_itemRegistryId;
     const xpTokenId       = TESTBED_xpTokenId;
     const revivalTokenId  = TESTBED_revivalTokenId;
@@ -67,62 +59,46 @@ struct TX {
 } currentTx;
 
 void init(){
-    occupiedInvSlots = TEN;
-    skillPoints = TEN;
+    maxInvSlots = TEN;
+    skillpoints = TEN;
 
     long creationCap = 5;
-    long sumAttrs = attrs.strength + attrs.stamina + attrs.dexterity + attrs.luck + attrs.willpower;
-    if (
-        attrs.strength  > creationCap ||
-        attrs.stamina   > creationCap ||
-        attrs.dexterity > creationCap ||
-        attrs.luck      > creationCap ||
-        attrs.willpower > creationCap ||
-        sumAttrs > TEN
-    ) {
-        // Cheat detected: distribute exactly skillPoints randomly,
-        // each attribute gets 0..CREATION_CAP capped by points still available.
-        long remaining = skillPoints;
-        long toAssign;
-
-        toAssign = (getWeakRandomNumber() >> 1) % (creationCap + 1);
-        if (toAssign > remaining) { toAssign = remaining; }
-        attrs.strength = toAssign;
-        remaining -= toAssign;
-
-        toAssign = (getWeakRandomNumber() >> 1) % (creationCap + 1);
-        if (toAssign > remaining) { toAssign = remaining; }
-        attrs.stamina = toAssign;
-        remaining -= toAssign;
-
-        toAssign = (getWeakRandomNumber() >> 1) % (creationCap + 1);
-        if (toAssign > remaining) { toAssign = remaining; }
-        attrs.dexterity = toAssign;
-        remaining -= toAssign;
-
-        toAssign = (getWeakRandomNumber() >> 1) % (creationCap + 1);
-        if (toAssign > remaining) { toAssign = remaining; }
-        attrs.luck = toAssign;
-        remaining -= toAssign;
-
-        // Willpower absorbs whatever is left, capped at CREATION_CAP.
-        // Any overflow spills into charCreationPts so the 10-point budget is preserved.
-        if (remaining > creationCap) {
-            skillPoints = remaining - creationCap;
-            attrs.willpower = creationCap;
-        } else {
-            skillPoints = ZERO;
-            attrs.willpower = remaining;
+    long sumAttrs = attrs[0] + attrs[1] + attrs[2] + attrs[3] + attrs[4];
+    long cheat = ZERO;
+    long i;
+    if(sumAttrs <= TEN) {
+        for (i = 0; i < ATTR_COUNT; i++) {
+            if (attrs[i] > creationCap) { cheat = 1; break; }
         }
     } else {
-        // Valid (or empty) pre-set: remaining creation points stay available.
-        skillPoints = TEN - sumAttrs;
+        cheat = 1;
     }
-    // Recalculate HP for any stamina already assigned.
-    if (attrs.stamina > ZERO) {
-        maxHitpoints += attrs.stamina * HP_PER_STAMINA;
-        hitpoints = maxHitpoints;
+
+    if (cheat != ZERO) {
+        // Cheat detected: reset all attrs and redistribute 10 points one-by-one
+        // to random slots (respecting the creation cap). Uniform and unpredictable.
+        attrs[0] = ZERO;
+        attrs[1] = ZERO;
+        attrs[2] = ZERO;
+        attrs[3] = ZERO;
+        attrs[4] = ZERO;
+        long idx;
+        while (skillpoints > ZERO) {
+            idx = (getWeakRandomNumber() >> 1) % ATTR_COUNT;
+            if (attrs[idx] < creationCap) {
+                attrs[idx] += 1;
+                skillpoints -= 1;
+            }
+        }
+    } else {
+        skillpoints = TEN - sumAttrs;
     }
+
+    // Adjust HP for any stamina already assigned.
+    if (attrs[ATTR_STAMINA] > ZERO) {
+        maxHitpoints += attrs[ATTR_STAMINA] * HP_PER_STAMINA;
+    }
+    hitpoints = maxHitpoints;
 }
 
 init();
@@ -137,36 +113,19 @@ void main() {
                 case METHOD_ALLOCATE_SKILL:
                     allocateSkill();
                     break;
-                }
+            }
         }
     }
 }
 
 void allocateSkill() {
-
-    if(skillPoints == ZERO) { return; }
-
-    switch(currentTx.message[1]){
-        case ATTR_STRENGTH:
-            attrs.strength += 1;
-            break;
-        case ATTR_STAMINA:
-            attrs.stamina += 1;
-            maxHitpoints += HP_PER_STAMINA;
-            hitpoints    += HP_PER_STAMINA;
-            break;
-        case ATTR_DEXTERITY:
-            attrs.dexterity += 1;
-            break;
-        case ATTR_LUCK:
-            attrs.luck += 1;
-            break;
-        case ATTR_WILLPOWER:
-            attrs.willpower += 1;
-            break;
-        default:
-            return;
+    if (skillpoints == ZERO) { return; }
+    long attrIndex = currentTx.message[1];
+    if (attrIndex >= ATTR_COUNT) { return; }
+    attrs[attrIndex] += 1;
+    if (attrIndex == ATTR_STAMINA) {
+        maxHitpoints += HP_PER_STAMINA;
+        hitpoints    += HP_PER_STAMINA;
     }
-
-    skillPoints -= 1;
+    skillpoints -= 1;
 }
