@@ -1,0 +1,6 @@
+pre-push:
+  commands:
+    build:
+      run: npm run build
+      skip:
+        - CI=true
