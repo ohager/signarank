@@ -10,8 +10,10 @@ interface PageProps {
     title: string,
     description?: string,
     ogImage?: string,
+    ogImageAlt?: string,
     ogUrl?: string,
-    ogTitle?: string
+    ogTitle?: string,
+    canonical?: string,
 }
 
 const DEFAULT_DESCRIPTION = "An achievement system built on the Signum blockchain. The more chain activity the higher your score. Compare yourself with others.";
@@ -19,12 +21,18 @@ const DEFAULT_OG_TITLE = "SignaRank - Check your Signum Blockchain Score";
 const DEFAULT_OG_IMAGE = "https://signarank.club/card.jpg";
 const DEFAULT_OG_URL = "https://signarank.club";
 
+const truncate = (text: string, max: number) =>
+    text.length > max ? text.slice(0, max - 1) + '…' : text;
+
 const Page = (props: PageProps) => {
     const videoUrl = seasonsData.bloombrawl?.background || '';
-    const description = props.description ?? DEFAULT_DESCRIPTION;
+    const rawDescription = props.description ?? DEFAULT_DESCRIPTION;
+    const description = truncate(rawDescription, 155);
     const ogTitle = props.ogTitle ?? props.title ?? DEFAULT_OG_TITLE;
     const ogImage = props.ogImage ?? DEFAULT_OG_IMAGE;
+    const ogImageAlt = props.ogImageAlt ?? ogTitle;
     const ogUrl = props.ogUrl ?? DEFAULT_OG_URL;
+    const canonical = props.canonical ?? ogUrl;
 
     return (
         <>
@@ -35,18 +43,21 @@ const Page = (props: PageProps) => {
                     <title>{props.title}</title>
                     <meta name="title" content={ogTitle}/>
                     <meta name="description" content={description}/>
+                    <link rel="canonical" href={canonical}/>
 
                     <meta property="og:type" content="website"/>
                     <meta property="og:url" content={ogUrl}/>
                     <meta property="og:title" content={ogTitle}/>
                     <meta property="og:description" content={description}/>
                     <meta property="og:image" content={ogImage}/>
+                    <meta property="og:image:alt" content={ogImageAlt}/>
 
                     <meta property="twitter:card" content="summary_large_image"/>
                     <meta property="twitter:url" content={ogUrl}/>
                     <meta property="twitter:title" content={ogTitle}/>
                     <meta property="twitter:description" content={description}/>
                     <meta property="twitter:image" content={ogImage}/>
+                    <meta property="twitter:image:alt" content={ogImageAlt}/>
 
                     <link rel="icon" href="/favicon.ico"/>
                     <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png"/>

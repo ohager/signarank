@@ -72,8 +72,19 @@ const ConstructPage = ({preview}: ConstructPageProps) => {
     const ogImage = preview?.imageUrl || undefined;
     const ogUrl = preview ? `${SITE_URL}/construct/${preview.contractId}` : undefined;
 
+    const ogTitle = preview ? preview.name : 'Construct';
+    const ogImageAlt = preview ? `${preview.name} construct avatar` : 'SIGNArank Construct';
+
     return (
-        <Page title={title} description={description} ogImage={ogImage} ogUrl={ogUrl}>
+        <Page
+            title={title}
+            description={description}
+            ogTitle={ogTitle}
+            ogImage={ogImage}
+            ogImageAlt={ogImageAlt}
+            ogUrl={ogUrl}
+            canonical={ogUrl}
+        >
             <ConstructPageBody initialContractId={preview?.contractId}/>
         </Page>
     );
