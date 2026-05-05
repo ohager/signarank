@@ -1,4 +1,7 @@
-import {NextRequest, NextResponse} from 'next/serve// Non-browser clients: 10 req / 60s per IP
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// Non-browser clients: 10 req / 60s per IP
 const BOT_LIMIT = 10;
 const BOT_WINDOW_MS = 60_000;
 
