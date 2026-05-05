@@ -40,7 +40,7 @@ export const useAttackHistory = (
 
                 const {name: attackerName, assetBalances} = resolved!
 
-                const xpToken = assetBalances.find(ab => ab.asset === signaRankTokenId)
+                const xpToken = assetBalances?.find(ab => ab.asset === signaRankTokenId)
                 const attackerXp = Number(xpToken?.balanceQNT || 0)
                 attackRecords.push({
                     txId: transfer.assetTransfer,
