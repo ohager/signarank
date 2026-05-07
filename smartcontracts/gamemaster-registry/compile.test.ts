@@ -5,7 +5,7 @@ import { SmartC } from 'smartc-signum-compiler';
 
 const MAX_CODE_SIZE = 40 * 256;
 
-describe('Item Registry Compile Test', () => {
+describe('Gamemaster Registry Compile Test', () => {
     test('should compile without errors and be within code size limit', () => {
         const code = readFileSync(Context.ContractPath, 'utf8');
         const compiler = new SmartC({ language: 'C', sourceCode: code });
