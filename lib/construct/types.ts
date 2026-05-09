@@ -7,6 +7,8 @@ export interface ConstructData {
     name: string;
     description: string;
     imageUrl: string;
+    /** IPFS CID from SRC44 avatar field; null for xav-based or avatar-less constructs */
+    ipfsCid: string | null;
     currentHp: number;
     maxHp: number;
     coolDownInBlocks: number;

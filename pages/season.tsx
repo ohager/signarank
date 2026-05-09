@@ -1,9 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Page from '@components/Page';
 import {useSeasonInfo} from '@hooks/useSeasonInfo';
 import {useConstruct} from '@hooks/useConstruct';
 import {getCurrentSeasonConstructs} from '@lib/construct/seasonConstructs';
 import Link from 'next/link';
+import { resolveDamageVariantUrl, resolveDisplayUrl } from '@lib/construct/damageVariants';
 
 const CARD_WIDTH = 280 + 20; // card width + gap
 
@@ -143,6 +144,26 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, or
     const isActive = construct.isActive && !construct.isDefeated;
     const isDefeated = construct.isDefeated;
 
+    const [displayImageUrl, setDisplayImageUrl] = useState(construct.imageUrl);
+
+    useEffect(() => {
+        const variantUrl = resolveDamageVariantUrl(
+            construct.ipfsCid,
+            construct.isDefeated,
+            construct.currentHp,
+            construct.maxHp,
+        );
+        if (!variantUrl) {
+            setDisplayImageUrl(construct.imageUrl);
+            return;
+        }
+        let cancelled = false;
+        resolveDisplayUrl(variantUrl, construct.imageUrl).then(url => {
+            if (!cancelled) setDisplayImageUrl(url);
+        });
+        return () => { cancelled = true; };
+    }, [construct.ipfsCid, construct.isDefeated, construct.currentHp, construct.maxHp, construct.imageUrl]);
+
     return (
         <Link href={`/construct/${construct.contractId}`} style={{textDecoration: 'none'}} className="shrink-0 w-[280px] max-md:w-[200px] snap-start">
             <div
@@ -152,7 +173,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, or
                 style={isActive ? {borderColor: 'rgba(197,164,78,0.4)', boxShadow: '0 4px 20px rgba(197,164,78,0.15)'} : isDefeated ? {opacity: 0.7, borderColor: 'rgba(232,93,58,0.3)'} : {}}
             >
                 <div className="relative w-full aspect-[3/4] overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover [&_img]:object-center">
-                    <img src={construct.imageUrl} alt={construct.name}/>
+                    <img src={displayImageUrl} alt={construct.name} onError={() => setDisplayImageUrl(construct.imageUrl)}/>
                     {isActive && (
                         <div
                             className="absolute top-2.5 right-2.5 py-1.5 px-3 rounded-full text-[0.65rem] font-bold uppercase tracking-wide animate-pulse"
