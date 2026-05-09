@@ -14,6 +14,7 @@ import {singleQueryString} from '@lib/singleQueryString';
 import {prisma} from '@lib/prisma';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import {getExplorerBaseUrl} from '@lib/construct/constants';
+import {Tier} from '@lib/titles';
 
 export const getStaticPaths: GetStaticPaths = async () => {
     return {
@@ -43,6 +44,7 @@ export interface AddressProps {
     address: string,
     score: number,
     rank: number,
+    tier?: Tier | null,
     progress: Array<string>,
     error: boolean | string,
     name?: string,
@@ -51,7 +53,16 @@ export interface AddressProps {
     explorerBaseUrl?: string
 }
 
-const Index = ({address, score, rank, progress, error, name, title, explorerBaseUrl}: AddressProps) => {
+const tierColor = (topPercent: number): { bg: string; border: string; color: string } => {
+    if (topPercent <= 1)  return { bg: 'linear-gradient(135deg, rgba(197,164,78,0.25), rgba(232,200,90,0.12))', border: 'var(--gold-bright)',          color: 'var(--gold-bright)' };
+    if (topPercent <= 5)  return { bg: 'rgba(197,164,78,0.15)',                                                  border: 'var(--gold-dim)',             color: 'var(--gold-bright)' };
+    if (topPercent <= 10) return { bg: 'rgba(192,192,192,0.12)',                                                 border: 'rgba(192,192,192,0.35)',      color: '#d8d8d8' };
+    if (topPercent <= 25) return { bg: 'rgba(120,160,190,0.12)',                                                 border: 'rgba(120,160,190,0.35)',      color: '#a8c4d8' };
+    if (topPercent <= 50) return { bg: 'rgba(255,255,255,0.04)',                                                 border: 'rgba(255,255,255,0.12)',      color: 'var(--text-dim)' };
+    return                       { bg: 'rgba(255,255,255,0.03)',                                                 border: 'rgba(255,255,255,0.08)',      color: 'var(--text-faint)' };
+};
+
+const Index = ({address, score, rank, tier, progress, error, name, title, explorerBaseUrl}: AddressProps) => {
     const router = useRouter()
     const displayAddress = useReedSolomonAddress(address)
 
@@ -247,19 +258,37 @@ const Index = ({address, score, rank, progress, error, name, title, explorerBase
                             &#127760;
                         </a>
                     </div>
-                    {rank <= 3 && (
-                        <div className="mt-3">
-                            <span
-                                className="inline-block px-4 py-1.5 rounded-full text-[0.7rem] font-semibold tracking-widest uppercase"
-                                style={{
-                                    fontFamily: "'IBM Plex Mono', monospace",
-                                    background: rank === 1 ? 'linear-gradient(135deg, rgba(197,164,78,0.2), rgba(232,200,90,0.1))' : rank === 2 ? 'rgba(192,192,192,0.15)' : 'rgba(205,127,50,0.15)',
-                                    border: `1px solid ${rank === 1 ? 'var(--gold-dim)' : rank === 2 ? 'rgba(192,192,192,0.3)' : 'rgba(205,127,50,0.3)'}`,
-                                    color: rank === 1 ? 'var(--gold-bright)' : rank === 2 ? '#c0c0c0' : '#cd7f32'
-                                }}
-                            >
-                                {rank === 1 ? 'Champion' : rank === 2 ? 'Runner-Up' : 'Third Place'}
-                            </span>
+                    {(rank <= 3 || tier) && (
+                        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                            {rank <= 3 && (
+                                <span
+                                    className="inline-block px-4 py-1.5 rounded-full text-[0.7rem] font-semibold tracking-widest uppercase"
+                                    style={{
+                                        fontFamily: "'IBM Plex Mono', monospace",
+                                        background: rank === 1 ? 'linear-gradient(135deg, rgba(197,164,78,0.2), rgba(232,200,90,0.1))' : rank === 2 ? 'rgba(192,192,192,0.15)' : 'rgba(205,127,50,0.15)',
+                                        border: `1px solid ${rank === 1 ? 'var(--gold-dim)' : rank === 2 ? 'rgba(192,192,192,0.3)' : 'rgba(205,127,50,0.3)'}`,
+                                        color: rank === 1 ? 'var(--gold-bright)' : rank === 2 ? '#c0c0c0' : '#cd7f32'
+                                    }}
+                                >
+                                    {rank === 1 ? 'Champion' : rank === 2 ? 'Runner-Up' : 'Third Place'}
+                                </span>
+                            )}
+                            {tier && rank > 3 && (() => {
+                                const c = tierColor(tier.topPercent);
+                                return (
+                                    <span
+                                        className="inline-block px-4 py-1.5 rounded-full text-[0.7rem] font-semibold tracking-widest uppercase"
+                                        style={{
+                                            fontFamily: "'IBM Plex Mono', monospace",
+                                            background: c.bg,
+                                            border: `1px solid ${c.border}`,
+                                            color: c.color
+                                        }}
+                                    >
+                                        {tier.label}
+                                    </span>
+                                );
+                            })()}
                         </div>
                     )}
                 </div>

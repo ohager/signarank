@@ -12,9 +12,18 @@ import {
 } from '@signumjs/core';
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
 import {ExceptionInactiveAccount} from './exceptionInactiveAccount';
-import {Amount, ChainTime} from '@signumjs/util';
+import {Amount} from '@signumjs/util';
 import {NftService} from './nftService';
-import {getCategoryScoresFromProgress, getTitle} from '@lib/titles';
+import {getCategoryScoresFromProgress, getTitle, getTier, Tier} from '@lib/titles';
+
+async function calculateRankAndTotal(score: number): Promise<{ rank: number; total: number }> {
+    const result = await prisma.$queryRaw<Array<{ rank: number; total: number }>>`
+        SELECT
+            ((SELECT COUNT(*) FROM "Address" WHERE score > ${score} AND active = true) + 1)::int AS rank,
+            (SELECT COUNT(*) FROM "Address" WHERE active = true)::int AS total
+    `;
+    return result[0];
+}
 
 async function fetchCachedAddress(accountId: string) {
     const cacheAddress = await prisma.address.findFirst({
@@ -540,7 +549,6 @@ export async function calculateScore(accountId: string) {
             }
 
 
-            // update the cache and calculate rank in a transaction
             const upsertObj = {
                 address: accountId.toLowerCase(),
                 score,
@@ -550,48 +558,19 @@ export async function calculateScore(accountId: string) {
                 progress: JSON.stringify(progress)
             };
 
-            // Use transaction to atomically upsert address and calculate rank
-            await prisma.$transaction(async (tx) => {
-                // Upsert the address with new score
-                await tx.address.upsert({
-                    where: {
-                        // @ts-ignore
-                        address: accountId.toLowerCase()
-                    },
-                    update: upsertObj,
-                    create: upsertObj
-                });
-
-                // Calculate rank immediately using indexed query
-                // COUNT(*) WHERE score > current_score gives us addresses better than us
-                const rankResult = await tx.$queryRaw<Array<{ranking: bigint}>>`
-                    SELECT COUNT(*) + 1 as ranking
-                    FROM "Address"
-                    WHERE score > ${score}
-                `;
-                rank = Number(rankResult[0].ranking);
-
-                // Update the ranking column for future reads
-                await tx.address.update({
-                    where: {
-                        // @ts-ignore
-                        address: accountId.toLowerCase()
-                    },
-                    data: { ranking: rank }
-                });
-            });
-
-        } else {
-            // If not recalculating (cache hit), fetch rank from database
-            const cachedAddress = await prisma.address.findUnique({
+            await prisma.address.upsert({
                 where: {
                     // @ts-ignore
                     address: accountId.toLowerCase()
                 },
-                select: { ranking: true }
+                update: upsertObj,
+                create: upsertObj
             });
-            rank = cachedAddress?.ranking || 0;
         }
+
+        const {rank: computedRank, total} = await calculateRankAndTotal(score);
+        rank = computedRank;
+        const tier: Tier | null = getTier(rank, total);
         const categoryScores = getCategoryScoresFromProgress(progress);
         const title = getTitle(categoryScores, rank, accountId);
 
@@ -599,9 +578,8 @@ export async function calculateScore(accountId: string) {
             props: {
                 address: accountId,
                 score,
-                // totalPointsPossible,
-                // totalTransactions: transactions.length,
                 rank,
+                tier,
                 progress,
                 error,
                 name,
@@ -616,6 +594,7 @@ export async function calculateScore(accountId: string) {
                 address: accountId,
                 score: -1,
                 rank: -1,
+                tier: null,
                 progress: [],
                 error: e.message,
                 name: '',

@@ -3,6 +3,23 @@ import titlesConfig from './titles.signa.json';
 
 export type CategoryScores = Record<string, number>;
 
+export type Tier = { label: string; topPercent: number };
+
+const TIER_THRESHOLDS: Tier[] = [
+    { label: 'Top 1%',  topPercent: 1 },
+    { label: 'Top 5%',  topPercent: 5 },
+    { label: 'Top 10%', topPercent: 10 },
+    { label: 'Top 25%', topPercent: 25 },
+    { label: 'Top 50%', topPercent: 50 },
+    { label: 'Top 75%', topPercent: 75 },
+];
+
+export function getTier(rank: number, total: number): Tier | null {
+    if (!rank || !total || rank < 1 || total < 1) return null;
+    const pct = (rank / total) * 100;
+    return TIER_THRESHOLDS.find(t => pct <= t.topPercent) || null;
+}
+
 export function getCategoryScoresFromProgress(progress: string[]): CategoryScores {
     const done = new Set(progress);
     const scores: CategoryScores = {};
