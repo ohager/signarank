@@ -16,6 +16,15 @@ import {Amount, ChainTime} from '@signumjs/util';
 import {NftService} from './nftService';
 import {getCategoryScoresFromProgress, getTitle} from '@lib/titles';
 
+async function calculateRank(score: number): Promise<number> {
+    const result = await prisma.$queryRaw<Array<{ ranking: bigint }>>`
+        SELECT COUNT(*) + 1 AS ranking
+        FROM "Address"
+        WHERE score > ${score} AND active = true
+    `;
+    return Number(result[0].ranking);
+}
+
 async function fetchCachedAddress(accountId: string) {
     const cacheAddress = await prisma.address.findFirst({
         where: {
@@ -540,7 +549,6 @@ export async function calculateScore(accountId: string) {
             }
 
 
-            // update the cache and calculate rank in a transaction
             const upsertObj = {
                 address: accountId.toLowerCase(),
                 score,
@@ -550,48 +558,17 @@ export async function calculateScore(accountId: string) {
                 progress: JSON.stringify(progress)
             };
 
-            // Use transaction to atomically upsert address and calculate rank
-            await prisma.$transaction(async (tx) => {
-                // Upsert the address with new score
-                await tx.address.upsert({
-                    where: {
-                        // @ts-ignore
-                        address: accountId.toLowerCase()
-                    },
-                    update: upsertObj,
-                    create: upsertObj
-                });
-
-                // Calculate rank immediately using indexed query
-                // COUNT(*) WHERE score > current_score gives us addresses better than us
-                const rankResult = await tx.$queryRaw<Array<{ranking: bigint}>>`
-                    SELECT COUNT(*) + 1 as ranking
-                    FROM "Address"
-                    WHERE score > ${score}
-                `;
-                rank = Number(rankResult[0].ranking);
-
-                // Update the ranking column for future reads
-                await tx.address.update({
-                    where: {
-                        // @ts-ignore
-                        address: accountId.toLowerCase()
-                    },
-                    data: { ranking: rank }
-                });
-            });
-
-        } else {
-            // If not recalculating (cache hit), fetch rank from database
-            const cachedAddress = await prisma.address.findUnique({
+            await prisma.address.upsert({
                 where: {
                     // @ts-ignore
                     address: accountId.toLowerCase()
                 },
-                select: { ranking: true }
+                update: upsertObj,
+                create: upsertObj
             });
-            rank = cachedAddress?.ranking || 0;
         }
+
+        rank = await calculateRank(score);
         const categoryScores = getCategoryScoresFromProgress(progress);
         const title = getTitle(categoryScores, rank, accountId);
 
