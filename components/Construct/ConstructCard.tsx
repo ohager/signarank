@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ConstructData } from '@lib/construct/types';
 import { useAttackerData } from '@hooks/useAttackerData';
+import { useConstructDisplayImage } from '@hooks/useConstructDisplayImage';
 import { getExplorerBaseUrl } from '@lib/construct/constants';
-import { resolveDamageVariantUrl, resolveDisplayUrl } from '@lib/construct/damageVariants';
 
 interface ConstructCardProps {
     construct: ConstructData;
@@ -14,25 +14,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
     const hpPercent = construct.currentHp / construct.maxHp;
     const hpColor = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-    const [displayImageUrl, setDisplayImageUrl] = useState(construct.imageUrl);
-
-    useEffect(() => {
-        const variantUrl = resolveDamageVariantUrl(
-            construct.ipfsCid,
-            construct.isDefeated,
-            construct.currentHp,
-            construct.maxHp,
-        );
-        if (!variantUrl) {
-            setDisplayImageUrl(construct.imageUrl);
-            return;
-        }
-        let cancelled = false;
-        resolveDisplayUrl(variantUrl, construct.imageUrl).then(url => {
-            if (!cancelled) setDisplayImageUrl(url);
-        });
-        return () => { cancelled = true; };
-    }, [construct.ipfsCid, construct.isDefeated, construct.currentHp, construct.maxHp, construct.imageUrl]);
+    const { displayImageUrl, handleImageError } = useConstructDisplayImage(construct);
 
     useEffect(() => {
         if (!isLightboxOpen) return;
@@ -65,7 +47,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                 <img
                     src={displayImageUrl}
                     alt={construct.name}
-                    onError={() => setDisplayImageUrl(construct.imageUrl)}
+                    onError={handleImageError}
                     className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
                 />
                 {construct.isDefeated && (
