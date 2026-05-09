@@ -12,17 +12,17 @@ import {
 } from '@signumjs/core';
 import {ExceptionInvalidAddress} from './exceptionInvalidAddress';
 import {ExceptionInactiveAccount} from './exceptionInactiveAccount';
-import {Amount, ChainTime} from '@signumjs/util';
+import {Amount} from '@signumjs/util';
 import {NftService} from './nftService';
-import {getCategoryScoresFromProgress, getTitle} from '@lib/titles';
+import {getCategoryScoresFromProgress, getTitle, getTier, Tier} from '@lib/titles';
 
-async function calculateRank(score: number): Promise<number> {
-    const result = await prisma.$queryRaw<Array<{ ranking: bigint }>>`
-        SELECT COUNT(*) + 1 AS ranking
-        FROM "Address"
-        WHERE score > ${score} AND active = true
+async function calculateRankAndTotal(score: number): Promise<{ rank: number; total: number }> {
+    const result = await prisma.$queryRaw<Array<{ rank: number; total: number }>>`
+        SELECT
+            ((SELECT COUNT(*) FROM "Address" WHERE score > ${score} AND active = true) + 1)::int AS rank,
+            (SELECT COUNT(*) FROM "Address" WHERE active = true)::int AS total
     `;
-    return Number(result[0].ranking);
+    return result[0];
 }
 
 async function fetchCachedAddress(accountId: string) {
@@ -568,7 +568,9 @@ export async function calculateScore(accountId: string) {
             });
         }
 
-        rank = await calculateRank(score);
+        const {rank: computedRank, total} = await calculateRankAndTotal(score);
+        rank = computedRank;
+        const tier: Tier | null = getTier(rank, total);
         const categoryScores = getCategoryScoresFromProgress(progress);
         const title = getTitle(categoryScores, rank, accountId);
 
@@ -576,9 +578,8 @@ export async function calculateScore(accountId: string) {
             props: {
                 address: accountId,
                 score,
-                // totalPointsPossible,
-                // totalTransactions: transactions.length,
                 rank,
+                tier,
                 progress,
                 error,
                 name,
@@ -593,6 +594,7 @@ export async function calculateScore(accountId: string) {
                 address: accountId,
                 score: -1,
                 rank: -1,
+                tier: null,
                 progress: [],
                 error: e.message,
                 name: '',

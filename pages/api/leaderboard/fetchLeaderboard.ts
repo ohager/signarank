@@ -5,7 +5,7 @@ type Row = {
     address: string;
     score: number;
     progress: string;
-    ranking: bigint;
+    ranking: number;
 };
 
 function decorate(row: Row) {
@@ -15,13 +15,12 @@ function decorate(row: Row) {
     } catch {
         parsed = [];
     }
-    const ranking = Number(row.ranking);
     const categoryScores = getCategoryScoresFromProgress(parsed);
-    const title = getTitle(categoryScores, ranking, row.address);
+    const title = getTitle(categoryScores, row.ranking, row.address);
     return {
         address: row.address,
         score: row.score,
-        rank: ranking,
+        rank: row.ranking,
         title
     };
 }
@@ -29,7 +28,7 @@ function decorate(row: Row) {
 export async function fetchLeaderboard() {
     const leaderboardPromise = prisma.$queryRaw<Row[]>`
         SELECT address, score, progress,
-               RANK() OVER (ORDER BY score DESC) AS ranking
+               (RANK() OVER (ORDER BY score DESC))::int AS ranking
         FROM "Address"
         WHERE active = true
         ORDER BY score DESC
@@ -38,7 +37,7 @@ export async function fetchLeaderboard() {
     const latestScoresPromise = prisma.$queryRaw<Row[]>`
         SELECT address, score, progress, ranking FROM (
             SELECT address, score, progress, "updatedAt",
-                   RANK() OVER (ORDER BY score DESC) AS ranking
+                   (RANK() OVER (ORDER BY score DESC))::int AS ranking
             FROM "Address"
             WHERE active = true
         ) sub
