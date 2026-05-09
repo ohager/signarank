@@ -43,6 +43,8 @@
 #define ITEM_EQUIPMENT            1
 #define ITEM_CONSUMABLE           2
 
+
+
 long ZERO;
 const ZERO = 0;
 

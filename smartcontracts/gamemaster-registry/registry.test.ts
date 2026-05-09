@@ -305,3 +305,4 @@ describe('Authorization', () => {
         expect(getValue(testbed, 1234n, Context.EffectKeys.Target)).toBe(0n);
     });
 });
+

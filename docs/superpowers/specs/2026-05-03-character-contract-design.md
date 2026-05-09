@@ -46,7 +46,8 @@ The Construct identifies a Character attacker using:
 long isCharacter = (getCodeHashOf(currentTx.sender) == knownCharacterHash);
 ```
 
-`knownCharacterHash` is a `long` (signed 64-bit integer) **that can be negative**. It must be set by the Construct creator via the `SETCHARACTERHASH` admin method using the exact signed representation of the hash. Explorers may display it as unsigned — the signed value must be used.
+
+`knownCharacterHash` is a `long` (signed 64-bit integer) that is set by the Gamemaster on a global registry contract. The Construct checks the hash of the sender's code against this value. 
 
 `knownCharacterHash` is **configurable by the Construct creator** to allow updates when a new Character contract version is deployed.
 
@@ -58,11 +59,11 @@ long isCharacter = (getCodeHashOf(currentTx.sender) == knownCharacterHash);
 
 ```c
 // Attributes
-#define MAP_CHAR_STRENGTH    100
-#define MAP_CHAR_STAMINA     101
-#define MAP_CHAR_DEXTERITY   102
-#define MAP_CHAR_LUCK        103
-#define MAP_CHAR_WILLPOWER   104
+#define MAP_CHAR_STRENGTH    1
+#define MAP_CHAR_STAMINA     2
+#define MAP_CHAR_DEXTERITY   3
+#define MAP_CHAR_LUCK        4
+#define MAP_CHAR_WILLPOWER   5
 
 // Combat state
 #define MAP_CHAR_HP          200
