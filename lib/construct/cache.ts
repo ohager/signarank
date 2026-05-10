@@ -60,14 +60,6 @@ export const ConstructCache = {
         setItem(CacheKeys.constructMeta(contractId), meta);
     },
 
-    // Defeated status (permanent - final state is immutable)
-    getDefeatedStatus(contractId: string): DefeatedStatus | null {
-        return getItem<DefeatedStatus>(CacheKeys.defeatedStatus(contractId));
-    },
-
-    setDefeatedStatus(contractId: string, status: DefeatedStatus): void {
-        setItem(CacheKeys.defeatedStatus(contractId), status);
-    },
 
     // Clear all construct-related cache (for debugging/reset)
     clearAll(): void {

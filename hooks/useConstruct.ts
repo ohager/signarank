@@ -6,6 +6,7 @@ import {useSignumLedger} from './useSignumLedger';
 import {ReadOnlyPlayer} from "@signarank/client"
 import {Amount} from "@signumjs/util"
 import {getSeasonNameForContract} from '@lib/construct/seasonConstructs'
+import {resolveDamageVariantUrl, resolveDisplayUrl} from '@lib/construct/damageVariants'
 
 interface UseConstructResult {
     construct: ConstructData | null;
@@ -23,10 +24,6 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
             if (!contractId) return null;
             if (!ledger) return null;
 
-            // const cachedDefeated = ConstructCache.getDefeatedStatus(contractId);
-            // if (cachedDefeated?.constructData) {
-            //     return cachedDefeated.constructData;
-            // }
 
             const player = new ReadOnlyPlayer({ledger, accountId: ''});
             const contractService = player.constructService.with(contractId);
@@ -38,13 +35,19 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
 
             const customImage = metadata.getCustomField('xav') as string | undefined;
             const ipfsCid = metadata.avatar?.ipfsCid ? metadata.avatar.ipfsCid : null;
-            const imageUrl = customImage || (ipfsCid ? `${R2_CDN_BASE}/${ipfsCid}` : '');
+            const baseImageUrl = customImage || (ipfsCid ? `${R2_CDN_BASE}/${ipfsCid}` : '');
 
             const playersRewardPercent = status.rewardDistribution?.players ?? 85;
             const contractBalance = contract.balanceNQT ?? '0';
             const rewardPot = Amount.fromPlanck(contractBalance)
                 .multiply(playersRewardPercent / 100)
                 .getSigna();
+
+            const hpPercent = status.maxHp > 0 ? Number(status.hitpoints) / status.maxHp : 1;
+            const variantUrl = resolveDamageVariantUrl(ipfsCid, status.isDefeated, hpPercent * status.maxHp, status.maxHp);
+            const imageUrl = variantUrl
+                ? await resolveDisplayUrl(variantUrl, baseImageUrl)
+                : baseImageUrl;
 
             const data: ConstructData = {
                 contractId,
@@ -84,16 +87,6 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 coolDownInBlocks: data.coolDownInBlocks,
             });
 
-            if (data.isDefeated) {
-                ConstructCache.setDefeatedStatus(contractId, {
-                    contractId,
-                    finalBlowAccount: data.finalBlowAccount || '',
-                    firstBloodAccount: data.firstBloodAccount || '',
-                    defeatedAt: Date.now(),
-                    constructData: data,
-                });
-            }
-
             return data;
         },
         enabled: !!contractId && !!ledger,
@@ -108,6 +101,6 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
         construct: construct ?? null,
         loading,
         error: queryError ? String(queryError) : null,
-        refetch
+        refetch,
     };
 };

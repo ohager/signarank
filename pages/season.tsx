@@ -2,7 +2,6 @@ import React, { useRef } from 'react';
 import Page from '@components/Page';
 import {useSeasonInfo} from '@hooks/useSeasonInfo';
 import {useConstruct} from '@hooks/useConstruct';
-import {useConstructDisplayImage} from '@hooks/useConstructDisplayImage';
 import {getCurrentSeasonConstructs} from '@lib/construct/seasonConstructs';
 import Link from 'next/link';
 
@@ -110,7 +109,7 @@ interface ConstructSeasonCardProps {
 
 const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, order, locked}) => {
     const {construct, loading} = useConstruct(locked ? null : contractId);
-    const {displayImageUrl, handleImageError} = useConstructDisplayImage(construct);
+
 
     if (locked) {
         return (
@@ -154,7 +153,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, or
                 style={isActive ? {borderColor: 'rgba(197,164,78,0.4)', boxShadow: '0 4px 20px rgba(197,164,78,0.15)'} : isDefeated ? {opacity: 0.7, borderColor: 'rgba(232,93,58,0.3)'} : {}}
             >
                 <div className="relative w-full aspect-[3/4] overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover [&_img]:object-center">
-                    <img src={displayImageUrl} alt={construct.name} onError={handleImageError}/>
+                    <img src={construct.imageUrl} alt={construct.name} />
                     {isActive && (
                         <div
                             className="absolute top-2.5 right-2.5 py-1.5 px-3 rounded-full text-[0.65rem] font-bold uppercase tracking-wide animate-pulse"
