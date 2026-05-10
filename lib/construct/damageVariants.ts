@@ -37,8 +37,10 @@ export async function resolveDisplayUrl(variantUrl: string, fallbackUrl: string)
         return cached.url;
     }
     try {
-        const res = await fetch(variantUrl, { method: 'HEAD' });
-        const url = res.ok ? variantUrl : fallbackUrl;
+        const checkUrl = `/api/asset/exists?url=${encodeURIComponent(variantUrl)}`;
+        const res = await fetch(checkUrl);
+        const { exists } = await res.json();
+        const url = exists ? variantUrl : fallbackUrl;
         existenceCache.set(variantUrl, { url, expiresAt: now + CACHE_TTL_MS });
         return url;
     } catch {
