@@ -13,8 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         const upstream = await fetch(url, { method: 'HEAD' });
         res.setHeader('Cache-Control', 'public, max-age=900');
-        return res.status(200).json({ exists: upstream.ok });
-    } catch {
-        return res.status(200).json({ exists: false });
+        return res.status(200).json({ exists: upstream.ok, upstreamStatus: upstream.status });
+    } catch (err) {
+        return res.status(200).json({ exists: false, error: String(err) });
     }
 }
