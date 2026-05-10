@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { S3Client, HeadObjectCommand, NoSuchKey } from '@aws-sdk/client-s3';
-import { R2_CDN_BASE } from '@lib/construct/constants';
 
 const r2 = new S3Client({
     region: 'auto',
@@ -14,7 +13,7 @@ const r2 = new S3Client({
 const BUCKET = process.env.R2_BUCKET_NAME ?? '';
 
 function urlToKey(url: string): string {
-    return url.replace(`${R2_CDN_BASE}/`, '');
+    return url.replace(`${process.env.R2_PUBLIC_URL}/`, '');
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

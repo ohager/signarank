@@ -1,9 +1,11 @@
-import React, { useRef } from 'react';
+import React, {useMemo, useRef} from 'react';
 import Page from '@components/Page';
 import {useSeasonInfo} from '@hooks/useSeasonInfo';
 import {useConstruct} from '@hooks/useConstruct';
 import {getCurrentSeasonConstructs} from '@lib/construct/seasonConstructs';
 import Link from 'next/link';
+import {useAddressPrefix} from "@hooks/useAddressPrefix";
+import {Address} from "@signumjs/core";
 
 const CARD_WIDTH = 280 + 20; // card width + gap
 
@@ -109,7 +111,25 @@ interface ConstructSeasonCardProps {
 
 const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, order, locked}) => {
     const {construct, loading} = useConstruct(locked ? null : contractId);
+    const prefix = useAddressPrefix();
 
+    const victorAddress = useMemo(() => {
+        if(construct?.finalBlowAccount){
+            try{
+                return Address.fromNumericId(construct.finalBlowAccount, prefix).getReedSolomonAddress()
+            } catch(e){
+            }
+        }
+    }, [construct?.finalBlowAccount, prefix]);
+
+    const firstBloodAddress = useMemo(() => {
+        if(construct?.firstBloodAccount){
+            try{
+                return Address.fromNumericId(construct.firstBloodAccount, prefix).getReedSolomonAddress()
+            } catch(e){
+            }
+        }
+    }, [construct?.firstBloodAccount, prefix]);
 
     if (locked) {
         return (
@@ -143,6 +163,8 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, or
     const hpPercent = construct.maxHp > 0 ? construct.currentHp / construct.maxHp : 0;
     const isActive = construct.isActive && !construct.isDefeated;
     const isDefeated = construct.isDefeated;
+
+
 
     return (
         <Link href={`/construct/${construct.contractId}`} style={{textDecoration: 'none'}} className="shrink-0 w-[280px] max-md:w-[200px] snap-start">
@@ -219,12 +241,23 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, or
                             Attack Now &rarr;
                         </div>
                     )}
-                    {isDefeated && construct.finalBlowAccount && (
+                    {
+                        firstBloodAddress && (
+                            <div
+                                className="text-[var(--text-faint)] text-xs text-center mt-2 truncate max-md:text-[0.6rem]"
+                                style={{fontFamily: "'IBM Plex Mono', monospace"}}
+                            >
+                                ⚔️First Attacker: {firstBloodAddress}
+                            </div>
+                        )
+                    }
+
+                    {isDefeated && victorAddress && (
                         <div
                             className="text-[var(--text-faint)] text-xs text-center mt-2 truncate max-md:text-[0.6rem]"
                             style={{fontFamily: "'IBM Plex Mono', monospace"}}
                         >
-                            Victor: {construct.finalBlowAccount.slice(0, 10)}...
+                            🏆 Victor: {victorAddress}
                         </div>
                     )}
                 </div>
