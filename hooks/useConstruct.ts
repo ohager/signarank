@@ -23,10 +23,10 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
             if (!contractId) return null;
             if (!ledger) return null;
 
-            const cachedDefeated = ConstructCache.getDefeatedStatus(contractId);
-            if (cachedDefeated?.constructData) {
-                return cachedDefeated.constructData;
-            }
+            // const cachedDefeated = ConstructCache.getDefeatedStatus(contractId);
+            // if (cachedDefeated?.constructData) {
+            //     return cachedDefeated.constructData;
+            // }
 
             const player = new ReadOnlyPlayer({ledger, accountId: ''});
             const contractService = player.constructService.with(contractId);
@@ -37,7 +37,7 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
             ]);
 
             const customImage = metadata.getCustomField('xav') as string | undefined;
-            const ipfsCid = !customImage && metadata.avatar?.ipfsCid ? metadata.avatar.ipfsCid : null;
+            const ipfsCid = metadata.avatar?.ipfsCid ? metadata.avatar.ipfsCid : null;
             const imageUrl = customImage || (ipfsCid ? `${R2_CDN_BASE}/${ipfsCid}` : '');
 
             const playersRewardPercent = status.rewardDistribution?.players ?? 85;
@@ -102,6 +102,7 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
         refetchOnWindowFocus: false,
         placeholderData: (prev: any) => prev,
     });
+
 
     return {
         construct: construct ?? null,

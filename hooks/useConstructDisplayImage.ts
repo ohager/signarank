@@ -14,6 +14,7 @@ export function useConstructDisplayImage(construct: ConstructData | null) {
             construct.currentHp,
             construct.maxHp,
         );
+
         if (!variantUrl) {
             setDisplayImageUrl(construct.imageUrl);
             return;
