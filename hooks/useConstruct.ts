@@ -36,9 +36,9 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 contractService.getContract(),
             ]);
 
-            const imageUrl = metadata.avatar
-                ? `${R2_CDN_BASE}/${metadata.avatar.ipfsCid}`
-                : '';
+            const customImage = metadata.getCustomField('xav') as string | undefined;
+            const ipfsCid = !customImage && metadata.avatar?.ipfsCid ? metadata.avatar.ipfsCid : null;
+            const imageUrl = customImage || (ipfsCid ? `${R2_CDN_BASE}/${ipfsCid}` : '');
 
             const playersRewardPercent = status.rewardDistribution?.players ?? 85;
             const contractBalance = contract.balanceNQT ?? '0';
@@ -51,6 +51,7 @@ export const useConstruct = (contractId: string | null): UseConstructResult => {
                 name: metadata.name,
                 description: metadata.description,
                 imageUrl,
+                ipfsCid,
                 currentHp: Number(status.hitpoints),
                 maxHp: status.maxHp,
                 coolDownInBlocks: status.coolDownInBlocks,

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ConstructData } from '@lib/construct/types';
 import { useAttackerData } from '@hooks/useAttackerData';
+import { useConstructDisplayImage } from '@hooks/useConstructDisplayImage';
 import { getExplorerBaseUrl } from '@lib/construct/constants';
 
 interface ConstructCardProps {
@@ -13,6 +14,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
     const hpPercent = construct.currentHp / construct.maxHp;
     const hpColor = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const { displayImageUrl, handleImageError } = useConstructDisplayImage(construct);
 
     useEffect(() => {
         if (!isLightboxOpen) return;
@@ -43,8 +45,9 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                 className="relative w-full h-full min-h-[360px] overflow-hidden max-md:h-[45vh] max-md:min-h-[280px] group cursor-zoom-in p-0 border-0 bg-transparent"
             >
                 <img
-                    src={construct.imageUrl}
+                    src={displayImageUrl}
                     alt={construct.name}
+                    onError={handleImageError}
                     className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
                 />
                 {construct.isDefeated && (
@@ -305,7 +308,7 @@ export const ConstructCard: React.FC<ConstructCardProps> = ({ construct }) => {
                     style={{ animation: 'fadeIn 0.2s ease-out' }}
                 >
                     <img
-                        src={construct.imageUrl}
+                        src={displayImageUrl}
                         alt={construct.name}
                         onClick={(e) => e.stopPropagation()}
                         className="max-w-[min(90vw,900px)] max-h-[90vh] object-contain rounded-sm shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
