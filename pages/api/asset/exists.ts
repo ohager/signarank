@@ -11,7 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const upstream = await fetch(url, { method: 'HEAD' });
+        const upstream = await fetch(url, {
+            method: 'HEAD',
+            headers: {
+                'Origin': 'https://www.signarank.club',
+            },
+        });
         res.setHeader('Cache-Control', 'public, max-age=900');
         return res.status(200).json({ exists: upstream.ok, upstreamStatus: upstream.status });
     } catch (err) {
