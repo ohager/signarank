@@ -28,7 +28,7 @@ interface CacheEntry {
 }
 
 const existenceCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 15 * 60_000;
 
 export async function resolveDisplayUrl(variantUrl: string, fallbackUrl: string): Promise<string> {
     const now = Date.now();
