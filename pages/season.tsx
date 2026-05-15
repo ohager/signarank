@@ -114,7 +114,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, or
     const prefix = useAddressPrefix();
 
     const victorAddress = useMemo(() => {
-        if(construct?.finalBlowAccount){
+        if(construct?.finalBlowAccount && construct.finalBlowAccount !== "0"){
             try{
                 return Address.fromNumericId(construct.finalBlowAccount, prefix).getReedSolomonAddress()
             } catch(e){
@@ -123,7 +123,7 @@ const ConstructSeasonCard: React.FC<ConstructSeasonCardProps> = ({contractId, or
     }, [construct?.finalBlowAccount, prefix]);
 
     const firstBloodAddress = useMemo(() => {
-        if(construct?.firstBloodAccount){
+        if(construct?.firstBloodAccount && construct.firstBloodAccount !== "0"){
             try{
                 return Address.fromNumericId(construct.firstBloodAccount, prefix).getReedSolomonAddress()
             } catch(e){
