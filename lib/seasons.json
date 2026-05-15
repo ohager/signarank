@@ -21,12 +21,12 @@
     "description": "Spring has arrived and new life stirs beneath the soil of the blockchain... Bloom Brawl has begun — a season of new awakenings, fierce competition, and untamed growth. The roots remember!",
     "pastConstructs": {
       "testnet": ["9386099853473333948"],
-      "mainnet": []
+      "mainnet": ["14370811576880379895"]
     },
     "constructs": {
       "testnet": ["8366565611413730873", "12996457512312423436"],
-      "mainnet": ["14370811576880379895"]
+      "mainnet": ["8811246917341673382"]
     },
-    "futureConstructs": ["8811246917341673382", "TBD_2", "TBD_3", "TBD_4"]
+    "futureConstructs": ["TBD_2", "TBD_3", "TBD_4"]
   }
 }
