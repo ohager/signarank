@@ -45,35 +45,58 @@ Character Contract       Construct Contract         Off-Chain Frontend
 
 ## Key Namespace
 
-The Registry uses a single KKV map. The key1 value range determines the domain:
+The Registry uses a single KKV map. Globals and Effects live in a small reserved
+window at the **high end** of the int64 key1 range; Items use everything else,
+including all negative int64 values (= uint64 token IDs whose bit 63 is set).
 
-| Key1 Range            | Domain               | Key2 Meaning           |
-|-----------------------|----------------------|------------------------|
-| `1..99`               | Global Settings      | sub-id (per-setting)   |
-| `100..999_999`        | Effect Definitions   | effect property id     |
-| `> 10^9` (Token IDs)  | Item Definitions     | item property id       |
+```
+#define REGISTRY_BASE  0x7FFFFFFFFFF00000   // (MAX_LONG - 0xFFFFF)
+```
 
-**Why this layout:** the off-chain Signum Node API supports listing all `(k2, value)` pairs for a given `k1` in one request. With `k1 = tokenId`, the frontend fetches all properties of one item in a single API call — efficient for item-card rendering.
+| Key1 Range                                              | Domain             | Key2 Meaning        |
+|---------------------------------------------------------|--------------------|---------------------|
+| `REGISTRY_BASE + 1 .. REGISTRY_BASE + 99`               | Global Settings    | sub-id              |
+| `REGISTRY_BASE + 100 .. REGISTRY_BASE + 999_999`        | Effect Definitions | effect property id  |
+| anything `< REGISTRY_BASE` and `!= 0` (incl. negatives) | Item Definitions   | item property id    |
 
-**Namespace separation is structural:** Effect IDs are assigned by the Gamemaster from `100..999_999`. Signum-issued token IDs are 64-bit and in practice >10^12, so they cannot collide with effect IDs or global keys. The constant `MAX_EFFECT_ID = 999_999` is documented in registry source.
+The Registry rejects `tokenId == 0` (no such Signum asset) and any `tokenId >= REGISTRY_BASE`
+in every item-touching entry point.
+
+**Why this layout:** the off-chain Signum Node API supports listing all `(k2, value)`
+pairs for a given `k1` in one request. With `k1 = tokenId`, the frontend fetches all
+properties of one item in a single API call — efficient for item-card rendering.
+
+**Why high-end packing:** Signum asset IDs span the full uint64 range. SmartC's `long`
+is signed, so any token ID with bit 63 set appears as a negative long inside the
+contract. Reserving the high end of the signed range (~10^6 keys out of 2^64) lets us
+validate tokenIds with a single `tokenId >= REGISTRY_BASE` compare that works correctly
+for negative longs too. The collision probability for a randomly-assigned asset ID is
+~5×10^-14.
+
+**Off-chain encoding:** all callers (Gamemaster tools, frontend, sibling contracts)
+must add `REGISTRY_BASE` to logical IDs before sending them to the Registry and
+before reading via `getMapValue`. The test helper `effectK1(n)` in `lib.ts` is the
+canonical implementation.
 
 ---
 
 ## Global Settings
 
 Each global concept gets its own `key1`. Tabular values use `key2` as the row index.
+All k1 values shown below are offsets relative to `REGISTRY_BASE`.
 
-| K1 | K2       | Value                  |
-|----|----------|------------------------|
-| 1  | 0        | Construct Code Hash    |
-| 2  | 0        | Character Code Hash    |
-| 10 | `level`  | XP threshold for level |
+| K1 (offset from REGISTRY_BASE) | K2       | Value                  |
+|--------------------------------|----------|------------------------|
+| `+1`                           | 0        | Construct Code Hash    |
+| `+2`                           | 0        | Character Code Hash    |
+| `+10`                          | `level`  | XP threshold for level |
 
-Off-chain consumers can fetch the entire level threshold table via `listByFirstKey(k1=10)`.
+Off-chain consumers can fetch the entire level threshold table via
+`listByFirstKey(k1 = REGISTRY_BASE + 10)`.
 
 ---
 
-## Item Definition (`key1 = tokenId`)
+## Item Definition (`key1 = tokenId`, where `0 < tokenId < REGISTRY_BASE` OR `tokenId` is negative)
 
 | K2     | Property      | Notes                              |
 |--------|---------------|------------------------------------|
@@ -95,7 +118,7 @@ Item Type does **not** govern effect application — that's the Effect's `Mode`.
 
 ---
 
-## Effect Definition (`key1 = effectId`)
+## Effect Definition (`key1 = REGISTRY_BASE + effectId`, effectId in `100..999_999`)
 
 | K2 | Property     | Notes                                     |
 |----|--------------|-------------------------------------------|
@@ -158,9 +181,24 @@ All methods gated by `currentTx.sender == getCreator()` (Gamemaster wallet).
 | 21   | `UNREGISTER_EFFECT`   | `m[1] = effectId` — clears all `(effectId, *)`                          |
 
 **Validation:**
-- `REGISTER_ITEM`: rejects `tokenId == 0`, `effectCount > MAX_EFFECT_SLOTS_PER_ITEM` (cap at 8 for safety), invalid item type
-- `REGISTER_EFFECT`: rejects `effectId == 0` or `effectId > MAX_EFFECT_ID`, invalid mode
-- `SET_ITEM_EFFECT`: rejects `slot >= MAX_EFFECT_SLOTS_PER_ITEM`
+- `REGISTER_ITEM`: rejects `tokenId == 0` or `tokenId >= REGISTRY_BASE`, `effectCount > MAX_EFFECT_SLOTS_PER_ITEM` (cap 8), invalid item type
+- `REGISTER_EFFECT`: rejects `effectId < MIN_EFFECT_ID` or `effectId > MAX_EFFECT_ID`, invalid mode
+- `SET_ITEM_EFFECT`: rejects bad tokenId, `slot < 0`, `slot >= MAX_EFFECT_SLOTS_PER_ITEM`
+- `UNREGISTER_ITEM` / `UNREGISTER_EFFECT`: rejects out-of-range keys (same gates as their `REGISTER_*` counterparts)
+
+**Error log:** every rejected creator tx writes `(G_ERROR_LOG, txId) = errorCode`
+to the KKV map, where `G_ERROR_LOG = REGISTRY_BASE + 99`. This lets the Gamemaster
+diagnose silent failures without re-running the tx. Non-creator txs are dropped
+before dispatch and do not produce an entry.
+
+| Code | Name                       | Trigger                                                            |
+|------|----------------------------|--------------------------------------------------------------------|
+| 1    | `ERR_TOKEN_ID_INVALID`     | tokenId == 0 or in `[REGISTRY_BASE, MAX_LONG]`                     |
+| 2    | `ERR_EFFECT_ID_INVALID`    | effectId outside `[MIN_EFFECT_ID, MAX_EFFECT_ID]`                  |
+| 3    | `ERR_INVALID_ITEM_TYPE`    | item type not in {1: Equipment, 2: Consumable}                     |
+| 4    | `ERR_INVALID_MODE`         | effect mode outside `[MIN_MODE, MAX_MODE]`                         |
+| 5    | `ERR_INVALID_SLOT`         | effect slot outside `[0, MAX_EFFECT_SLOTS_PER_ITEM)`               |
+| 6    | `ERR_EFFECT_COUNT_INVALID` | item effectCount > MAX_EFFECT_SLOTS_PER_ITEM                       |
 
 ---
 

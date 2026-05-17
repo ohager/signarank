@@ -15,7 +15,7 @@
   "author": "ohager",
   "license": "ISC",
   "devDependencies": {
-    "signum-smartc-testbed": "^1.0.4",
+    "signum-smartc-testbed": "file:../../signum-smartc-testbed",
     "typescript": "^5.2.2",
     "vitest": "^3.2.4"
   },

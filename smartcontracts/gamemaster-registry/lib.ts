@@ -1,6 +1,10 @@
 import type { SimulatorTestbed } from 'signum-smartc-testbed';
 import { Context } from './context';
 
+// Compose the physical k1 for an effect from a logical id (small number).
+// The Gamemaster's off-chain encoder must apply the same offset before sending.
+export const effectK1 = (logical: bigint): bigint => Context.RegistryBase + logical;
+
 export type ItemDefinition = {
     tokenId: bigint;
     itemType: bigint;
@@ -87,6 +91,12 @@ export function unregisterEffect(testbed: SimulatorTestbed, effectId: bigint) {
 
 export function getValue(testbed: SimulatorTestbed, k1: bigint, k2: bigint): bigint {
     return testbed.getContractMapValue(k1, k2);
+}
+
+// All rejected creator txs are logged at (G_ERROR_LOG, txId) = errorCode.
+// This returns just the codes — sufficient for most test assertions.
+export function getErrorCodes(testbed: SimulatorTestbed): bigint[] {
+    return testbed.getContractMapValues(Context.Globals.ErrorLog).map(m => m.value);
 }
 
 export const BootstrapScenario = [

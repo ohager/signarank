@@ -6,7 +6,6 @@ import {
     BootstrapScenario,
     setCharacterHash,
     registerCharacter,
-    deploySecondaryContract,
     getValue,
 } from './lib';
 
@@ -22,8 +21,9 @@ function makeTestbedWithCharacter(opts: { creator?: bigint; address?: bigint } =
     const creator = opts.creator ?? 4242n;
     const address = opts.address ?? 7777n;
     const testbed = new SimulatorTestbed(BootstrapScenario)
+        .loadContract(CHARACTER_CONTRACT_PATH, { creator, contractId: address })
         .loadContract(Context.ContractPath);
-    const character = deploySecondaryContract(testbed, CHARACTER_CONTRACT_PATH, creator, address);
+    const character = testbed.getContract(address);
     testbed.runScenario();
     return { testbed, character };
 }
@@ -131,13 +131,15 @@ describe('Character registration', () => {
 
 describe('Listing characters of an account', () => {
     test('all characters of one account are individually addressable via (account, *) entries', () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath);
-
         const PLAYER = 9999n;
-        const charA = deploySecondaryContract(testbed, CHARACTER_CONTRACT_PATH, PLAYER, 5001n);
-        const charB = deploySecondaryContract(testbed, CHARACTER_CONTRACT_PATH, PLAYER, 5002n);
-        const charC = deploySecondaryContract(testbed, CHARACTER_CONTRACT_PATH, PLAYER, 5003n);
+        const testbed = new SimulatorTestbed(BootstrapScenario)
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: PLAYER, contractId: 5001n })
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: PLAYER, contractId: 5002n })
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: PLAYER, contractId: 5003n })
+            .loadContract(Context.ContractPath)
+        const charA = testbed.getContract(5001n);
+        const charB = testbed.getContract(5002n);
+        const charC = testbed.getContract(5003n);
         testbed.runScenario();
 
         // All three are compiled from the same source -> identical codehash.
@@ -159,10 +161,11 @@ describe('Listing characters of an account', () => {
 
     test('different accounts each have their own list', () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: 1001n, contractId: 7001n })
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: 2002n, contractId: 7002n })
             .loadContract(Context.ContractPath);
-
-        const charA = deploySecondaryContract(testbed, CHARACTER_CONTRACT_PATH, /*creator*/ 1001n, /*addr*/ 7001n);
-        const charB = deploySecondaryContract(testbed, CHARACTER_CONTRACT_PATH, /*creator*/ 2002n, /*addr*/ 7002n);
+        const charA = testbed.getContract(7001n);
+        const charB = testbed.getContract(7002n);
         testbed.runScenario();
 
         setCharacterHash(testbed, charA.codeHashId);
