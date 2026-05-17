@@ -50,6 +50,7 @@ export const POLLING_INTERVALS = {
     currentHp: 30 * 1000,
     attackHistory: 30 * 1000,
     userCooldown: 30 * 1000,
+    tokenBalances: BLOCK_TIME_MS / 2,
 } as const;
 
 // Parse attack token IDs from environment variable
