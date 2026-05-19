@@ -576,7 +576,10 @@
             "points": 10,
             "type": "own_xp_token_balance",
             "params": {
-              "tokenIds": ["17598645928467159302"],
+              "tokenIds": [
+                "17598645928467159302",
+                "5927102414173368603"
+              ],
               "minBalance": 100
             }
           },
@@ -585,7 +588,10 @@
             "points": 15,
             "type": "own_xp_token_balance",
             "params": {
-              "tokenIds": ["17598645928467159302"],
+              "tokenIds": [
+                "17598645928467159302",
+                "5927102414173368603"
+              ],
               "minBalance": 500
             }
           },
@@ -594,7 +600,10 @@
             "points": 25,
             "type": "own_xp_token_balance",
             "params": {
-              "tokenIds": ["17598645928467159302"],
+              "tokenIds": [
+                "17598645928467159302",
+                "5927102414173368603"
+              ],
               "minBalance": 2000
             }
           },
@@ -603,7 +612,10 @@
             "points": 30,
             "type": "own_xp_token_balance",
             "params": {
-              "tokenIds": ["17598645928467159302"],
+              "tokenIds": [
+                "17598645928467159302",
+                "5927102414173368603"
+              ],
               "minBalance": 5000
             }
           }
