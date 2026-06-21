@@ -30,6 +30,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
     const [tokenSelections, setTokenSelections] = useState<TokenSelection[]>([]);
     const [narration, setNarration] = useState<string | null>(null);
     const [narrationLoading, setNarrationLoading] = useState(false);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
     const connectedAccount = useAppSelector(selectConnectedAccount);
     const { attack, attacking, lastResult, reset } = useConstructAttack();
@@ -133,11 +134,28 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
             if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
                 const body = await res.json();
                 setNarration(body.text);
+                fetchAudio(body.text);
             }
         } catch {
             // narration is non-critical; silently ignore
         } finally {
             setNarrationLoading(false);
+        }
+    };
+
+    const fetchAudio = async (text: string) => {
+        try {
+            const res = await fetch('/api/narrations/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text }),
+            });
+            if (res.ok) {
+                const blob = await res.blob();
+                setAudioUrl(URL.createObjectURL(blob));
+            }
+        } catch {
+            // audio is non-critical
         }
     };
 
@@ -221,6 +239,8 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
             : null;
 
         const handleAttackAgain = () => {
+            if (audioUrl) URL.revokeObjectURL(audioUrl);
+            setAudioUrl(null);
             setNarration(null);
             reset();
         };
@@ -263,7 +283,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                         </div>
                     </div>
 
-                    <NarrationBanner text={narration} loading={narrationLoading} />
+                    <NarrationBanner text={narration} loading={narrationLoading} audioUrl={audioUrl} />
 
                     <div
                         className="mt-4 py-2.5 px-3 rounded-sm text-center"
