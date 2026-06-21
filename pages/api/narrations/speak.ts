@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { findNarrations } from '@lib/narration/repository';
+import { pickNarration } from '@lib/narration/pickNarration';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== 'POST') {
+    if (req.method !== 'GET') {
         return res.status(405).end();
     }
 
@@ -13,12 +15,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(204).end();
     }
 
-    const { text } = req.body ?? {};
-    if (typeof text !== 'string' || !text.trim()) {
-        return res.status(400).json({ error: 'text is required' });
+    const { seasonName, constructName, locale, tags } = req.query;
+
+    if (
+        typeof seasonName !== 'string' || !seasonName ||
+        typeof constructName !== 'string' || !constructName ||
+        typeof locale !== 'string' || !locale ||
+        typeof tags !== 'string'
+    ) {
+        return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const parsedTags = tags ? tags.split(',').filter(Boolean) : [];
+
     try {
+        const candidates = await findNarrations({ seasonName, constructName, locale, tags: parsedTags });
+        const picked = pickNarration(candidates, parsedTags);
+
+        if (!picked) {
+            return res.status(204).end();
+        }
+
         const upstream = await fetch(
             `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
             {
@@ -28,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    text,
+                    text: picked.text,
                     model_id: modelId,
                     voice_settings: { stability: 0.5, similarity_boost: 0.75 },
                 }),

@@ -134,7 +134,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
             if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
                 const body = await res.json();
                 setNarration(body.text);
-                fetchAudio(body.text);
+                fetchAudio(params);
             }
         } catch {
             // narration is non-critical; silently ignore
@@ -143,13 +143,9 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         }
     };
 
-    const fetchAudio = async (text: string) => {
+    const fetchAudio = async (params: URLSearchParams) => {
         try {
-            const res = await fetch('/api/narrations/speak', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text }),
-            });
+            const res = await fetch(`/api/narrations/speak?${params}`);
             if (res.ok) {
                 const blob = await res.blob();
                 setAudioUrl(URL.createObjectURL(blob));
