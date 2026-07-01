@@ -7,6 +7,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).end();
     }
 
+    const expectedKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
+    if (expectedKey && req.headers['x-narration-key'] !== expectedKey) {
+        return res.status(401).end();
+    }
+
     const { seasonName, constructName, locale, tags } = req.query;
 
     if (

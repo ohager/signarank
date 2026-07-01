@@ -129,7 +129,10 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                 locale: 'en',
                 tags: tags.join(','),
             });
-            const res = await fetch(`/api/narrations/pick?${params}`);
+            const narrationKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
+            const res = await fetch(`/api/narrations/pick?${params}`, {
+                headers: narrationKey ? { 'x-narration-key': narrationKey } : undefined,
+            });
 
             if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
                 const body = await res.json();
@@ -145,7 +148,10 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
     const fetchAudio = async (params: URLSearchParams) => {
         try {
-            const res = await fetch(`/api/narrations/speak?${params}`);
+            const narrationKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
+            const res = await fetch(`/api/narrations/speak?${params}`, {
+                headers: narrationKey ? { 'x-narration-key': narrationKey } : undefined,
+            });
             if (res.ok) {
                 const blob = await res.blob();
                 setAudioUrl(URL.createObjectURL(blob));
