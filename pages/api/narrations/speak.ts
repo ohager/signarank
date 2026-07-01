@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const expectedKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
-    if (expectedKey && req.headers['x-narration-key'] !== expectedKey) {
+    if (expectedKey && req.headers['x-api-key'] !== expectedKey) {
         return res.status(401).end();
     }
 

@@ -58,7 +58,7 @@ describe('GET /api/narrations/speak', () => {
     it('returns 401 when narration key is set and header is wrong', async () => {
         process.env.NEXT_PUBLIC_NARRATION_API_KEY = 'secret';
         const res = makeRes();
-        await handler(makeReq({ headers: { 'x-narration-key': 'wrong' } }), res);
+        await handler(makeReq({ headers: { 'x-api-key': 'wrong' } }), res);
         expect(res.statusCode).toBe(401);
     });
 
@@ -67,7 +67,7 @@ describe('GET /api/narrations/speak', () => {
         process.env.NEXT_SERVER_ELEVENLABS_API_KEY = 'test-key';
         process.env.NEXT_SERVER_ELEVENLABS_VOICE_ID = 'test-voice';
         const res = makeRes();
-        await handler(makeReq({ headers: { 'x-narration-key': 'secret' } }), res);
+        await handler(makeReq({ headers: { 'x-api-key': 'secret' } }), res);
         expect(res.statusCode).not.toBe(401);
     });
 

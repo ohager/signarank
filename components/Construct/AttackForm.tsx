@@ -131,7 +131,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
             });
             const narrationKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
             const res = await fetch(`/api/narrations/pick?${params}`, {
-                headers: narrationKey ? { 'x-narration-key': narrationKey } : undefined,
+                headers: narrationKey ? { 'x-api-key': narrationKey } : undefined,
             });
 
             if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
@@ -150,7 +150,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
         try {
             const narrationKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
             const res = await fetch(`/api/narrations/speak?${params}`, {
-                headers: narrationKey ? { 'x-narration-key': narrationKey } : undefined,
+                headers: narrationKey ? { 'x-api-key': narrationKey } : undefined,
             });
             if (res.ok) {
                 const blob = await res.blob();
