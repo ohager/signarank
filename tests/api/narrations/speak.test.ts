@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import handler from '../speak';
+import handler from '../../../pages/api/narrations/speak';
 
 vi.mock('@lib/narration/repository', () => ({
     findNarrations: vi.fn(),
