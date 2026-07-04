@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { pickRandomAttackSfx } from '@lib/construct/constants';
+import { isSoundMuted } from '@hooks/useSoundMuted';
 
 const SPARK_COUNT = 28;
 const COLORS = [
@@ -44,6 +46,20 @@ export const AttackEffect: React.FC<AttackEffectProps> = ({ onDone }) => {
     const [sparks] = useState<Spark[]>(makeSparks);
 
     useEffect(() => {
+        // Impact SFX — fired on mount so it's frame-synced with the shockwave
+        const sfxUrl = isSoundMuted() ? null : pickRandomAttackSfx();
+        if (sfxUrl) {
+            try {
+                const audio = new Audio(sfxUrl);
+                audio.volume = 0.7;
+                audio.play().catch(() => {
+                    // sfx is non-critical (e.g. autoplay blocked)
+                });
+            } catch {
+                // sfx is non-critical
+            }
+        }
+
         // Tremor: add class to body, remove after animation
         document.body.classList.add('tremor');
         const tremorTimer = setTimeout(() => document.body.classList.remove('tremor'), 500);

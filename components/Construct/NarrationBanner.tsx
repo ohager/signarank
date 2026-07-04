@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useTypingEffect } from '@hooks/useTypingEffect';
+import { isSoundMuted } from '@hooks/useSoundMuted';
 
 interface NarrationBannerProps {
     text: string | null;
@@ -13,7 +14,7 @@ export const NarrationBanner: React.FC<NarrationBannerProps> = ({ text, loading,
     const audioCtxRef = useRef<AudioContext | null>(null);
 
     useEffect(() => {
-        if (!audioUrl) return;
+        if (!audioUrl || isSoundMuted()) return;
 
         const ctx = new AudioContext();
         audioCtxRef.current = ctx;
@@ -22,28 +23,17 @@ export const NarrationBanner: React.FC<NarrationBannerProps> = ({ text, loading,
             .then(r => r.arrayBuffer())
             .then(buf => ctx.decodeAudioData(buf))
             .then(decoded => {
+
+                // audio 
                 const src = ctx.createBufferSource();
                 src.buffer = decoded;
+                src.playbackRate.value = 1;
 
                 // Dry path (direct signal)
                 const dry = ctx.createGain();
                 dry.gain.value = 1.0;
                 src.connect(dry);
                 dry.connect(ctx.destination);
-
-                // Echo path: delay → feedback loop → wet mix
-                const delay = ctx.createDelay(1.0);
-                delay.delayTime.value = 0.3;
-                const feedback = ctx.createGain();
-                feedback.gain.value = 0.4;
-                const wet = ctx.createGain();
-                wet.gain.value = 0.6;
-
-                src.connect(delay);
-                delay.connect(feedback);
-                feedback.connect(delay);
-                feedback.connect(wet);
-                wet.connect(ctx.destination);
 
                 src.start();
             })
