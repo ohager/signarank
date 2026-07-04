@@ -39,7 +39,7 @@ describe('GET /api/narrations/speak', () => {
     beforeEach(() => {
         delete process.env.NEXT_SERVER_ELEVENLABS_API_KEY;
         delete process.env.NEXT_SERVER_ELEVENLABS_VOICE_ID;
-        delete process.env.NEXT_PUBLIC_NARRATION_API_KEY;
+        delete process.env.NEXT_PUBLIC_API_KEY;
         vi.mocked(findNarrations).mockResolvedValue([]);
         vi.mocked(pickNarration).mockReturnValue(null);
     });
@@ -49,21 +49,21 @@ describe('GET /api/narrations/speak', () => {
     });
 
     it('returns 401 when narration key is set and header is missing', async () => {
-        process.env.NEXT_PUBLIC_NARRATION_API_KEY = 'secret';
+        process.env.NEXT_PUBLIC_API_KEY = 'secret';
         const res = makeRes();
         await handler(makeReq(), res);
         expect(res.statusCode).toBe(401);
     });
 
     it('returns 401 when narration key is set and header is wrong', async () => {
-        process.env.NEXT_PUBLIC_NARRATION_API_KEY = 'secret';
+        process.env.NEXT_PUBLIC_API_KEY = 'secret';
         const res = makeRes();
         await handler(makeReq({ headers: { 'x-api-key': 'wrong' } }), res);
         expect(res.statusCode).toBe(401);
     });
 
     it('allows request when narration key matches', async () => {
-        process.env.NEXT_PUBLIC_NARRATION_API_KEY = 'secret';
+        process.env.NEXT_PUBLIC_API_KEY = 'secret';
         process.env.NEXT_SERVER_ELEVENLABS_API_KEY = 'test-key';
         process.env.NEXT_SERVER_ELEVENLABS_VOICE_ID = 'test-voice';
         const res = makeRes();

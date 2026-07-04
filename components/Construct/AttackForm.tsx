@@ -129,7 +129,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
                 locale: 'en',
                 tags: tags.join(','),
             });
-            const narrationKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
+            const narrationKey = process.env.NEXT_PUBLIC_API_KEY;
             const res = await fetch(`/api/narrations/pick?${params}`, {
                 headers: narrationKey ? { 'x-api-key': narrationKey } : undefined,
             });
@@ -148,7 +148,7 @@ export const AttackForm: React.FC<AttackFormProps> = ({ construct, cooldownStatu
 
     const fetchAudio = async (params: URLSearchParams) => {
         try {
-            const narrationKey = process.env.NEXT_PUBLIC_NARRATION_API_KEY;
+            const narrationKey = process.env.NEXT_PUBLIC_API_KEY;
             const res = await fetch(`/api/narrations/speak?${params}`, {
                 headers: narrationKey ? { 'x-api-key': narrationKey } : undefined,
             });
