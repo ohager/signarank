@@ -28,5 +28,25 @@
       "mainnet": ["8811246917341673382"]
     },
     "futureConstructs": ["TBD_2", "TBD_3", "TBD_4"]
+<<<<<<< Updated upstream
+=======
+  },
+  "coralcarnival": {
+    "isCurrent": true,
+    "name": "Coral Carnival",
+    "background": "https://r2.signarank.club/seasons/coralcarnival/smExJxSipXrLPzEAgbacyJM5EC42AAvz.mp4",
+    "atmo": "https://r2.signarank.club/seasons/coralcarnival/coralcarnival-atmo.mp3",
+    "description-voice": "https://r2.signarank.club/seasons/coralcarnival/description-voice.mp3",
+    "description": "The storm has broken over the pier and the sea has come to play... Coral Carnival has begun — a season of drowned revelry, glittering menace, and prizes clawed from the deep. Step right up — the tide always collects its toll!",
+    "pastConstructs": {
+      "testnet": [],
+      "mainnet": []
+    },
+    "constructs": {
+      "testnet": [],
+      "mainnet": []
+    },
+    "futureConstructs": ["TBD_1","TBD_2", "TBD_3", "TBD_4"]
+>>>>>>> Stashed changes
   }
 }
