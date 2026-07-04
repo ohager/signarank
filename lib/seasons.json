@@ -15,7 +15,7 @@
     "futureConstructs": []
   },
   "bloombrawl": {
-    "isCurrent": true,
+    "isCurrent": false,
     "name": "Bloombrawl",
     "background": "https://r2.signarank.club/seasons/bloombrawl/Z1-r_OO5u2NSlzgP7b2ef_d7f1db267b614f189f65168448263469.mp4",
     "description": "Spring has arrived and new life stirs beneath the soil of the blockchain... Bloom Brawl has begun — a season of new awakenings, fierce competition, and untamed growth. The roots remember!",
@@ -28,5 +28,24 @@
       "mainnet": ["8811246917341673382"]
     },
     "futureConstructs": ["TBD_2", "TBD_3", "TBD_4"]
+  },
+  "coralcarnival": {
+    "isCurrent": true,
+    "name": "Coral Carnival",
+    "background": "https://r2.signarank.club/seasons/coralcarnival/smExJxSipXrLPzEAgbacyJM5EC42AAvz.mp4",
+    "atmo": "https://r2.signarank.club/seasons/coralcarnival/coralcarnival-atmo.mp3",
+    "description-voice": "https://r2.signarank.club/seasons/coralcarnival/description-voice.mp3",
+    "description": "The storm has broken over the pier and the sea has come to play... Coral Carnival has begun — a season of drowned revelry, glittering menace, and prizes clawed from the deep. Step right up — the tide always collects its toll!",
+    "pastConstructs": {
+      "testnet": ["9386099853473333948"],
+      "mainnet": ["14370811576880379895"]
+    },
+    "constructs": {
+      "testnet": ["8366565611413730873", "12996457512312423436"],
+      "mainnet": ["8811246917341673382"]
+    },
+    "futureConstructs": ["TBD_2", "TBD_3", "TBD_4"]
   }
 }
+
+

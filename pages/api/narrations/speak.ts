@@ -12,6 +12,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(401).end();
     }
 
+    const apiKey = process.env.NEXT_SERVER_ELEVENLABS_API_KEY;
+    const voiceId = process.env.NEXT_SERVER_ELEVENLABS_VOICE_ID;
+    const modelId = process.env.NEXT_SERVER_ELEVENLABS_MODEL_ID ?? 'eleven_turbo_v2_5';
+
+    if (!apiKey || !voiceId) {
+        return res.status(204).end();
+    }
+
     const { seasonName, constructName, locale, tags } = req.query;
 
     if (
@@ -33,9 +41,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(204).end();
         }
 
-        return res.status(200).json({ text: picked.text });
-    } catch (err) {
-        console.error('Narration pick error:', err);
+        const upstream = await fetch(
+            `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+            {
+                method: 'POST',
+                headers: {
+                    'xi-api-key': apiKey,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: picked.text,
+                    model_id: modelId,
+                    voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+                }),
+            }
+        );
+
+        if (!upstream.ok) {
+            return res.status(204).end();
+        }
+
+        const audioBuffer = await upstream.arrayBuffer();
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).end(Buffer.from(audioBuffer));
+    } catch {
         return res.status(204).end();
     }
 }

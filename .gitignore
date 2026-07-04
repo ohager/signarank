@@ -122,4 +122,7 @@ dist
 .idea
 .DS_Store
 
+.superpowers/
+docs/superpowers/
 
+.vercel
