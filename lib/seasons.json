@@ -15,7 +15,7 @@
     "futureConstructs": []
   },
   "bloombrawl": {
-    "isCurrent": true,
+    "isCurrent": false,
     "name": "Bloombrawl",
     "background": "https://r2.signarank.club/seasons/bloombrawl/Z1-r_OO5u2NSlzgP7b2ef_d7f1db267b614f189f65168448263469.mp4",
     "description": "Spring has arrived and new life stirs beneath the soil of the blockchain... Bloom Brawl has begun — a season of new awakenings, fierce competition, and untamed growth. The roots remember!",
@@ -28,8 +28,6 @@
       "mainnet": ["8811246917341673382"]
     },
     "futureConstructs": ["TBD_2", "TBD_3", "TBD_4"]
-<<<<<<< Updated upstream
-=======
   },
   "coralcarnival": {
     "isCurrent": true,
@@ -47,6 +45,5 @@
       "mainnet": []
     },
     "futureConstructs": ["TBD_1","TBD_2", "TBD_3", "TBD_4"]
->>>>>>> Stashed changes
   }
 }
