@@ -12,5 +12,6 @@ export default defineConfig({
     },
     test: {
         globals: false,
+        exclude: ['.next/**', 'node_modules/**'],
     },
 });

@@ -3,6 +3,7 @@ import {ReactNode} from 'react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 import VideoBackground from '../components/VideoBackground'
+import AmbientAudio from '../components/AmbientAudio'
 import seasonsData from '../lib/seasons.json'
 
 interface PageProps {
@@ -25,7 +26,10 @@ const truncate = (text: string, max: number) =>
     text.length > max ? text.slice(0, max - 1) + '…' : text;
 
 const Page = (props: PageProps) => {
-    const videoUrl = seasonsData.bloombrawl?.background || '';
+    const seasonList = Object.values(seasonsData) as Array<{ isCurrent: boolean; background?: string; atmo?: string }>;
+    const currentSeason = seasonList.find(s => s.isCurrent);
+    const videoUrl = currentSeason?.background || '';
+    const atmoUrl = currentSeason?.atmo || '';
     const rawDescription = props.description ?? DEFAULT_DESCRIPTION;
     const description = truncate(rawDescription, 155);
     const ogTitle = props.ogTitle ?? props.title ?? DEFAULT_OG_TITLE;
@@ -37,6 +41,7 @@ const Page = (props: PageProps) => {
     return (
         <>
             {videoUrl && <VideoBackground videoUrl={videoUrl} />}
+            {atmoUrl && <AmbientAudio src={atmoUrl} />}
 
             <div className="relative z-10 min-h-screen flex flex-col">
                 <Head>

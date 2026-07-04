@@ -66,6 +66,21 @@ export function getSignaRankTokenId(): string {
     return process.env.NEXT_PUBLIC_SRANK_ID || '';
 }
 
+// Attack SFX bundled in /public/sounds — one is randomly selected per attack
+const ATTACK_SFX_FILES = [
+    'attack-1.mp3',
+    'attack-2.mp3',
+    'attack-3.mp3',
+    'attack-4.mp3',
+];
+
+// Randomly select one attack SFX URL, or null if none are configured
+export function pickRandomAttackSfx(): string | null {
+    if (ATTACK_SFX_FILES.length === 0) return null;
+    const file = ATTACK_SFX_FILES[Math.floor(Math.random() * ATTACK_SFX_FILES.length)];
+    return `/sounds/${file}`;
+}
+
 export const getExplorerBaseUrl = () =>
     process.env.NEXT_PUBLIC_SIGNUM_EXPLORER || 'https://explorer.signum.network';
 
