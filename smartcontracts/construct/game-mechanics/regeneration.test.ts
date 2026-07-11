@@ -6,10 +6,10 @@ import {Context} from "../context";
 describe("Regeneration Mechanics", () => {
     test("should regenerate HP over time", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 maxHp: 1000n,
-            })
+            } })
             .runScenario();
 
         // Configure regeneration: 10 HP every 5 blocks
@@ -41,10 +41,10 @@ describe("Regeneration Mechanics", () => {
 
     test("should cap regeneration at maxHp", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 maxHp: 1000n,
-            })
+            } })
             .runScenario();
 
         // Configure regeneration: 1000 HP every 5 blocks (huge amount)
@@ -78,10 +78,10 @@ describe("Regeneration Mechanics", () => {
 
     test("should not regenerate when already at full HP", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 maxHp: 1000n,
-            })
+            } })
             .runScenario();
 
         // Configure regeneration
@@ -112,10 +112,10 @@ describe("Regeneration Mechanics", () => {
 
     test("should calculate proportional regeneration", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 maxHp: 10000n,
-            })
+            } })
             .runScenario();
 
         // Configure regeneration: 100 HP every 10 blocks
@@ -150,11 +150,11 @@ describe("Regeneration Mechanics", () => {
 
     test("should not regenerate when defeated", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 maxHp: 100n,
                 breachLimit: 100n,
-            })
+            } })
             .runScenario();
 
         // Configure regeneration

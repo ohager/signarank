@@ -6,10 +6,10 @@ import {Context} from "../context";
 describe("Cooldown Mechanics", () => {
     test("should prevent attack during cooldown", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 coolDownInBlocks: 15n,
-            })
+            } })
             .runScenario();
 
         const initialHp = getCurrentHitpoints(testbed)!;
@@ -30,10 +30,10 @@ describe("Cooldown Mechanics", () => {
 
     test("should refund 90% of SIGNA during cooldown", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 coolDownInBlocks: 15n,
-            })
+            } })
             .runScenario();
 
         // First attack
@@ -52,10 +52,10 @@ describe("Cooldown Mechanics", () => {
 
     test("should allow attack after cooldown expires", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 coolDownInBlocks: 10n,
-            })
+            } })
             .runScenario();
 
         // First attack at block 1

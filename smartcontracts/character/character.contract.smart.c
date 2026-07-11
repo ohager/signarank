@@ -10,8 +10,13 @@
 // It's the game master registry contract
 #define GAMEMASTER_REGISTRY 122344543654
 
+// Must mirror gamemaster-registry.contract.smart.c's REGISTRY_BASE exactly —
+// that contract stores Globals (incl. the trusted construct hash) at
+// REGISTRY_BASE.., and Items below it. Using a different key here silently
+// desyncs senderIsConstruct() from whatever the gamemaster actually configures.
+#define REGISTRY_BASE 0x7FFFFFFFFFF00000
 #define GAMEMASTER_MAP_KEY1_ITEMS 1
-#define GAMEMASTER_MAP_KEY1_CONSTRUCT_HASH 2
+#define GAMEMASTER_MAP_KEY1_CONSTRUCT_HASH (REGISTRY_BASE + 1)
 #define GAMEMASTER_MAP_KEY2_CHARACTER_HASH 3
 
 // Magic codes for methods - Player Methods
@@ -19,6 +24,7 @@
 #define ATTACK 2
 #define TRANSFER_ITEM 4
 #define USE_ITEM 5
+#define REVIVE 6
 #define REFUND 99
 
 // Construct Methods
@@ -41,9 +47,11 @@
 // Initializable
 
 long constructorAccount; // the creator of constructs
+long revivalTokenId;     // native Signum token; owner sends 1 to revive a dead Character
 
 #ifdef TESTBED
     const constructorAccount = TESTBED_constructorAccount;
+    const revivalTokenId = TESTBED_revivalTokenId;
 #endif
 
 
@@ -51,6 +59,9 @@ long constructorAccount; // the creator of constructs
 long currentHitpoints;
 long maxHitpoints;
 long isDead;
+// Guards handleDead() so its random attribute penalty applies exactly once
+// per death. Reset to FALSE by revive() alongside isDead.
+long deathPenaltyApplied;
 long skillPoints;
 long usedInventorySlots;
 long maxInventorySlots;
@@ -115,8 +126,11 @@ void main() {
                 case TRANSFER_ITEM:
                     transferItem(currentTx.message[1], currentTx.message[2]);
                     break;
+                case REVIVE:
+                    revive();
+                break;
                 case REFUND:
-                    refund();
+                    refund(currentTx.message[1]);
                 break;
 
             }
@@ -129,17 +143,21 @@ void main() {
             }
        }
     }
-    if(isDead == TRUE){
+    if(isDead == TRUE && deathPenaltyApplied == FALSE){
         handleDead();
     }
 }
 
 long senderIsConstruct() {
     long codehash = getExtMapValue(GAMEMASTER_MAP_KEY1_CONSTRUCT_HASH, ZERO, GAMEMASTER_REGISTRY);
+    // An EOA's codehash is also 0, so an unset trusted hash must never match.
+    if (codehash == ZERO) { return FALSE; }
     return getCodeHashOf(currentTx.sender) == codehash;
 }
 
 void handleDead() {
+    deathPenaltyApplied = TRUE;
+
     // when dead, drop a random skill point
     long i;
     long rnd;
@@ -153,7 +171,7 @@ void handleDead() {
         }
     }
 
-    // recalculate eventual attrbute penalties
+    // recalculate eventual attribute penalties
     maxHitpoints = 100 + (getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STAMINA) * HP_PER_STAMINA);
     maxInventorySlots = 10 + ((getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STRENGTH)));
 
@@ -162,6 +180,18 @@ void handleDead() {
         usedInventorySlots = maxInventorySlots;
     }
 
+}
+
+void revive() {
+    // getAssetBalance() is live and slot-independent, so this recognizes the
+    // token whether it arrived in this transaction or an earlier one.
+    // revivalTokenId != ZERO guards against an unconfigured (0) token id.
+    if(isDead == TRUE && revivalTokenId != ZERO && getAssetBalance(revivalTokenId) >= 1){
+        isDead = FALSE;
+        deathPenaltyApplied = FALSE; // must reset alongside isDead — see its declaration comment
+        currentHitpoints = maxHitpoints / 2; // restore half of the hitpoints
+        sendQuantity(1, revivalTokenId, ZERO);
+    }
 }
 
 void allocateSkillPoint(long attrIndex) {
@@ -180,12 +210,20 @@ void deductHitpoints(long hitpoints){
     }
 }
 
-void refund() {
-    sendAmount(getCurrentBalance(), getCreator());
+void refund(long assetId) {
+    if(assetId == ZERO){
+        sendAmount(getCurrentBalance(), getCreator());
+    } else {
+        sendQuantity(getAssetBalance(assetId), assetId, getCreator());
+    }
 }
 
 void attack(long constructId, long quantity, long assetId) {
     long amount = getAmount(currentTx.txId);
+    if(isDead == TRUE){
+        if(amount >= ZERO){ sendAmount(amount, currentTx.sender); }
+        return;
+    }
     if(quantity > ZERO && amount >= ZERO) {
         sendQuantityAndAmount(quantity, assetId, amount, constructId);
     } else if (amount >= ZERO) {

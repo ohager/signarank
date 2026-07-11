@@ -6,13 +6,13 @@ import {Context} from "../context";
 describe("Defeat and Victory Rewards", () => {
     test("should handle defeat correctly", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 maxHp: 100n, // maximal 1000 SIGNA
                 breachLimit: 100n,
                 firstBloodBonus: 50_0000_0000n,
                 finalBlowBonus: 100_0000_0000n,
-            })
+            } })
             .runScenario();
 
         // Attack to defeat

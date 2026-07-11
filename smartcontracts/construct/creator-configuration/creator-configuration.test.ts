@@ -9,7 +9,7 @@ const MAP_SET_FLAG = 1024n;
 describe('Construct Contract - Creator Configuration', () => {
     test('should have default initialization as expected', () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
         const name = testbed.getContractMemoryValue('name') ?? 0n;
         expect(utils.long2string(name)).toBe("CT000001")
@@ -54,7 +54,7 @@ describe('Construct Contract - Creator Configuration', () => {
         ];
 
         const testbed = new SimulatorTestbed(InsufficientXPScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
 
         // Initially active
@@ -96,7 +96,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('firstBloodBonus')).toBe(500_0000_0000n)
             expect(testbed.getContractMemoryValue('finalBlowBonus')).toBe(2500_0000_0000n)
@@ -112,7 +112,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('firstBloodBonus')).not.toBe(500_0000_0000n)
             expect(testbed.getContractMemoryValue('finalBlowBonus')).not.toBe(2500_0000_0000n)
@@ -128,7 +128,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('firstBloodBonus')).not.toBe(-500_0000_0000n)
             expect(testbed.getContractMemoryValue('finalBlowBonus')).not.toBe(-2500_0000_0000n)
@@ -147,7 +147,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('breachLimit')).toBe(50n)
         })
@@ -162,7 +162,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('breachLimit')).toBe(20n) // Should remain default
         })
@@ -177,7 +177,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('breachLimit')).toBe(20n) // Should remain default
         })
@@ -192,7 +192,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('breachLimit')).toBe(20n) // Should remain default
         })
@@ -207,7 +207,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('breachLimit')).toBe(1n)
         })
@@ -222,7 +222,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('breachLimit')).toBe(99n)
         })
@@ -249,7 +249,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const hasWarning = testbed.blockchain.transactions.some(tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("Unregistered Token"))
@@ -269,7 +269,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const hasWarning = testbed.blockchain.transactions.some(tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("Unregistered Token"))
@@ -297,7 +297,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             const hasWarning = testbed.blockchain.transactions.some(tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("Unregistered Token"))
             expect(hasWarning).toBeFalsy();
@@ -318,7 +318,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(0n); // Should not be set
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(1000n);
@@ -335,7 +335,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(0n); // Should not be set
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(1000n);
@@ -352,7 +352,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(1n);
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(0n);
@@ -369,7 +369,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageMultiplier, TestTokenId)).toBe(1000n);
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(5000n);
@@ -396,7 +396,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const hasWarning = testbed.blockchain.transactions.some(tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("Unregistered Token"))
@@ -416,7 +416,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const hasWarning = testbed.blockchain.transactions.some(tx => tx.recipient === Context.CreatorAccount && tx.messageText?.startsWith("Unregistered Token"))
@@ -437,7 +437,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageAddition, TestTokenId)).toBe(0n);
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(0n);
@@ -454,7 +454,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageAddition, TestTokenId)).toBe(0n);
             // But tokenLimit should still be set
@@ -472,7 +472,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageAddition, TestTokenId)).toBe(0n);
             // But tokenLimit should still be set
@@ -490,7 +490,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageAddition, TestTokenId)).toBe(1n);
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(0n);
@@ -507,7 +507,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageAddition, TestTokenId)).toBe(5000n);
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(10000n);
@@ -524,7 +524,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageAddition, TestTokenId)).toBe(100n);
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(0n);
@@ -541,7 +541,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.DamageAddition, TestTokenId)).toBe(50n);
             expect(testbed.getContractMapValue(Context.Maps.DamageTokenLimit, TestTokenId)).toBe(0n);
@@ -560,7 +560,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(70n);
             expect(testbed.getContractMemoryValue('rewardDistribution_treasury')).toBe(30n);
@@ -578,7 +578,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(80n);
             expect(testbed.getContractMemoryValue('rewardDistribution_treasury')).toBe(10n);
@@ -596,7 +596,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // Should remain default values
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(85n);
@@ -614,7 +614,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // Should remain default values (sum is 101, not <= 100)
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(85n);
@@ -632,7 +632,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // All rewards go to treasury, no burn
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(0n);
@@ -650,7 +650,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // 90% players, 0% treasury, 10% burn (implicit)
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(90n);
@@ -668,7 +668,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // All rewards go to players, nothing burned or to treasury
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(100n);
@@ -686,7 +686,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // 0% players, 0% treasury, 100% burn (implicit)
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(0n);
@@ -704,7 +704,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // 33% players, 33% treasury, 34% burn (implicit)
             expect(testbed.getContractMemoryValue('rewardDistribution_players')).toBe(33n);
@@ -719,7 +719,7 @@ describe('Construct Contract - Creator Configuration', () => {
             // NFTID message stays 0n when having more than 1 contract
             const testbed = new SimulatorTestbed(BootstrapScenario)
                 .loadContract(Context.NftContractPath)
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const NftContractId = testbed.blockchain.Contracts[0].contract
@@ -739,7 +739,7 @@ describe('Construct Contract - Creator Configuration', () => {
 
         test('should set reward NFT with invalid NFT ID', () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             testbed.sendTransactionAndGetResponse([{
@@ -757,16 +757,16 @@ describe('Construct Contract - Creator Configuration', () => {
         test('should NOT set reward NFT when sender is not creator', () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
                 .loadContract(Context.NftContractPath)
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const NftContractId = testbed.blockchain.Contracts[0].contract
 
             testbed.sendTransactionAndGetResponse([{
                 amount: Context.ActivationFee,
-                sender: Context.CreatorAccount,
+                sender: Context.SenderAccount1,
                 messageArr: [Context.Methods.SetRewardNft, NftContractId],
-                recipient: Context.ThisContract + 1n,
+                recipient: Context.ThisContract,
             }])
 
             expect(testbed.getContractMemoryValue('rewardNftId')).toBe(0n);
@@ -785,7 +785,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('debuff_chance')).toBe(25n);
             expect(testbed.getContractMemoryValue('debuff_damageReduction')).toBe(10n);
@@ -804,7 +804,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('debuff_chance')).toBe(30n);
             expect(testbed.getContractMemoryValue('debuff_damageReduction')).toBe(-1n); // Negative = buff
@@ -822,7 +822,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // Should remain default (all 0)
             expect(testbed.getContractMemoryValue('debuff_chance')).toBe(0n);
@@ -841,7 +841,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('debuff_chance')).toBe(0n); // Not set
             expect(testbed.getContractMemoryValue('debuff_damageReduction')).toBe(15n); // Set anyway
@@ -859,7 +859,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('debuff_chance')).toBe(20n); // Set
             expect(testbed.getContractMemoryValue('debuff_damageReduction')).toBe(10n); // Set
@@ -877,7 +877,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('debuff_chance')).toBe(0n);
             expect(testbed.getContractMemoryValue('debuff_damageReduction')).toBe(20n);
@@ -895,7 +895,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('debuff_chance')).toBe(100n);
             expect(testbed.getContractMemoryValue('debuff_damageReduction')).toBe(50n);
@@ -915,7 +915,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('regeneration_blockInterval')).toBe(10n);
             expect(testbed.getContractMemoryValue('regeneration_hitpoints')).toBe(100n);
@@ -932,7 +932,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // Should remain default (0)
             expect(testbed.getContractMemoryValue('regeneration_blockInterval')).toBe(0n);
@@ -950,7 +950,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('regeneration_blockInterval')).toBe(0n); // Not set
             expect(testbed.getContractMemoryValue('regeneration_hitpoints')).toBe(100n); // Set anyway
@@ -967,7 +967,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('regeneration_blockInterval')).toBe(10n); // Set
             expect(testbed.getContractMemoryValue('regeneration_hitpoints')).toBe(0n); // Not set
@@ -984,7 +984,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('regeneration_blockInterval')).toBe(10n); // Set
             expect(testbed.getContractMemoryValue('regeneration_hitpoints')).toBe(0n); // Not set (exceeds maxHp)
@@ -1001,7 +1001,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('regeneration_blockInterval')).toBe(5n);
             expect(testbed.getContractMemoryValue('regeneration_hitpoints')).toBe(50000n);
@@ -1018,7 +1018,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('regeneration_blockInterval')).toBe(0n);
             expect(testbed.getContractMemoryValue('regeneration_hitpoints')).toBe(0n);
@@ -1038,7 +1038,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             expect(getCurrentHitpoints(testbed)).toBe(50000n);
@@ -1055,7 +1055,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             expect(getCurrentHitpoints(testbed)).toBe(50000n);
@@ -1072,7 +1072,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             expect(getCurrentHitpoints(testbed)).toBe(50000n);
@@ -1089,7 +1089,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             expect(getCurrentHitpoints(testbed)).toBe(50000n);
@@ -1106,7 +1106,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             expect(getCurrentHitpoints(testbed)).toBe(50000n);
@@ -1123,7 +1123,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const hasHealingMessage = testbed.blockchain.transactions.some(tx =>
@@ -1142,7 +1142,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 }
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             const hp = getCurrentHitpoints(testbed);
@@ -1175,7 +1175,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // Value should be stored with MAP_SET_FLAG added
             expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(2n + MAP_SET_FLAG);
@@ -1192,7 +1192,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(0n);
         })
@@ -1208,7 +1208,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(0n);
         })
@@ -1224,7 +1224,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(0n);
         })
@@ -1240,7 +1240,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // 0 is valid, should be stored with flag
             expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(0n + MAP_SET_FLAG);
@@ -1257,7 +1257,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             // 6 is max valid value, should be stored with flag
             expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(6n + MAP_SET_FLAG);
@@ -1274,7 +1274,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMapValue(Context.Maps.TokenDecimalsInfo, TestTokenId)).toBe(2n + MAP_SET_FLAG);
 
@@ -1305,7 +1305,7 @@ describe('Construct Contract - Creator Configuration', () => {
                     recipient: Context.ThisContract,
                 },
             ])
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
 
             // Unset token should return 0
@@ -1318,7 +1318,7 @@ describe('Construct Contract - Creator Configuration', () => {
     describe('setActive', () => {
         test('should set contract to inactive and active state', () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('isActive')).toBe(1n)
             testbed.sendTransactionAndGetResponse([
@@ -1345,7 +1345,7 @@ describe('Construct Contract - Creator Configuration', () => {
         })
         test('should set contract to exactly "1"', () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('isActive')).toBe(1n)
             testbed.sendTransactionAndGetResponse([
@@ -1387,7 +1387,7 @@ describe('Construct Contract - Creator Configuration', () => {
         })
         test('should NOT set contract to inactive and active state as sender is not creator', () => {
             const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
                 .runScenario();
             expect(testbed.getContractMemoryValue('isActive')).toBe(1n)
             testbed.sendTransactionAndGetResponse([

@@ -17,7 +17,7 @@ describe("Event System", () => {
 
     test("should send event when toggling active status", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
 
         // Set event listener
@@ -53,7 +53,7 @@ describe("Event System", () => {
 
     test("should send event when construct is hit", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
 
         // Set event listener
@@ -74,7 +74,7 @@ describe("Event System", () => {
 
     test("should send event when construct is healed", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
 
         // Set event listener
@@ -105,7 +105,7 @@ describe("Event System", () => {
 
     test("should send event when counter attack occurs", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
 
         // Set event listener
@@ -132,11 +132,11 @@ describe("Event System", () => {
 
     test("should send event when construct is defeated", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, {
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
                 ...DefaultRequiredInitializers,
                 maxHp: 100n,
                 breachLimit: 100n,
-            })
+            } })
             .runScenario();
 
         // Set event listener
@@ -157,7 +157,7 @@ describe("Event System", () => {
 
     test("should NOT send events when listener is not configured", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
 
         // No event listener configured
@@ -170,7 +170,7 @@ describe("Event System", () => {
 
     test("should NOT send events to the listener when listener is the sender", async () => {
         const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, DefaultRequiredInitializers)
+            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
             .runScenario();
 
         // Set event listener to the account that will attack

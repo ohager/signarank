@@ -1,64 +1,70 @@
 import { join } from 'path';
 
+// Mirrors #defines in character.contract.smart.c as it exists today.
+// Several fields referenced in the original design plan (leveling, migrate,
+// item registry, status effects) are NOT implemented yet — see the contract
+// source itself for the current feature set. Death/revival IS implemented.
 export const Context = {
     ContractPath: join(__dirname + '/character.contract.smart.c'),
-    // Simulator default creator is 555n — matches getCreator() in contract
+    ConstructContractPath: join(__dirname, '..', 'construct', 'construct.contract.smart.c'),
+    GamemasterRegistryPath: join(__dirname, '..', 'gamemaster-registry', 'gamemaster-registry.contract.smart.c'),
+
+    // SimulatorTestbed default creator is 555n unless overridden — matches getCreator().
     OwnerAccount: 555n,
     CharacterAddress: 999n,
-    CharacterAddressWithRegistry: 1000n,
-    ItemRegistryAddress: 999n,
-    ConstructContract: 888n,
-    XPTokenId: 1000n,
     RevivalTokenId: 2000n,
-    ActivationFee: 1_0000_0000n,
+
+    // Hardcoded in the contract as GAMEMASTER_REGISTRY — NOT a TESTBED-injectable
+    // parameter. To exercise senderIsConstruct()/deductHitpoints gating, the
+    // gamemaster-registry contract must be deployed at exactly this address.
+    GamemasterRegistryAddress: 122344543654n,
+
+    ActivationFee: 2_0000_0000n, // must match #program activationAmount 200000000
 
     Methods: {
-        AllocateSkill:     1n,
-        Attack:            2n,
-        CollectItems:      3n,
-        Migrate:           4n,
-        EmergencyWithdraw: 5n,
-        SetLevelThreshold: 6n,
-        UseItem:           7n,
-        CounterAttack:   100n,
-        Buff:            102n,
-        Debuff:          103n,
+        AllocateSkillpoint: 1n,
+        Attack: 2n,
+        TransferItem: 4n,
+        UseItem: 5n,   // defined in the contract but NOT wired into the dispatch switch — always a no-op
+        Revive: 6n,
+        Refund: 99n,
     },
 
-    // 0-indexed — maps directly to the attrs[] array in the contract
-    Attrs: {
-        Strength:  0n,
-        Stamina:   1n,
-        Dexterity: 2n,
-        Luck:      3n,
-        Willpower: 4n,
+    ConstructMethods: {
+        DeductHitpoints: 13n,
     },
 
-    // Variable names — read via getContractMemoryValue(name) in tests
+    // Contract memory variables — read via getContractMemoryValue(name)
     Vars: {
-        Hitpoints:    'hitpoints',
+        CurrentHitpoints: 'currentHitpoints',
         MaxHitpoints: 'maxHitpoints',
-        IsDead:       'isDead',
-        Level:        'level',
-        Skillpoints:  'skillpoints',
-        Strength:     'attrs[0]',
-        Stamina:      'attrs[1]',
-        Dexterity:    'attrs[2]',
-        Luck:         'attrs[3]',
-        Willpower:    'attrs[4]',
-        MaxInvSlots:  'maxInvSlots',
-        OccupiedInvSlots: 'occupiedInvSlots',
+        IsDead: 'isDead',
+        DeathPenaltyApplied: 'deathPenaltyApplied',
+        SkillPoints: 'skillPoints',
+        UsedInventorySlots: 'usedInventorySlots',
+        MaxInventorySlots: 'maxInventorySlots',
     },
 
-    // KKV map keys — only for dynamic-key structures
+    // KKV map keys — attribute values live at (MAP_KEY1_ATTRIBUTES, attrIndex)
     Maps: {
-        LevelThreshold: 500n,  // key2 = level number
+        Attributes: 1n,
     },
 
-    StatusEffects: {
-        None:     0n,
-        Frozen:   1n,
-        Stunned:  2n,
-        Weakened: 3n,
+    // 1-indexed — matches MAP_KEY2_ATTRIBUTES_* in the contract (NOT 0-indexed)
+    Attrs: {
+        Strength: 1n,
+        Stamina: 2n,
+        Dexterity: 3n,
+        Luck: 4n,
+        Willpower: 5n,
+    },
+
+    // Gamemaster registry keys as the CHARACTER CONTRACT reads them.
+    // ConstructHash mirrors the real gamemaster-registry's G_CONSTRUCT_HASH
+    // (REGISTRY_BASE + 1) — see character.contract.smart.c.
+    GamemasterKeysAsReadByCharacter: {
+        Items: 1n,
+        ConstructHash: 0x7FFFFFFFFFF00000n + 1n,
+        CharacterHash: 3n,
     },
 } as const;
