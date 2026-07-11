@@ -28,8 +28,9 @@ function makeTestbedWithCharacter(opts: { creator?: bigint; address?: bigint } =
     return { testbed, character };
 }
 
+// k2 = 0 is the reserved per-creator character counter, not a character entry.
 function indexEntries(testbed: SimulatorTestbed, accountId: bigint) {
-    return testbed.getContractMap().filter(({ k1 }) => k1 === accountId);
+    return testbed.getContractMap().filter(({ k1, k2 }) => k1 === accountId && k2 !== 0n);
 }
 
 describe('Trusted character hash configuration', () => {

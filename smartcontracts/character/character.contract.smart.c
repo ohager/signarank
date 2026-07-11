@@ -10,6 +10,11 @@
 // It's the game master registry contract
 #define GAMEMASTER_REGISTRY 122344543654
 
+// FIXME: The value needs to be defined for SIM, TESTNET and MAINNET
+// It's the singleton character-account registry contract (discoverability +
+// per-account character cap) — distinct from GAMEMASTER_REGISTRY above.
+#define CHAR_REGISTRY 122344543655
+
 // Must mirror gamemaster-registry.contract.smart.c's REGISTRY_BASE exactly —
 // that contract stores Globals (incl. the trusted construct hash) at
 // REGISTRY_BASE.., and Items below it. Using a different key here silently
@@ -19,16 +24,27 @@
 #define GAMEMASTER_MAP_KEY1_CONSTRUCT_HASH (REGISTRY_BASE + 1)
 #define GAMEMASTER_MAP_KEY2_CHARACTER_HASH 3
 
+// Must mirror character-account-registry.contract.smart.c's method codes exactly.
+#define CHAR_REGISTRY_M_REGISTER_CHARACTER   2
+#define CHAR_REGISTRY_M_UNREGISTER_CHARACTER 3
+
 // Magic codes for methods - Player Methods
 #define ALLOCATE_SKILLPOINT 1
 #define ATTACK 2
+#define REROLL 3
 #define TRANSFER_ITEM 4
 #define USE_ITEM 5
 #define REVIVE 6
+#define SEPPUKU 66
 #define REFUND 99
 
 // Construct Methods
 #define DEDUCT_HITPOINTS 13
+
+// Minimum SIGNA a REROLL transaction must carry — the full attached amount is
+// burned regardless, this is just the floor below which the request is rejected.
+#define REROLL_MIN_AMOUNT 100_0000_0000
+#define MAX_REROLLS 5
 
 
 // Maps - accessible by other contracts
@@ -65,6 +81,15 @@ long deathPenaltyApplied;
 long skillPoints;
 long usedInventorySlots;
 long maxInventorySlots;
+// Set on the first ATTACK. Locks REROLL and gates SEPPUKU.
+long committed;
+long rerollCount;
+// Cached at init() via getActivationOf(CHAR_REGISTRY) — getNextTx() only
+// surfaces incoming transactions carrying at least the recipient's own
+// activation fee, so registry messages must attach it.
+long charRegistryActivationFee;
+
+long messageBuffer[4];
 
 // Constants
 long ZERO;
@@ -79,9 +104,7 @@ long HP_PER_STAMINA;
 const HP_PER_STAMINA = 10;
 
 
-void init() {
-
-    // create random attributes
+void rollAttributes() {
     skillPoints = FIVE;
     long index;
     long attrValue;
@@ -93,10 +116,25 @@ void init() {
     };
 
     maxHitpoints = 100 + (getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STAMINA) * HP_PER_STAMINA);
-    currentHitpoints = maxHitpoints;
     maxInventorySlots = 10 + ((getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STRENGTH)));
+}
+
+void init() {
+    rollAttributes();
+    currentHitpoints = maxHitpoints;
     usedInventorySlots = ZERO;
     isDead = FALSE;
+
+    // Registers this character at the singleton character-account registry so
+    // it is discoverable regardless of whether it is ever committed. The
+    // registry silently drops the entry if the creator is already at its cap
+    // — init() cannot reject the deployment itself.
+    charRegistryActivationFee = getActivationOf(CHAR_REGISTRY);
+    messageBuffer[0] = CHAR_REGISTRY_M_REGISTER_CHARACTER;
+    messageBuffer[1] = ZERO;
+    messageBuffer[2] = ZERO;
+    messageBuffer[3] = ZERO;
+    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, CHAR_REGISTRY);
 }
 
 init();
@@ -123,11 +161,17 @@ void main() {
                 case ATTACK:
                     attack(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
                 break;
+                case REROLL:
+                    reroll();
+                break;
                 case TRANSFER_ITEM:
                     transferItem(currentTx.message[1], currentTx.message[2]);
                     break;
                 case REVIVE:
                     revive();
+                break;
+                case SEPPUKU:
+                    seppuku();
                 break;
                 case REFUND:
                     refund(currentTx.message[1]);
@@ -224,11 +268,46 @@ void attack(long constructId, long quantity, long assetId) {
         if(amount >= ZERO){ sendAmount(amount, currentTx.sender); }
         return;
     }
+    committed = TRUE;
     if(quantity > ZERO && amount >= ZERO) {
         sendQuantityAndAmount(quantity, assetId, amount, constructId);
     } else if (amount >= ZERO) {
         sendAmount(amount, constructId);
     }
+}
+
+void reroll() {
+    long amount = getAmount(currentTx.txId);
+    if(committed == TRUE || rerollCount >= MAX_REROLLS || amount < REROLL_MIN_AMOUNT){
+        if(amount >= ZERO){ sendAmount(amount, currentTx.sender); }
+        return;
+    }
+    ++rerollCount;
+
+    setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STRENGTH, ZERO);
+    setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STAMINA, ZERO);
+    setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_DEXTERITY, ZERO);
+    setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_LUCK, ZERO);
+    setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_WILLPOWER, ZERO);
+    rollAttributes();
+    currentHitpoints = maxHitpoints; // full heal
+
+    sendAmount(amount, ZERO); // burn the full attached amount
+}
+
+void seppuku() {
+    if(committed == FALSE){ return; }
+
+    // Ritual suicide: the character dies outright. No SIGNA or assets are
+    // sent back here — refund() remains separately available for that.
+    currentHitpoints = ZERO;
+    isDead = TRUE;
+
+    messageBuffer[0] = CHAR_REGISTRY_M_UNREGISTER_CHARACTER;
+    messageBuffer[1] = ZERO;
+    messageBuffer[2] = ZERO;
+    messageBuffer[3] = ZERO;
+    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, CHAR_REGISTRY);
 }
 
 void transferItem(long itemId, long recipientId) {

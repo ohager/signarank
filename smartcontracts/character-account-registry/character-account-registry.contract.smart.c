@@ -7,13 +7,21 @@
 #pragma version 2.3.0
 
 // Method codes
-#define M_SET_CHARACTER_HASH  1
-#define M_REGISTER_CHARACTER  2
+#define M_SET_CHARACTER_HASH    1
+#define M_REGISTER_CHARACTER    2
+#define M_UNREGISTER_CHARACTER  3
 
 // Trusted-hash slot (k1, k2). Uses (0, 0); chain-issued account IDs are
 // large numbers and never collide with this fixed marker.
 #define K_TRUSTED_HASH_K1 0
 #define K_TRUSTED_HASH_K2 0
+
+// Per-creator character counter lives at (creatorAccount, K_COUNTER_K2).
+// K_COUNTER_K2 = 0 is reserved and never collides with a real characterId,
+// since chain-issued contract IDs are never 0 — mirrors the (0, 0) reservation
+// used for the trusted-hash slot above.
+#define K_COUNTER_K2 0
+#define MAX_CHARACTERS_PER_ACCOUNT 5
 
 long ZERO;
 const ZERO = 0;
@@ -39,14 +47,39 @@ void main() {
         else if (isSenderCharacter()) {
             switch (currentTx.message[0]) {
                 case M_REGISTER_CHARACTER:
-                    // Index entry: (creatorAccount, characterId) -> codehash.
-                    // Value carries the version (codehash at registration time)
-                    // so readers can distinguish between contract revisions.
-                    setMapValue(getCreatorOf(currentTx.sender), currentTx.sender, getCodeHashOf(currentTx.sender));
+                    registerCharacter();
+                break;
+                case M_UNREGISTER_CHARACTER:
+                    unregisterCharacter();
                 break;
             }
         }
     }
+}
+
+void registerCharacter() {
+    long creator = getCreatorOf(currentTx.sender);
+    // Index entry: (creatorAccount, characterId) -> codehash. Value carries
+    // the version (codehash at registration time) so readers can distinguish
+    // between contract revisions.
+    if (getMapValue(creator, currentTx.sender) != ZERO) {
+        // already registered — refresh the codehash, the slot is not reconsumed
+        setMapValue(creator, currentTx.sender, getCodeHashOf(currentTx.sender));
+        return;
+    }
+    long count = getMapValue(creator, K_COUNTER_K2);
+    if (count < MAX_CHARACTERS_PER_ACCOUNT) {
+        setMapValue(creator, K_COUNTER_K2, count + 1);
+        setMapValue(creator, currentTx.sender, getCodeHashOf(currentTx.sender));
+    }
+}
+
+void unregisterCharacter() {
+    long creator = getCreatorOf(currentTx.sender);
+    if (getMapValue(creator, currentTx.sender) == ZERO) { return; }
+    long count = getMapValue(creator, K_COUNTER_K2);
+    if (count > ZERO) { setMapValue(creator, K_COUNTER_K2, count - 1); }
+    setMapValue(creator, currentTx.sender, ZERO);
 }
 
 long isSenderCharacter() {

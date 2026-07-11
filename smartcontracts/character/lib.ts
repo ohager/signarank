@@ -31,6 +31,83 @@ export function deployCharacter(opts: { creator?: bigint; address?: bigint; revi
     return testbed;
 }
 
+// Codehash is a pure function of source (not runtime state), so it can be
+// learned from a throwaway, never-run load.
+function characterCodeHash(revivalTokenId: bigint): bigint {
+    return new Testbed().loadContract(Context.ContractPath, {
+        initializers: { constructorAccount: 0n, revivalTokenId },
+    }).getContract().codeHashId;
+}
+
+// Deploys a real character-account-registry at the hardcoded CHAR_REGISTRY
+// address and configures its trusted character hash — required BEFORE any
+// character is deployed, since init()'s registration message is one-shot and
+// silently lost forever if the trust hash isn't already configured when it
+// fires. Returns the bare testbed; use deployCharacterOnRegistry to add
+// characters to it.
+export function deployCharRegistry(opts: { revivalTokenId?: bigint } = {}) {
+    const revivalTokenId = opts.revivalTokenId ?? Context.RevivalTokenId;
+    const codeHashId = characterCodeHash(revivalTokenId);
+
+    const testbed = new Testbed().loadContract(Context.CharRegistryPath, { contractId: Context.CharRegistryAddress });
+    testbed.runScenario();
+
+    testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount, // registry's creator defaults to 555n
+        recipient: Context.CharRegistryAddress,
+        amount: 1_0000_0000n,
+        messageArr: [1n, codeHashId, 0n, 0n], // M_SET_CHARACTER_HASH
+    }], Context.CharRegistryAddress);
+
+    return testbed;
+}
+
+// Deploys+funds a character on a testbed whose registry trust hash is already
+// configured (see deployCharRegistry) — init()'s registration message will
+// carry its own activation fee to the registry and be picked up for real.
+export function deployCharacterOnRegistry(testbed: SimulatorTestbed, opts: {
+    creator?: bigint;
+    address?: bigint;
+    revivalTokenId?: bigint;
+} = {}) {
+    const characterAddress = opts.address ?? Context.CharacterAddress;
+    testbed.loadContract(Context.ContractPath, {
+        creator: opts.creator ?? Context.OwnerAccount,
+        contractId: characterAddress,
+        initializers: { constructorAccount: 0n, revivalTokenId: opts.revivalTokenId ?? Context.RevivalTokenId },
+    });
+    // sendTransactionAndGetResponse auto-resolves blockheight, unlike a raw
+    // runScenario() call, which is required here since the chain is already
+    // several blocks in by the time a second/third character is deployed.
+    testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount,
+        recipient: characterAddress,
+        amount: 200_0000_0000n,
+    }], characterAddress);
+
+    // The simulator only re-activates a contract on a block where it either
+    // just received a qualifying tx or was already scheduled to wake — the
+    // registry's own consumption of the queued registration message (sent by
+    // the character's init(), one block prior) needs one more nudge here.
+    testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount,
+        recipient: Context.CharRegistryAddress,
+        amount: 1_0000_0000n,
+    }], Context.CharRegistryAddress);
+    return testbed;
+}
+
+// Convenience wrapper for the common single-character case.
+export function deployCharacterWithCharRegistry(opts: {
+    creator?: bigint;
+    address?: bigint;
+    revivalTokenId?: bigint;
+} = {}) {
+    const testbed = deployCharRegistry({ revivalTokenId: opts.revivalTokenId });
+    deployCharacterOnRegistry(testbed, opts);
+    return testbed;
+}
+
 // Deploys the character plus a real gamemaster-registry at the hardcoded
 // GAMEMASTER_REGISTRY address, and a distinct "construct" stand-in contract
 // (any different bytecode works — only its codehash matters) so tests can
@@ -201,6 +278,52 @@ export function sendRevive(testbed: SimulatorTestbed, opts: {
             : [],
         messageArr: [Context.Methods.Revive, 0n, 0n, 0n],
     }], characterAddress);
+}
+
+// opts.signa is what reroll()'s getAmount() will see — the testbed
+// automatically deducts the character's own activationAmount from the raw tx
+// amount before the contract can read it, so that headroom is added here.
+export function sendReroll(testbed: SimulatorTestbed, opts: {
+    signa: bigint;
+    sender?: bigint;
+    characterAddress?: bigint;
+}) {
+    const characterAddress = opts.characterAddress ?? Context.CharacterAddress;
+    return testbed.sendTransactionAndGetResponse([{
+        sender: opts.sender ?? Context.OwnerAccount,
+        recipient: characterAddress,
+        amount: opts.signa + Context.ActivationFee,
+        messageArr: [Context.Methods.Reroll, 0n, 0n, 0n],
+    }], characterAddress);
+}
+
+export function sendSeppuku(testbed: SimulatorTestbed, opts: {
+    sender?: bigint;
+    characterAddress?: bigint;
+} = {}) {
+    const characterAddress = opts.characterAddress ?? Context.CharacterAddress;
+    const response = testbed.sendTransactionAndGetResponse([{
+        sender: opts.sender ?? Context.OwnerAccount,
+        recipient: characterAddress,
+        amount: Context.ActivationFee,
+        messageArr: [Context.Methods.Seppuku, 0n, 0n, 0n],
+    }], characterAddress);
+
+    // Same registry-activation nudge as deployCharacterOnRegistry — a no-op
+    // (harmless) if no registry is deployed in this scenario at all.
+    testbed.sendTransactionAndGetResponse([{
+        sender: opts.sender ?? Context.OwnerAccount,
+        recipient: Context.CharRegistryAddress,
+        amount: 1_0000_0000n,
+    }], Context.CharRegistryAddress);
+
+    return response;
+}
+
+// Reads the character-account-registry's map — must be deployed at
+// Context.CharRegistryAddress (see deployCharacterWithCharRegistry).
+export function getCharRegistryValue(testbed: SimulatorTestbed, k1: bigint, k2: bigint): bigint {
+    return testbed.getContractMapValue(k1, k2, Context.CharRegistryAddress);
 }
 
 export function setConstructHashOnGamemasterRegistry(testbed: SimulatorTestbed, hash: bigint) {

@@ -123,4 +123,7 @@ dist
 .idea
 .DS_Store
 
+# Vercel
+.vercel
+
 

@@ -8,6 +8,7 @@ export const Context = {
     ContractPath: join(__dirname + '/character.contract.smart.c'),
     ConstructContractPath: join(__dirname, '..', 'construct', 'construct.contract.smart.c'),
     GamemasterRegistryPath: join(__dirname, '..', 'gamemaster-registry', 'gamemaster-registry.contract.smart.c'),
+    CharRegistryPath: join(__dirname, '..', 'character-account-registry', 'character-account-registry.contract.smart.c'),
 
     // SimulatorTestbed default creator is 555n unless overridden — matches getCreator().
     OwnerAccount: 555n,
@@ -19,15 +20,32 @@ export const Context = {
     // gamemaster-registry contract must be deployed at exactly this address.
     GamemasterRegistryAddress: 122344543654n,
 
+    // Hardcoded in the contract as CHAR_REGISTRY — NOT a TESTBED-injectable
+    // parameter. init() sends a registration message here unconditionally; to
+    // observe it, the character-account-registry contract must be deployed at
+    // exactly this address.
+    CharRegistryAddress: 122344543655n,
+
     ActivationFee: 2_0000_0000n, // must match #program activationAmount 200000000
+    RerollMinAmount: 100_0000_0000n, // must match #define REROLL_MIN_AMOUNT
+    MaxRerolls: 5n,
 
     Methods: {
         AllocateSkillpoint: 1n,
         Attack: 2n,
+        Reroll: 3n,
         TransferItem: 4n,
         UseItem: 5n,   // defined in the contract but NOT wired into the dispatch switch — always a no-op
         Revive: 6n,
+        Seppuku: 66n,
         Refund: 99n,
+    },
+
+    // Method codes as the character-account-registry contract defines them —
+    // must mirror CHAR_REGISTRY_M_* in character.contract.smart.c.
+    CharRegistryMethods: {
+        RegisterCharacter: 2n,
+        UnregisterCharacter: 3n,
     },
 
     ConstructMethods: {
@@ -43,6 +61,8 @@ export const Context = {
         SkillPoints: 'skillPoints',
         UsedInventorySlots: 'usedInventorySlots',
         MaxInventorySlots: 'maxInventorySlots',
+        Committed: 'committed',
+        RerollCount: 'rerollCount',
     },
 
     // KKV map keys — attribute values live at (MAP_KEY1_ATTRIBUTES, attrIndex)
