@@ -10,9 +10,10 @@ import {
 } from '../lib';
 
 const CONSTRUCT_ID = 12345n;
+const REROLL_COSTS = 100_0000_0000n; // must mirror the contract's REROLL_COSTS
 
 describe('reroll()', () => {
-    test('re-rolls attributes, fully heals, and burns the attached amount', () => {
+    test('re-rolls attributes, fully heals, and burns the reroll cost', () => {
         const testbed = deployCharacter();
         const before = getAllAttrs(testbed);
         // Account 0 also accumulates the character's own execution fees on
@@ -36,14 +37,28 @@ describe('reroll()', () => {
         expect(after).not.toBe(before);
     });
 
-    test('burns the full attached amount, not just the 100 SIGNA floor', () => {
+    test('draws the cost from the character balance — a reroll with no attached SIGNA still succeeds', () => {
         const testbed = deployCharacter();
-        const burnBefore = testbed.getAccount(0n)?.balance ?? 0n;
+        // A freshly deployed character already holds more than REROLL_COSTS, so
+        // the cost is paid from its own balance without re-attaching any SIGNA.
+        sendReroll(testbed, { signa: 0n });
+
+        expect(getCharState(testbed, Context.Vars.RerollCount)).toBe(1n);
+        expect(sumAttrs(testbed)).toBe(5n);
+    });
+
+    test('burns only the reroll cost, leaving any excess attached SIGNA on the character', () => {
+        const testbed = deployCharacter();
+        const before = testbed.getAccount(Context.CharacterAddress)?.balance ?? 0n;
 
         sendReroll(testbed, { signa: 250_0000_0000n });
 
-        const burnAfter = testbed.getAccount(0n)?.balance ?? 0n;
-        expect(burnAfter - burnBefore).toBeGreaterThanOrEqual(250_0000_0000n);
+        // 250 attached but only REROLL_COSTS (100) is burned, so the character's
+        // balance rises by well over 100 — the surplus is kept, not consumed.
+        const after = testbed.getAccount(Context.CharacterAddress)?.balance ?? 0n;
+        const delta = after - before;
+        expect(delta).toBeGreaterThan(REROLL_COSTS);          // clearly kept the excess
+        expect(delta).toBeLessThan(250_0000_0000n);           // but did pay the cost
     });
 
     test('increments rerollCount on each successful reroll', () => {
@@ -56,19 +71,30 @@ describe('reroll()', () => {
         expect(getCharState(testbed, Context.Vars.RerollCount)).toBe(2n);
     });
 
-    test('rejects and refunds when the attached amount is below the 100 SIGNA floor', () => {
+    test('rejects when the character balance is below the reroll cost — no reroll, SIGNA retained not refunded', () => {
         const testbed = deployCharacter();
-        const before = getAllAttrs(testbed);
+        // Two zero-attached rerolls burn REROLL_COSTS each, draining the ~199 SIGNA
+        // starting balance below the 100 SIGNA floor.
+        sendReroll(testbed, { signa: 0n });
+        sendReroll(testbed, { signa: 0n });
+        expect(getCharState(testbed, Context.Vars.RerollCount)).toBe(2n);
+        const charBefore = testbed.getAccount(Context.CharacterAddress)?.balance ?? 0n;
+        expect(charBefore).toBeLessThan(REROLL_COSTS); // precondition: below the floor
+        const attrsBefore = getAllAttrs(testbed);
         const ownerBefore = testbed.getAccount(Context.OwnerAccount)?.balance ?? 0n;
 
-        sendReroll(testbed, { signa: 99_0000_0000n });
+        // 50 SIGNA attached is still not enough to clear the floor with the drained balance.
+        sendReroll(testbed, { signa: 50_0000_0000n });
 
-        expect(getAllAttrs(testbed)).toEqual(before);
-        expect(getCharState(testbed, Context.Vars.RerollCount)).toBe(0n);
+        // Rejected: attributes and reroll count are untouched.
+        expect(getCharState(testbed, Context.Vars.RerollCount)).toBe(2n);
+        expect(getAllAttrs(testbed)).toEqual(attrsBefore);
+        // The attached SIGNA is NOT refunded — it accumulates on the character to
+        // fund a later reroll (the whole point of drawing from balance).
+        const charAfter = testbed.getAccount(Context.CharacterAddress)?.balance ?? 0n;
+        expect(charAfter).toBeGreaterThan(charBefore);
         const ownerAfter = testbed.getAccount(Context.OwnerAccount)?.balance ?? 0n;
-        // The 99 Signa comes back; only the (non-refundable) activation fee is lost.
-        expect(ownerAfter - ownerBefore).toBeGreaterThan(-Context.ActivationFee * 2n);
-        expect(ownerAfter - ownerBefore).toBeLessThanOrEqual(0n);
+        expect(ownerAfter).toBeLessThanOrEqual(ownerBefore); // owner only spent, nothing came back
     });
 
     test('rejects once committed (after the first ATTACK)', () => {

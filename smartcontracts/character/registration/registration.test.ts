@@ -1,17 +1,32 @@
 import { describe, expect, test } from 'vitest';
+import type { SimulatorTestbed } from 'signum-smartc-testbed';
 import { Context } from '../context';
 import {
     deployCharRegistry,
     deployCharacterOnRegistry,
     deployCharacterWithCharRegistry,
+    deployCharacterWithRegistries,
     getCharRegistryValue,
     getCharState,
     sendAttack,
     sendSeppuku,
     sendRefund,
+    sendDeductHitpoints,
 } from '../lib';
 
 const CONSTRUCT_ID = 12345n;
+
+// SEPPUKU now requires isDead == TRUE at dispatch, so exercising it needs a
+// real death. Damage mitigation (armor/dodge) means one maxHp hit no longer
+// reliably kills, so overwhelm armor and retry past dodges until dead.
+function killCharacter(testbed: SimulatorTestbed, constructAddress: bigint) {
+    for (let i = 0; i < 64; i++) {
+        if (getCharState(testbed, Context.Vars.IsDead, Context.CharacterAddress) === 1n) return;
+        const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
+        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp * 4n });
+    }
+    throw new Error('killCharacter: character never died');
+}
 
 describe('init() — registration at the character-account registry', () => {
     test('registers (creator, characterId) -> codehash on deploy, before any commitment', () => {
@@ -43,9 +58,11 @@ describe('init() — registration at the character-account registry', () => {
 });
 
 describe('seppuku()', () => {
-    test('is a no-op before commitment — no unregister, no death', () => {
+    test('is a no-op while alive, even after committing — SEPPUKU is blocked at dispatch until isDead == TRUE', () => {
         const testbed = deployCharacterWithCharRegistry();
         const character = testbed.getContract(Context.CharacterAddress);
+        sendAttack(testbed, { signa: 10n, constructId: CONSTRUCT_ID });
+        expect(getCharState(testbed, Context.Vars.Committed)).toBe(1n);
 
         sendSeppuku(testbed);
 
@@ -53,27 +70,40 @@ describe('seppuku()', () => {
         expect(getCharState(testbed, Context.Vars.IsDead)).toBe(0n);
     });
 
-    test('after commitment, unregisters the character and kills it — no SIGNA or assets sent back', () => {
-        const testbed = deployCharacterWithCharRegistry();
+    test('is a no-op while dead but never committed — no unregister', () => {
+        const { testbed, constructAddress } = deployCharacterWithRegistries();
+        const character = testbed.getContract(Context.CharacterAddress);
+        killCharacter(testbed, constructAddress);
+        expect(getCharState(testbed, Context.Vars.IsDead)).toBe(1n);
+        expect(getCharState(testbed, Context.Vars.Committed)).toBe(0n);
+
+        sendSeppuku(testbed);
+
+        expect(getCharRegistryValue(testbed, character.creator, character.contract)).toBe(character.codeHashId);
+    });
+
+    test('once committed and dead, unregisters the character — no SIGNA or assets sent back', () => {
+        const { testbed, constructAddress } = deployCharacterWithRegistries();
         const character = testbed.getContract(Context.CharacterAddress);
         sendAttack(testbed, { signa: 10n, constructId: CONSTRUCT_ID });
+        killCharacter(testbed, constructAddress);
         expect(getCharState(testbed, Context.Vars.Committed)).toBe(1n);
+        expect(getCharState(testbed, Context.Vars.IsDead)).toBe(1n);
         const ownerBefore = testbed.getAccount(Context.OwnerAccount)?.balance ?? 0n;
 
         sendSeppuku(testbed);
 
         expect(getCharRegistryValue(testbed, character.creator, character.contract)).toBe(0n);
         expect(getCharRegistryValue(testbed, character.creator, 0n)).toBe(0n); // slot freed
-        expect(getCharState(testbed, Context.Vars.CurrentHitpoints)).toBe(0n);
-        expect(getCharState(testbed, Context.Vars.IsDead)).toBe(1n);
         const ownerAfter = testbed.getAccount(Context.OwnerAccount)?.balance ?? 0n;
         expect(ownerAfter).toBeLessThanOrEqual(ownerBefore); // nothing refunded by seppuku itself
     });
 
     test('ignores seppuku from a non-creator sender', () => {
-        const testbed = deployCharacterWithCharRegistry();
+        const { testbed, constructAddress } = deployCharacterWithRegistries();
         const character = testbed.getContract(Context.CharacterAddress);
         sendAttack(testbed, { signa: 10n, constructId: CONSTRUCT_ID });
+        killCharacter(testbed, constructAddress);
 
         sendSeppuku(testbed, { sender: 424242n });
 
@@ -83,8 +113,9 @@ describe('seppuku()', () => {
 
 describe('refund() — independent of registration and commitment', () => {
     test('still works after seppuku — the balance stays available since seppuku never touches it', () => {
-        const testbed = deployCharacterWithCharRegistry();
+        const { testbed, constructAddress } = deployCharacterWithRegistries();
         sendAttack(testbed, { signa: 10n, constructId: CONSTRUCT_ID });
+        killCharacter(testbed, constructAddress);
         sendSeppuku(testbed);
         const ownerBefore = testbed.getAccount(Context.OwnerAccount)?.balance ?? 0n;
 

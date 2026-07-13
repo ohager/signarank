@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { Context } from '../context';
-import { deployCharacterWithTrustedConstruct, getCharState, sumAttrs, sendDeductHitpoints, sendRefund } from '../lib';
+import { deployCharacterWithTrustedConstruct, getCharState, sumAttrs, sendDeductHitpoints, sendRefund, killCharacter } from '../lib';
 
 // deathPenaltyApplied (character.contract.smart.c) gates handleDead() so its
 // random attribute penalty applies exactly once per death, regardless of how
@@ -10,9 +10,8 @@ describe('handleDead() — penalty applies exactly once per death', () => {
     test('a death event applies at most one penalty point in that same activation', () => {
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
         const sumBefore = sumAttrs(testbed);
-        const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
 
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp });
+        killCharacter(testbed, constructAddress);
         expect(getCharState(testbed, Context.Vars.IsDead, Context.CharacterAddress)).toBe(1n);
 
         const sumAfter = sumAttrs(testbed);
@@ -22,8 +21,7 @@ describe('handleDead() — penalty applies exactly once per death', () => {
 
     test('further damage from the trusted construct while already dead does NOT apply another penalty', () => {
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
-        const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp });
+        killCharacter(testbed, constructAddress);
         const sumAfterDeath = sumAttrs(testbed);
 
         for (let i = 0; i < 10; i++) {
@@ -35,8 +33,7 @@ describe('handleDead() — penalty applies exactly once per death', () => {
 
     test('rejected EOA transactions while dead do NOT apply another penalty', () => {
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
-        const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp });
+        killCharacter(testbed, constructAddress);
         const sumAfterDeath = sumAttrs(testbed);
 
         for (let i = 0; i < 10; i++) {
@@ -49,8 +46,7 @@ describe('handleDead() — penalty applies exactly once per death', () => {
 
     test('unrelated owner transactions (REFUND) while dead do NOT apply another penalty', () => {
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
-        const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp });
+        killCharacter(testbed, constructAddress);
         const sumAfterDeath = sumAttrs(testbed);
 
         for (let i = 0; i < 20; i++) {
@@ -62,8 +58,7 @@ describe('handleDead() — penalty applies exactly once per death', () => {
 
     test('REFUND while dead does not heal currentHitpoints or clear isDead — only REVIVE does that', () => {
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
-        const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp });
+        killCharacter(testbed, constructAddress);
 
         for (let i = 0; i < 5; i++) {
             sendRefund(testbed);

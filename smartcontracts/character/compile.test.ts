@@ -11,7 +11,9 @@ describe('Character Contract Compile Test', () => {
         const compiler = new SmartC({ language: 'C', sourceCode: code });
         const compiled = compiler.compile();
         const machinedata = compiled.getMachineCode();
+        const codeSize = machinedata.ByteCode.length / 2;
         expect(machinedata).toBeDefined();
-        expect(machinedata.ByteCode.length / 2).toBeLessThanOrEqual(MAX_CODE_SIZE);
+        console.log("Code Size:", codeSize, "bytes");
+        expect(codeSize).toBeLessThanOrEqual(MAX_CODE_SIZE);
     });
 });

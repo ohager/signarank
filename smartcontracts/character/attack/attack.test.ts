@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { Context } from '../context';
-import { deployCharacter, deployCharacterWithTrustedConstruct, sendAttack, sendDeductHitpoints, getCharState } from '../lib';
+import { deployCharacter, deployCharacterWithTrustedConstruct, sendAttack, getCharState, killCharacter } from '../lib';
 
 const CONSTRUCT_ID = 12345n;
 
@@ -30,19 +30,27 @@ describe('attack()', () => {
         expect(construct?.balance ?? 0n).toBe(0n);
     });
 
-    test('refunds the attached SIGNA to the owner instead of attacking while dead', () => {
+    test('is a total no-op while dead — ATTACK is blocked at dispatch, no forward and no refund', () => {
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
-        const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp + 1n });
+        killCharacter(testbed, constructAddress);
         expect(getCharState(testbed, Context.Vars.IsDead, Context.CharacterAddress)).toBe(1n);
+        const characterBalanceBefore = testbed.getAccount(Context.CharacterAddress)?.balance ?? 0n;
 
         sendAttack(testbed, { signa: 100n, constructId: CONSTRUCT_ID });
 
         const construct = testbed.getAccount(CONSTRUCT_ID);
         expect(construct?.balance ?? 0n).toBe(0n);
+        // "no refund" means no SIGNA or asset is returned to the owner. The death
+        // notification message that handleDead() sends on the kill carries no
+        // value (amount 0, no tokens), so it must not be counted as a refund.
         const refundTx = testbed.getTransactions().find(tx =>
-            tx.sender === Context.CharacterAddress && tx.recipient === Context.OwnerAccount,
+            tx.sender === Context.CharacterAddress &&
+            tx.recipient === Context.OwnerAccount &&
+            ((tx.amount ?? 0n) > 0n || (tx.tokens?.length ?? 0) > 0),
         );
-        expect(refundTx?.amount).toBe(100n * 1_0000_0000n);
+        expect(refundTx).toBeUndefined();
+        // The attached SIGNA simply stays on the character's own balance.
+        const characterBalanceAfter = testbed.getAccount(Context.CharacterAddress)?.balance ?? 0n;
+        expect(characterBalanceAfter).toBeGreaterThan(characterBalanceBefore);
     });
 });
