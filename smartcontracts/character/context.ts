@@ -161,6 +161,10 @@ export const Context = {
         EquipBonusAbs: 10n,
         EquipBonusRel: 11n,
         StatusEffects: 12n,
+        // key2 = EffectTarget — source effectId of each active status effect.
+        StatusEffectId: 15n,
+        // Live combat-state sheet (cross-contract readable). key2: see VitalsKeys.
+        Vitals: 16n,
         // Rolling error log — map[ErrorCode][slot], map[ErrorTxid][slot],
         // map[ErrorMeta][0] = total ever. Must mirror MAP_KEY1_ERROR_* .
         ErrorCode: 20n,
@@ -182,6 +186,13 @@ export const Context = {
         AttackAbs: 3n,  // flat attack bonus from equipment (EQUIP_BONUS_ABS[Attack])
         AttackRel: 4n,  // % attack bonus from equipment (EQUIP_BONUS_REL[Attack])
         AttackEffect: 5n, // primary attack effect id (element) for construct affinity
+    },
+
+    // key2 sub-ids under Maps.Vitals — mirror MAP_KEY2_VITALS_* .
+    VitalsKeys: {
+        CurrentHp: 1n,
+        MaxHp: 2n,
+        IsDead: 3n,
     },
 
     // 1-indexed — matches MAP_KEY2_ATTRIBUTES_* in the contract (NOT 0-indexed)

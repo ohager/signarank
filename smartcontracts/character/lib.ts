@@ -286,6 +286,11 @@ export function getPublicCombat(testbed: SimulatorTestbed, combatKey2: bigint, a
     return testbed.getContractMapValue(Context.Maps.Combat, combatKey2, address) ?? 0n;
 }
 
+// Live combat-state sheet (Maps.Vitals) — currentHp/maxHp/isDead.
+export function getVitals(testbed: SimulatorTestbed, vitalsKey2: bigint, address = Context.CharacterAddress): bigint {
+    return testbed.getContractMapValue(Context.Maps.Vitals, vitalsKey2, address) ?? 0n;
+}
+
 export function getAllAttrs(testbed: SimulatorTestbed) {
     return {
         strength: getAttr(testbed, Context.Attrs.Strength),

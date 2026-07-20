@@ -172,6 +172,14 @@
 #define MAP_KEY1_STATUS_ABS      13
 #define MAP_KEY1_STATUS_REL      14
 
+// ---- PUBLIC VITALS SHEET (cross-contract readable) ----
+// currentHitpoints is not derivable off-chain; maxHitpoints published for
+// self-containment; isDead flag. Republished every activation.
+#define MAP_KEY1_VITALS            16
+#define MAP_KEY2_VITALS_CURRENT_HP 1
+#define MAP_KEY2_VITALS_MAX_HP     2
+#define MAP_KEY2_VITALS_IS_DEAD    3
+
 // ---- ROLLING ERROR LOG ----
 // A ring buffer of the last ERROR_LOG_SIZE owner-action failures. Only the
 // creator's own actions are logged, so the window can't be flooded by others.
@@ -294,6 +302,15 @@ void publishProgression() {
     setMapValue(MAP_KEY1_PROGRESSION, MAP_KEY2_PROGRESSION_LEVEL, level);
     setMapValue(MAP_KEY1_PROGRESSION, MAP_KEY2_PROGRESSION_SKILL, skillPoints);
     publishCombatProfile();
+    publishVitals();
+}
+
+// Live combat-state sheet (cross-contract readable). currentHitpoints is not
+// derivable off-chain; maxHitpoints published for self-containment; isDead flag.
+void publishVitals() {
+    setMapValue(MAP_KEY1_VITALS, MAP_KEY2_VITALS_CURRENT_HP, currentHitpoints);
+    setMapValue(MAP_KEY1_VITALS, MAP_KEY2_VITALS_MAX_HP, maxHitpoints);
+    setMapValue(MAP_KEY1_VITALS, MAP_KEY2_VITALS_IS_DEAD, isDead);
 }
 
 // Effective offensive stats = base attribute + equipment aggregate. The construct
