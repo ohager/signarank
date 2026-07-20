@@ -1,14 +1,11 @@
 import {describe, expect, test} from "vitest";
-import {SimulatorTestbed} from "signum-smartc-testbed";
 import {Context} from "../context";
-import {getCurrentHitpoints, DefaultRequiredInitializers, BootstrapScenario, attack, timeLapse} from "../lib";
+import {getCurrentHitpoints, DefaultRequiredInitializers, deployConstruct, attack, timeLapse, setDebuff, attackAndDidCounter, countCounters} from "../lib";
 
 describe('Attack Mechanics', () => {
     describe("Basic Attack Mechanics", () => {
         test("should NOT run when inactive", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             testbed.sendTransactionAndGetResponse([{
                 sender: Context.CreatorAccount,
@@ -26,13 +23,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should NOT run when defeated", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 100n,
-                    breachLimit: 100n,
-                } })
-                .runScenario();
+            const testbed = deployConstruct({ maxHp: 100n, breachLimit: 100n });
 
             // First attack to defeat
             attack({testbed, signa: 1000n})
@@ -49,9 +40,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should deal basic damage with SIGNA only", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -66,9 +55,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should send XP and HP tokens to attacker", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -88,9 +75,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should track first blood", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             attack({testbed, signa: 100n, sender: Context.SenderAccount1})
 
@@ -103,9 +88,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should refund the attackers signa and tokens if construct is inactive", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             const PowerUpTokenId = 2000n;
 
@@ -142,13 +125,7 @@ describe('Attack Mechanics', () => {
 
     describe("Breach Limit Mechanics", () => {
         test("should limit damage per attack based on breach limit", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 10_000n,
-                    breachLimit: 10n, // Max 10% of current HP per attack
-                } })
-                .runScenario();
+            const testbed = deployConstruct({ maxHp: 10_000n, breachLimit: 10n }); // Max 10% of current HP per attack
 
             const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -162,13 +139,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should allow full damage if below breach limit", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 10_000n,
-                    breachLimit: 50n, // Max 50% of current HP
-                } })
-                .runScenario();
+            const testbed = deployConstruct({ maxHp: 10_000n, breachLimit: 50n }); // Max 50% of current HP
 
             const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -183,13 +154,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should breach limit edge cases - 1% (Minimum)", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 100n,
-                    breachLimit: 1n,
-                } })
-                .runScenario();
+            const testbed = deployConstruct({ maxHp: 100n, breachLimit: 1n });
 
             const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -204,13 +169,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should breach limit edge cases - 100% (Maximum)", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 1_000n,
-                    breachLimit: 100n,
-                } })
-                .runScenario();
+            const testbed = deployConstruct({ maxHp: 1_000n, breachLimit: 100n });
 
             // Attack with excessive amount - one kill
             attack({testbed, signa: 20_000n})
@@ -228,13 +187,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should keep breach limit constant based on maxHp throughout battle", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 10_000n,
-                    breachLimit: 20n, // 20% of maxHp = 2000 damage cap
-                } })
-                .runScenario();
+            const testbed = deployConstruct({ maxHp: 10_000n, breachLimit: 20n }); // 20% of maxHp = 2000 damage cap
 
             const maxHp = 10_000n;
             const expectedMaxDamage = (maxHp * 20n) / 100n; // 2000
@@ -275,9 +228,7 @@ describe('Attack Mechanics', () => {
         const PowerUpTokenId = 2000n;
 
         test("should apply damage multiplier from tokens - buffing", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             // Configure token with 5x multiplier (500 = 5.00x)
             testbed.sendTransactionAndGetResponse([{
@@ -311,9 +262,7 @@ describe('Attack Mechanics', () => {
 
 
         test("should apply damage multiplier from tokens - debuffing", async () => {
-                    const testbed = new SimulatorTestbed(BootstrapScenario)
-                        .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                        .runScenario();
+                    const testbed = deployConstruct();
 
                     // Configure token with 0.5x multiplier (50 = 0.5x)
                     testbed.sendTransactionAndGetResponse([{
@@ -360,9 +309,7 @@ describe('Attack Mechanics', () => {
                 })
 
         test("should apply damage addition from tokens", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             // Configure token with +100 damage addition
             testbed.sendTransactionAndGetResponse([{
@@ -395,9 +342,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should enforce token limit", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             // Configure token with 2x multiplier and limit of 5 tokens
             testbed.sendTransactionAndGetResponse([{
@@ -429,9 +374,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should apply multiple token modifiers in single attack", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             const Token1 = 2000n;
             const Token2 = 2001n;
@@ -535,9 +478,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should ignore unregistered tokens", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -556,9 +497,7 @@ describe('Attack Mechanics', () => {
 
     describe("Debuff Mechanics", () => {
         test("should apply debuff to reduce damage", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             // Configure debuff: 100% chance, 50% damage reduction, max 3 stacks
             testbed.sendTransactionAndGetResponse([{
@@ -589,9 +528,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should reduce debuff stack after application", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             // Configure debuff
             testbed.sendTransactionAndGetResponse([{
@@ -616,9 +553,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should not exceed max debuff stacks", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             // Configure debuff with max 2 stacks
             testbed.sendTransactionAndGetResponse([{
@@ -641,9 +576,7 @@ describe('Attack Mechanics', () => {
         })
 
         test("should never apply debuff when chance is 0%", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             // Configure debuff with 0% chance
             testbed.sendTransactionAndGetResponse([{
@@ -664,162 +597,68 @@ describe('Attack Mechanics', () => {
             expect(stacks).toBe(0n);
         })
 
-        test("should apply debuff probabilistically with 50% chance", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+        // NOTE on measuring counters: a fired counter sends a "COUNTER! …" short
+        // message to the attacker. The testbed CONCATENATES all short messages to
+        // one recipient per activation, so above the breach limit the text reads
+        // "FIRST BLOOD!…BREACH!…COUNTER!…" — detect a counter by SUBSTRING, via the
+        // attackAndDidCounter / countCounters helpers, not a stack-diff (the stack
+        // is a random walk: each hit consumes one then may add one).
 
-            // Configure debuff with 50% chance
-            testbed.sendTransactionAndGetResponse([{
-                sender: Context.CreatorAccount,
-                recipient: Context.ThisContract,
-                amount: Context.ActivationFee,
-                messageArr: [Context.Methods.SetDebuff, 50n, 25n, 10n],
-            }])
-
-            const iterations = 50;
-            const runs = 6;
-            const debuffsCount = new Set<number>();
-            // Run many attacks and count debuffs
-            for(let j = 0; j < runs; j++) {
-                let debuffCount = 0;
-                for(let i = 0; i < iterations; i++) {
-                    const stacksBefore = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
-
-                    attack({testbed, signa: 100n})
-                    timeLapse({testbed, blocks: 20n})
-
-                    const stacksAfter = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
-
-                    // Counter attack occurred if stacks increased
-                    if(stacksAfter > stacksBefore) {
-                        debuffCount++;
-                    }
-                }
-                debuffsCount.add(debuffCount);
-            }
-
-            // expect have at least 50% different debuff counts
-            expect(debuffsCount.size).toBeGreaterThanOrEqual(runs/2);
-            debuffsCount.forEach( c => {
-                // the randomness for simulator is weaker than real world,
-                // so we expect only different values, but not statistically correct
-                expect(c).toBeGreaterThan(1);
-            })
-
+        test("counters deterministically at 100% chance below the breach limit", () => {
+            const testbed = deployConstruct();
+            setDebuff(testbed, 100n, 25n, 200n); // 100% chance
+            // 10 damage ≪ breach limit (10000) → flat 100% chance → always fires
+            expect(attackAndDidCounter({testbed, signa: 100n})).toBe(true);
         })
 
-        test("should scale counter attack chance when damage exceeds breach limit", async () => {
-            // Use 100% counter attack chance for deterministic testing
-            // maxHp: 1000, breachLimit: 10% = 100 max damage
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 1000n,
-                    breachLimit: 10n, // Different from default 20%
-                } })
-                .runScenario();
+        test("applies the counter at roughly the configured chance (~50%)", () => {
+            const testbed = deployConstruct(); // maxHp 50000, xpSupply 50000, breach 20%
+            setDebuff(testbed, 50n, 25n, 200n);
 
-            // Configure 100% counter chance for deterministic behavior
-            testbed.sendTransactionAndGetResponse([{
-                sender: Context.CreatorAccount,
-                recipient: Context.ThisContract,
-                amount: Context.ActivationFee,
-                messageArr: [Context.Methods.SetDebuff, 100n, 25n, 50n],
-            }])
+            const rounds = 60;
+            // 10 damage per hit ≪ breach limit → flat 50% chance; construct survives
+            const fired = countCounters({testbed, signa: 100n, rounds});
 
-            // Attack with high damage that exceeds breach limit
-            // 10,000 SIGNA * 10% = 1000 damage (before breach limit)
-            // breachLimitDamage = (1000 * 10) / 100 = 100
-            // rawDamage (1000) >> breachLimitDamage (100)
-            // With 100% base chance and scaling, should always trigger
-            attack({testbed, signa: 10_000n})
-
-            // Should get debuff stack with 100% chance when exceeding breach
-            const stacks = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
-            expect(stacks).toBeGreaterThan(0n);
+            // Wide band around 50% — the simulator's weak RNG isn't statistically
+            // tight, so this only asserts "clearly probabilistic, roughly half".
+            expect(fired).toBeGreaterThan(rounds * 0.25); // > 15
+            expect(fired).toBeLessThan(rounds * 0.85);     // < 51
         })
 
-        test("should use base chance when damage is below breach limit", async () => {
-            // maxHp: 10000, breachLimit: 20% = 2000 max damage
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 10000n,
-                    breachLimit: 20n,
-                } })
-                .runScenario();
+        test("counter chance scales UP above the breach limit", () => {
+            const rounds = 40;
+            // breachLimit 1 → each hit removes ≤1% of HP, so all rounds survive.
+            // breachLimitDamage = maxHp*1/100 = 1000.
 
-            // Configure debuff: 10% base chance (low)
-            testbed.sendTransactionAndGetResponse([{
-                sender: Context.CreatorAccount,
-                recipient: Context.ThisContract,
-                amount: Context.ActivationFee,
-                messageArr: [Context.Methods.SetDebuff, 10n, 25n, 20n],
-            }])
+            const below = deployConstruct({maxHp: 100_000n, breachLimit: 1n}, {xpSupply: 100_000n});
+            setDebuff(below, 20n, 25n, 200n);
+            // 10 damage ≪ 1000 → flat 20% base chance
+            const belowFired = countCounters({testbed: below, signa: 100n, rounds});
 
-            // Attack with 100 SIGNA = 10 damage (well below breach limit of 2000)
-            // Should use base 10% chance
-            const iterations = 50;
-            let counterAttackCount = 0;
+            const above = deployConstruct({maxHp: 100_000n, breachLimit: 1n}, {xpSupply: 100_000n});
+            setDebuff(above, 20n, 25n, 200n);
+            // 50000 damage ≫ 1000 → scaled chance 20×50 = 1000 → capped 90%
+            const aboveFired = countCounters({testbed: above, signa: 500_000n, rounds});
 
-            for(let i = 0; i < iterations; i++) {
-                const stacksBefore = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
-
-                attack({testbed, signa: 100n})
-                timeLapse({testbed, blocks: 20n})
-
-                const stacksAfter = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
-
-                if(stacksAfter > stacksBefore) {
-                    counterAttackCount++;
-                }
-            }
-
-            // With 10% chance, expect around 5 out of 50 (allow some variance)
-            // Should be significantly less than if it was scaling up
-            expect(counterAttackCount).toBeLessThan(20); // Well below what scaled chance would give
+            // Above the breach limit the counter fires far more often. Huge margin
+            // (≈20% vs ≈90%) so the assertion is robust to the weak RNG.
+            expect(aboveFired).toBeGreaterThan(belowFired + 10);
         })
 
-        test("should scale counter attack chance proportionally", async () => {
-            // Test with 100% chance to ensure counter attacks happen
-            // maxHp: 1000, breachLimit: 10% = 100 max damage
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    maxHp: 1000n,
-                    breachLimit: 10n, // Different from default
-                } })
-                .runScenario();
+        test("uses the flat base chance below the breach limit", () => {
+            const testbed = deployConstruct(); // breach limit 10000
+            setDebuff(testbed, 10n, 25n, 200n); // 10% base
 
-            // Configure 100% counter chance
-            testbed.sendTransactionAndGetResponse([{
-                sender: Context.CreatorAccount,
-                recipient: Context.ThisContract,
-                amount: Context.ActivationFee,
-                messageArr: [Context.Methods.SetDebuff, 100n, 25n, 50n],
-            }])
+            // 10 damage ≪ breach limit → ~10% fire rate, well below any scaled rate
+            const fired = countCounters({testbed, signa: 100n, rounds: 50});
 
-            // Attack below breach limit - should use 100% base chance
-            attack({testbed, signa: 100n}) // 10 damage, well below 100 breach limit
-            let stacks1 = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
-            expect(stacks1).toBe(1n); // Should get 1 stack with 100% chance
-
-            timeLapse({testbed, blocks: 20n})
-
-            // Attack above breach limit - should still use 100% (or capped at 90%)
-            attack({testbed, signa: 10_000n}) // 1000 damage, way above 100 breach limit
-            let stacks2 = testbed.getContractMapValue(Context.Maps.AttackerDebuff, Context.SenderAccount1);
-            // Should be 1 (previous stack consumed, new stack added)
-            expect(stacks2).toBe(1n);
+            expect(fired).toBeLessThan(25); // 50% — safely above 10% noise, below scaling
         })
     })
 
     describe("Multiple Attackers", () => {
         test("should handle attacks from different accounts", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: DefaultRequiredInitializers })
-                .runScenario();
+            const testbed = deployConstruct();
 
             const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -839,23 +678,20 @@ describe('Attack Mechanics', () => {
         })
 
         test("should track cooldowns independently per attacker", async () => {
-            const testbed = new SimulatorTestbed(BootstrapScenario)
-                .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                    ...DefaultRequiredInitializers,
-                    coolDownInBlocks: 15n,
-                } })
-                .runScenario();
+            const testbed = deployConstruct({ coolDownInBlocks: 15n });
 
             // Attacker 1 attacks
             attack({testbed, signa: 100n, sender: Context.SenderAccount1})
             const hpAfterFirst = getCurrentHitpoints(testbed)!;
             const sender1LastHit = testbed.getContractMapValue(Context.Maps.AttackersLastAttack, Context.SenderAccount1)
-            expect(sender1LastHit).toBe(6n);
+            // recorded independently (absolute height depends on deploy, so assert relatively)
+            expect(sender1LastHit).toBeGreaterThan(0n);
 
-            // Attacker 2 can attack immediately (different account)
+            // Attacker 2 can attack immediately (different account) — not blocked by
+            // attacker 1's cooldown, and its own last-hit is tracked separately.
             attack({testbed, signa: 100n, sender: Context.SenderAccount2})
             const sender2LastHit = testbed.getContractMapValue(Context.Maps.AttackersLastAttack, Context.SenderAccount2)
-            expect(sender2LastHit).toBe(8n);
+            expect(sender2LastHit).toBe(sender1LastHit + 2n);
 
             expect(getCurrentHitpoints(testbed)).toBeLessThan(hpAfterFirst);
         })

@@ -7,9 +7,14 @@
 #pragma version 2.3.0
 
 // Method codes
-#define M_SET_CONSTRUCT_HASH   1
-#define M_SET_CHARACTER_HASH   2
-#define M_SET_LEVEL_THRESHOLD  3
+#define M_SET_CONSTRUCT_HASH       1
+#define M_SET_CHARACTER_HASH       2
+// (3 retired: per-level XP thresholds are obsolete — leveling is a hardcoded
+//  triangular curve in the Character, not registry config.)
+#define M_SET_XP_TOKEN             4
+#define M_SET_CONSTRUCTOR_ACCOUNT  5
+#define M_SET_CHAR_REGISTRY        6
+#define M_SET_NEXT_CHARACTER_HASH  7
 #define M_REGISTER_ITEM       10
 #define M_UNREGISTER_ITEM     11
 #define M_SET_ITEM_EFFECT     12
@@ -24,9 +29,20 @@
 #define REGISTRY_BASE  0x7FFFFFFFFFF00000
 
 // Global Settings keys (k1)
-#define G_CONSTRUCT_HASH  (REGISTRY_BASE + 1)
-#define G_CHARACTER_HASH  (REGISTRY_BASE + 2)
-#define G_LEVEL_THRESHOLD (REGISTRY_BASE + 10)
+#define G_CONSTRUCT_HASH      (REGISTRY_BASE + 1)
+#define G_CHARACTER_HASH      (REGISTRY_BASE + 2)
+// Deployment identities sourced by the Character at init() (registry-as-config):
+// the XP token it levels on, the trusted construct-issuer account, and the
+// character-account registry it registers with. See
+// docs/superpowers/specs/2026-07-12-registry-as-config-design.md.
+#define G_XP_TOKEN            (REGISTRY_BASE + 3)
+#define G_CONSTRUCTOR_ACCOUNT (REGISTRY_BASE + 4)
+#define G_CHAR_REGISTRY       (REGISTRY_BASE + 5)
+// Codehash of the next Character version. Non-zero opens a migration window:
+// each Character's one-shot MIGRATE (liquidate all tokens + SIGNA to its owner,
+// then retire) is enabled only while this is set.
+#define G_NEXT_CHARACTER_HASH (REGISTRY_BASE + 6)
+// (REGISTRY_BASE + 10 retired — was G_LEVEL_THRESHOLD; see the retired setter.)
 // Error log: k1 = G_ERROR_LOG, k2 = txId, value = error code
 #define G_ERROR_LOG       (REGISTRY_BASE + 99)
 
@@ -85,8 +101,17 @@ void main() {
             case M_SET_CHARACTER_HASH:
                 setMapValue(G_CHARACTER_HASH, ZERO, currentTx.message[1]);
             break;
-            case M_SET_LEVEL_THRESHOLD:
-                setMapValue(G_LEVEL_THRESHOLD, currentTx.message[1], currentTx.message[2]);
+            case M_SET_XP_TOKEN:
+                setMapValue(G_XP_TOKEN, ZERO, currentTx.message[1]);
+            break;
+            case M_SET_CONSTRUCTOR_ACCOUNT:
+                setMapValue(G_CONSTRUCTOR_ACCOUNT, ZERO, currentTx.message[1]);
+            break;
+            case M_SET_CHAR_REGISTRY:
+                setMapValue(G_CHAR_REGISTRY, ZERO, currentTx.message[1]);
+            break;
+            case M_SET_NEXT_CHARACTER_HASH:
+                setMapValue(G_NEXT_CHARACTER_HASH, ZERO, currentTx.message[1]);
             break;
             case M_REGISTER_EFFECT:
                 registerEffect();

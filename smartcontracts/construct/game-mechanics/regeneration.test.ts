@@ -1,16 +1,10 @@
 import {describe, expect, test} from "vitest";
-import {SimulatorTestbed} from "signum-smartc-testbed";
-import {attack, BootstrapScenario, DefaultRequiredInitializers, getCurrentHitpoints, timeLapse} from "../lib";
+import {attack, deployConstruct, getCurrentHitpoints, timeLapse} from "../lib";
 import {Context} from "../context";
 
 describe("Regeneration Mechanics", () => {
     test("should regenerate HP over time", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                maxHp: 1000n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ maxHp: 1000n });
 
         // Configure regeneration: 10 HP every 5 blocks
         testbed.sendTransactionAndGetResponse([{
@@ -40,12 +34,7 @@ describe("Regeneration Mechanics", () => {
     })
 
     test("should cap regeneration at maxHp", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                maxHp: 1000n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ maxHp: 1000n });
 
         // Configure regeneration: 1000 HP every 5 blocks (huge amount)
         testbed.sendTransactionAndGetResponse([{
@@ -77,12 +66,7 @@ describe("Regeneration Mechanics", () => {
     })
 
     test("should not regenerate when already at full HP", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                maxHp: 1000n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ maxHp: 1000n });
 
         // Configure regeneration
         testbed.sendTransactionAndGetResponse([{
@@ -111,12 +95,7 @@ describe("Regeneration Mechanics", () => {
     })
 
     test("should calculate proportional regeneration", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                maxHp: 10000n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ maxHp: 10000n });
 
         // Configure regeneration: 100 HP every 10 blocks
         testbed.sendTransactionAndGetResponse([{
@@ -149,13 +128,7 @@ describe("Regeneration Mechanics", () => {
     })
 
     test("should not regenerate when defeated", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                maxHp: 100n,
-                breachLimit: 100n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ maxHp: 100n, breachLimit: 100n });
 
         // Configure regeneration
         testbed.sendTransactionAndGetResponse([{

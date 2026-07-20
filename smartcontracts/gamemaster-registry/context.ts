@@ -13,22 +13,29 @@ export const Context = {
     RegistryBase: REGISTRY_BASE,
 
     Methods: {
-        SetConstructHash:  1n,
-        SetCharacterHash:  2n,
-        SetLevelThreshold: 3n,
-        RegisterItem:     10n,
-        UnregisterItem:   11n,
-        SetItemEffect:    12n,
-        RegisterEffect:   20n,
-        UnregisterEffect: 21n,
+        SetConstructHash:      1n,
+        SetCharacterHash:      2n,
+        // 3 retired (SetLevelThreshold — leveling is triangular, not registry config)
+        SetXpToken:            4n,
+        SetConstructorAccount: 5n,
+        SetCharRegistry:       6n,
+        SetNextCharacterHash:  7n,
+        RegisterItem:         10n,
+        UnregisterItem:       11n,
+        SetItemEffect:        12n,
+        RegisterEffect:       20n,
+        UnregisterEffect:     21n,
     },
 
     // Global Settings (k1, k2 = sub-id)
     Globals: {
-        ConstructHash:  REGISTRY_BASE + 1n,   // (REGISTRY_BASE+1,  0)
-        CharacterHash:  REGISTRY_BASE + 2n,   // (REGISTRY_BASE+2,  0)
-        LevelThreshold: REGISTRY_BASE + 10n,  // (REGISTRY_BASE+10, level)
-        ErrorLog:       REGISTRY_BASE + 99n,  // (REGISTRY_BASE+99, txId) = errorCode
+        ConstructHash:      REGISTRY_BASE + 1n,   // (REGISTRY_BASE+1,  0)
+        CharacterHash:      REGISTRY_BASE + 2n,   // (REGISTRY_BASE+2,  0)
+        XpToken:            REGISTRY_BASE + 3n,   // (REGISTRY_BASE+3,  0)
+        ConstructorAccount: REGISTRY_BASE + 4n,   // (REGISTRY_BASE+4,  0)
+        CharRegistry:       REGISTRY_BASE + 5n,   // (REGISTRY_BASE+5,  0)
+        NextCharacterHash:  REGISTRY_BASE + 6n,   // (REGISTRY_BASE+6,  0) — enables MIGRATE when non-zero
+        ErrorLog:           REGISTRY_BASE + 99n,  // (REGISTRY_BASE+99, txId) = errorCode
     },
 
     Errors: {

@@ -1,16 +1,10 @@
 import {describe, expect, test} from "vitest";
-import {SimulatorTestbed} from "signum-smartc-testbed";
-import {attack, BootstrapScenario, DefaultRequiredInitializers, getCurrentHitpoints, timeLapse} from "../lib";
+import {attack, deployConstruct, getCurrentHitpoints, timeLapse} from "../lib";
 import {Context} from "../context";
 
 describe("Cooldown Mechanics", () => {
     test("should prevent attack during cooldown", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                coolDownInBlocks: 15n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ coolDownInBlocks: 15n });
 
         const initialHp = getCurrentHitpoints(testbed)!;
 
@@ -29,12 +23,7 @@ describe("Cooldown Mechanics", () => {
     })
 
     test("should refund 90% of SIGNA during cooldown", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                coolDownInBlocks: 15n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ coolDownInBlocks: 15n });
 
         // First attack
         attack({testbed, signa: 100n})
@@ -51,12 +40,7 @@ describe("Cooldown Mechanics", () => {
     })
 
     test("should allow attack after cooldown expires", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                coolDownInBlocks: 10n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({ coolDownInBlocks: 10n });
 
         // First attack at block 1
         attack({testbed, signa: 100n})

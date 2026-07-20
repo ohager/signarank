@@ -60,6 +60,7 @@ export const Context = {
         UseItemNoEffect: 16n,
         EquipMultiUnit: 17n,
         TransferXp: 18n,
+        MigrateDisabled: 19n,
         CharacterDead: 66n,
     },
 
@@ -70,6 +71,7 @@ export const Context = {
         TransferItem: 4n,
         UseItem: 5n,
         Seppuku: 66n,
+        Migrate: 77n,
         Refund: 99n,
     },
 
@@ -77,7 +79,11 @@ export const Context = {
     GamemasterMethods: {
         SetConstructHash: 1n,
         SetCharacterHash: 2n,
-        SetLevelThreshold: 3n,
+        // 3 retired (SetLevelThreshold — leveling is triangular, not registry config)
+        SetXpToken: 4n,
+        SetConstructorAccount: 5n,
+        SetCharRegistry: 6n,
+        SetNextCharacterHash: 7n,
         RegisterItem: 10n,
         UnregisterItem: 11n,
         SetItemEffect: 12n,
@@ -120,6 +126,9 @@ export const Context = {
 
     ConstructMethods: {
         DeductHitpoints: 13n,
+        // COMBAT(rawDamage, effectId, duration): deduct HP + apply a timed status
+        // effect (effectId 0 = pure damage, == DeductHitpoints). Construct-only.
+        Combat: 14n,
     },
 
     // Contract memory variables — read via getContractMemoryValue(name)
@@ -136,11 +145,18 @@ export const Context = {
         Level: 'level',
         NextLevelXp: 'nextLevelXp',
         ErrorCount: 'errorCount',
+        Migrated: 'migrated',
     },
 
     // KKV map keys — attribute values live at (MAP_KEY1_ATTRIBUTES, attrIndex)
     Maps: {
         Attributes: 1n,
+        // Public progression sheet (cross-contract readable) — republished every
+        // activation. key2: 1 = level, 2 = skill points.
+        Progression: 3n,
+        // Public combat profile (cross-contract readable) — republished every
+        // activation for the construct to read. key2: see CombatKeys.
+        Combat: 4n,
         // key2 = EffectTarget — see character.contract.smart.c's applyEffect()
         EquipBonusAbs: 10n,
         EquipBonusRel: 11n,
@@ -150,6 +166,22 @@ export const Context = {
         ErrorCode: 20n,
         ErrorTxid: 21n,
         ErrorMeta: 22n,
+    },
+
+    // key2 sub-ids under Maps.Progression — mirror MAP_KEY2_PROGRESSION_* .
+    ProgressionKeys: {
+        Level: 1n,
+        SkillPoints: 2n,
+    },
+
+    // key2 sub-ids under Maps.Combat — mirror MAP_KEY2_COMBAT_* . Effective =
+    // base attribute + equipment aggregate. Read by the construct for damage.
+    CombatKeys: {
+        Strength: 1n,   // effective strength (base + equip)
+        Luck: 2n,       // effective luck (base + equip)
+        AttackAbs: 3n,  // flat attack bonus from equipment (EQUIP_BONUS_ABS[Attack])
+        AttackRel: 4n,  // % attack bonus from equipment (EQUIP_BONUS_REL[Attack])
+        AttackEffect: 5n, // primary attack effect id (element) for construct affinity
     },
 
     // 1-indexed — matches MAP_KEY2_ATTRIBUTES_* in the contract (NOT 0-indexed)

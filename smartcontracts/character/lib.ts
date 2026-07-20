@@ -1,114 +1,150 @@
-import type { SimulatorTestbed, TransactionObj } from 'signum-smartc-testbed';
+import type { SimulatorTestbed } from 'signum-smartc-testbed';
 import { SimulatorTestbed as Testbed } from 'signum-smartc-testbed';
 import { join } from 'path';
 import { Context } from './context';
 
 const CONSTRUCT_STANDIN_PATH = join(__dirname, '..', 'character-account-registry', 'character-account-registry.contract.smart.c');
 
-// The contract has no #ifdef TESTBED block requiring any parameter, so a
-// plain funding tx is enough to trigger the (once-only) init() and deploy.
-export const BootstrapScenario: TransactionObj[] = [
-    {
-        blockheight: 1,
-        amount: 200_0000_0000n,
-        sender: Context.OwnerAccount,
-        recipient: Context.CharacterAddress,
-    },
-];
+// ---- REGISTRY-AS-CONFIG DEPLOY BUILDER ----
+// The Character sources its identities (xp token, constructor account, char
+// registry) from the gamemaster registry at init() — so EVERY deploy must
+// stand up a *seeded* gamemaster registry BEFORE the Character is activated,
+// mirroring the mandatory on-chain deploy ordering. These low-level pieces
+// compose into the public deploy* helpers below.
 
-export function deployCharacter(opts: { creator?: bigint; address?: bigint; xpTokenId?: bigint } = {}) {
-    const testbed = new Testbed(
-        BootstrapScenario.map(tx => ({ ...tx, recipient: opts.address ?? Context.CharacterAddress })),
-    ).loadContract(Context.ContractPath, {
-        creator: opts.creator ?? Context.OwnerAccount,
-        contractId: opts.address ?? Context.CharacterAddress,
-        // Passing ANY initializer activates the whole #ifdef TESTBED block in
-        // the contract, so every TESTBED_-referenced var must be supplied —
-        // constructorAccount is otherwise unused but must still be provided.
-        initializers: {
-            constructorAccount: 0n,
-            xpTokenId: opts.xpTokenId ?? Context.XpTokenId,
-        },
-    });
-    testbed.runScenario();
-    return testbed;
-}
-
-// Codehash is a pure function of source (not runtime state), so it can be
-// learned from a throwaway, never-run load.
-function characterCodeHash(xpTokenId: bigint): bigint {
-    return new Testbed().loadContract(Context.ContractPath, {
-        initializers: { constructorAccount: 0n, xpTokenId },
-    }).getContract().codeHashId;
-}
-
-// Deploys a real character-account-registry at the hardcoded CHAR_REGISTRY
-// address and configures its trusted character hash — required BEFORE any
-// character is deployed, since init()'s registration message is one-shot and
-// silently lost forever if the trust hash isn't already configured when it
-// fires. Returns the bare testbed; use deployCharacterOnRegistry to add
-// characters to it.
-export function deployCharRegistry(opts: { xpTokenId?: bigint } = {}) {
-    const xpTokenId = opts.xpTokenId ?? Context.XpTokenId;
-    const codeHashId = characterCodeHash(xpTokenId);
-
-    const testbed = new Testbed().loadContract(Context.CharRegistryPath, { contractId: Context.CharRegistryAddress });
-    testbed.runScenario();
-
-    testbed.sendTransactionAndGetResponse([{
-        sender: Context.OwnerAccount, // registry's creator defaults to 555n
-        recipient: Context.CharRegistryAddress,
-        amount: 1_0000_0000n,
-        messageArr: [1n, codeHashId, 0n, 0n], // M_SET_CHARACTER_HASH
-    }], Context.CharRegistryAddress);
-
-    return testbed;
-}
-
-// Deploys+funds a character on a testbed whose registry trust hash is already
-// configured (see deployCharRegistry) — init()'s registration message will
-// carry its own activation fee to the registry and be picked up for real.
-export function deployCharacterOnRegistry(testbed: SimulatorTestbed, opts: {
+export type DeployOpts = {
     creator?: bigint;
     address?: bigint;
     xpTokenId?: bigint;
+    // Trusted construct issuer, cached by the Character at init(). Defaults to
+    // unset (0), which also doubles as the drop destination on death.
+    constructorAccount?: bigint;
+};
+
+// Bootstrap-funds + deploys the gamemaster registry at the hardcoded
+// GAMEMASTER_REGISTRY address so it can receive the seed txs below.
+function newGamemasterTestbed(): SimulatorTestbed {
+    const testbed = new Testbed([{
+        blockheight: 1,
+        amount: 100_0000_0000n,
+        sender: Context.OwnerAccount,
+        recipient: Context.GamemasterRegistryAddress,
+    }]).loadContract(Context.GamemasterRegistryPath, { contractId: Context.GamemasterRegistryAddress });
+    testbed.runScenario();
+    return testbed;
+}
+
+export function setXpTokenOnGamemasterRegistry(testbed: SimulatorTestbed, xpTokenId: bigint) {
+    return testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount, // gamemaster == the registry's creator (555n)
+        recipient: Context.GamemasterRegistryAddress,
+        amount: 1_0000_0000n,
+        messageArr: [Context.GamemasterMethods.SetXpToken, xpTokenId, 0n, 0n],
+    }], Context.GamemasterRegistryAddress);
+}
+
+export function setConstructorAccountOnGamemasterRegistry(testbed: SimulatorTestbed, account: bigint) {
+    return testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount,
+        recipient: Context.GamemasterRegistryAddress,
+        amount: 1_0000_0000n,
+        messageArr: [Context.GamemasterMethods.SetConstructorAccount, account, 0n, 0n],
+    }], Context.GamemasterRegistryAddress);
+}
+
+export function setCharRegistryOnGamemasterRegistry(testbed: SimulatorTestbed, charRegistry: bigint) {
+    return testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount,
+        recipient: Context.GamemasterRegistryAddress,
+        amount: 1_0000_0000n,
+        messageArr: [Context.GamemasterMethods.SetCharRegistry, charRegistry, 0n, 0n],
+    }], Context.GamemasterRegistryAddress);
+}
+
+// Seeds the three identities the Character reads at init(). charRegistry
+// defaults to CharRegistryAddress (getActivationOf on an undeployed address is
+// 0, so the registration send is a harmless no-op when no char registry is up).
+// constructorAccount is only seeded when non-zero — an unset key reads 0.
+function seedGamemasterConfig(testbed: SimulatorTestbed, opts: {
+    xpTokenId?: bigint;
+    constructorAccount?: bigint;
+    charRegistry?: bigint;
 } = {}) {
+    setXpTokenOnGamemasterRegistry(testbed, opts.xpTokenId ?? Context.XpTokenId);
+    if ((opts.constructorAccount ?? 0n) !== 0n) {
+        setConstructorAccountOnGamemasterRegistry(testbed, opts.constructorAccount!);
+    }
+    setCharRegistryOnGamemasterRegistry(testbed, opts.charRegistry ?? Context.CharRegistryAddress);
+}
+
+// Loads + funds the Character into an existing testbed whose gamemaster registry
+// is ALREADY seeded, triggering its (once-only) init(). Optionally nudges the
+// char-account registry afterwards so it consumes the queued registration
+// message (the simulator only re-activates a contract on a block where it gets
+// a qualifying tx).
+function activateCharacter(testbed: SimulatorTestbed, opts: DeployOpts = {}, nudgeCharRegistry = false) {
     const characterAddress = opts.address ?? Context.CharacterAddress;
     testbed.loadContract(Context.ContractPath, {
         creator: opts.creator ?? Context.OwnerAccount,
         contractId: characterAddress,
-        initializers: {
-            constructorAccount: 0n,
-            xpTokenId: opts.xpTokenId ?? Context.XpTokenId,
-        },
     });
-    // sendTransactionAndGetResponse auto-resolves blockheight, unlike a raw
-    // runScenario() call, which is required here since the chain is already
-    // several blocks in by the time a second/third character is deployed.
     testbed.sendTransactionAndGetResponse([{
         sender: Context.OwnerAccount,
         recipient: characterAddress,
         amount: 200_0000_0000n,
     }], characterAddress);
-
-    // The simulator only re-activates a contract on a block where it either
-    // just received a qualifying tx or was already scheduled to wake — the
-    // registry's own consumption of the queued registration message (sent by
-    // the character's init(), one block prior) needs one more nudge here.
-    testbed.sendTransactionAndGetResponse([{
-        sender: Context.OwnerAccount,
-        recipient: Context.CharRegistryAddress,
-        amount: 1_0000_0000n,
-    }], Context.CharRegistryAddress);
+    if (nudgeCharRegistry) {
+        testbed.sendTransactionAndGetResponse([{
+            sender: Context.OwnerAccount,
+            recipient: Context.CharRegistryAddress,
+            amount: 1_0000_0000n,
+        }], Context.CharRegistryAddress);
+    }
     return testbed;
 }
 
+// Codehash is a pure function of source. With identities now registry-sourced
+// (no initializers), the codehash is STABLE — the exact value the dApp verifies.
+function characterCodeHash(): bigint {
+    return new Testbed().loadContract(Context.ContractPath).getContract().codeHashId;
+}
+
+export function deployCharacter(opts: DeployOpts = {}) {
+    const testbed = newGamemasterTestbed();
+    seedGamemasterConfig(testbed, { xpTokenId: opts.xpTokenId, constructorAccount: opts.constructorAccount });
+    return activateCharacter(testbed, opts);
+}
+
+// Deploys a seeded gamemaster registry AND a real character-account-registry at
+// the hardcoded addresses, configuring the char registry's trusted character
+// hash — required BEFORE any character is deployed, since init()'s registration
+// message is one-shot and silently lost forever if the trust hash isn't already
+// configured when it fires. Returns the bare testbed; use deployCharacterOnRegistry
+// to add characters to it.
+export function deployCharRegistry(opts: { xpTokenId?: bigint } = {}) {
+    const testbed = newGamemasterTestbed();
+    seedGamemasterConfig(testbed, { xpTokenId: opts.xpTokenId, charRegistry: Context.CharRegistryAddress });
+
+    testbed.loadContract(Context.CharRegistryPath, { contractId: Context.CharRegistryAddress });
+    testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount, // registry's creator defaults to 555n
+        recipient: Context.CharRegistryAddress,
+        amount: 1_0000_0000n,
+        messageArr: [1n, characterCodeHash(), 0n, 0n], // M_SET_CHARACTER_HASH
+    }], Context.CharRegistryAddress);
+
+    return testbed;
+}
+
+// Deploys+funds a character on a testbed whose gamemaster + char registries are
+// already configured (see deployCharRegistry) — init() reads its identities and
+// its registration message is picked up for real.
+export function deployCharacterOnRegistry(testbed: SimulatorTestbed, opts: DeployOpts = {}) {
+    return activateCharacter(testbed, opts, true);
+}
+
 // Convenience wrapper for the common single-character case.
-export function deployCharacterWithCharRegistry(opts: {
-    creator?: bigint;
-    address?: bigint;
-    xpTokenId?: bigint;
-} = {}) {
+export function deployCharacterWithCharRegistry(opts: DeployOpts = {}) {
     const testbed = deployCharRegistry({ xpTokenId: opts.xpTokenId });
     deployCharacterOnRegistry(testbed, opts);
     return testbed;
@@ -119,18 +155,11 @@ export function deployCharacterWithCharRegistry(opts: {
 // needed for scenarios that require a real death (via a trusted construct's
 // DEDUCT_HITPOINTS) AND registry-observable effects (e.g. seppuku, which now
 // requires isDead == TRUE) in the same test.
-export function deployCharacterWithRegistries(opts: {
-    creator?: bigint;
-    address?: bigint;
-    constructStandInAddress?: bigint;
-    xpTokenId?: bigint;
-} = {}) {
+export function deployCharacterWithRegistries(opts: DeployOpts & { constructStandInAddress?: bigint } = {}) {
     const constructAddress = opts.constructStandInAddress ?? 888n;
 
     const testbed = deployCharRegistry({ xpTokenId: opts.xpTokenId });
-    testbed
-        .loadContract(Context.GamemasterRegistryPath, { contractId: Context.GamemasterRegistryAddress })
-        .loadContract(CONSTRUCT_STANDIN_PATH, { contractId: constructAddress });
+    testbed.loadContract(CONSTRUCT_STANDIN_PATH, { contractId: constructAddress });
     const constructStandIn = testbed.getContract(constructAddress);
 
     deployCharacterOnRegistry(testbed, opts);
@@ -139,44 +168,21 @@ export function deployCharacterWithRegistries(opts: {
     return { testbed, constructStandIn, constructAddress };
 }
 
-// Deploys the character plus a real gamemaster-registry at the hardcoded
+// Deploys the character plus a seeded gamemaster-registry at the hardcoded
 // GAMEMASTER_REGISTRY address, and a distinct "construct" stand-in contract
 // (any different bytecode works — only its codehash matters) so tests can
 // exercise the real codehash-comparison path in senderIsConstruct().
-export function deployCharacterWithGamemasterRegistry(opts: {
-    creator?: bigint;
-    address?: bigint;
-    constructStandInAddress?: bigint;
-    xpTokenId?: bigint;
-    // Where a dead character's randomly-dropped item is returned. Defaults to 0
-    // (burn); set to an observable account to assert the drop lands there.
-    constructorAccount?: bigint;
-} = {}) {
-    const characterAddress = opts.address ?? Context.CharacterAddress;
+export function deployCharacterWithGamemasterRegistry(opts: DeployOpts & { constructStandInAddress?: bigint } = {}) {
     const constructAddress = opts.constructStandInAddress ?? 888n;
 
-    const testbed = new Testbed(
-        BootstrapScenario.map(tx => ({ ...tx, recipient: characterAddress })),
-    )
-        .loadContract(Context.GamemasterRegistryPath, { contractId: Context.GamemasterRegistryAddress })
-        // character-account-registry.contract.smart.c is used purely as a distinct,
-        // zero-initializer bytecode to stand in for "the construct" — only its
-        // codehash matters here, not its actual behavior.
-        .loadContract(CONSTRUCT_STANDIN_PATH, { contractId: constructAddress })
-        .loadContract(Context.ContractPath, {
-            creator: opts.creator ?? Context.OwnerAccount,
-            contractId: characterAddress,
-            // Passing ANY initializer activates the whole #ifdef TESTBED block in
-        // the contract, so every TESTBED_-referenced var must be supplied —
-        // constructorAccount defaults to 0 (burn) unless the test observes drops.
-        initializers: {
-            constructorAccount: opts.constructorAccount ?? 0n,
-            xpTokenId: opts.xpTokenId ?? Context.XpTokenId,
-        },
-        });
-
+    const testbed = newGamemasterTestbed();
+    seedGamemasterConfig(testbed, { xpTokenId: opts.xpTokenId, constructorAccount: opts.constructorAccount });
+    // character-account-registry.contract.smart.c is used purely as a distinct
+    // bytecode to stand in for "the construct" — only its codehash matters here.
+    testbed.loadContract(CONSTRUCT_STANDIN_PATH, { contractId: constructAddress });
     const constructStandIn = testbed.getContract(constructAddress);
-    testbed.runScenario();
+
+    activateCharacter(testbed, opts);
     return { testbed, constructStandIn, constructAddress };
 }
 
@@ -184,13 +190,7 @@ export function deployCharacterWithGamemasterRegistry(opts: {
 // stand-in, AND registers the stand-in's codehash as the trusted construct
 // hash via the real M_SET_CONSTRUCT_HASH flow — the fully "correctly
 // configured" scenario senderIsConstruct() is meant to authorize.
-export function deployCharacterWithTrustedConstruct(opts: {
-    creator?: bigint;
-    address?: bigint;
-    constructStandInAddress?: bigint;
-    xpTokenId?: bigint;
-    constructorAccount?: bigint;
-} = {}) {
+export function deployCharacterWithTrustedConstruct(opts: DeployOpts & { constructStandInAddress?: bigint } = {}) {
     const result = deployCharacterWithGamemasterRegistry(opts);
     setConstructHashOnGamemasterRegistry(result.testbed, result.constructStandIn!.codeHashId);
     return result;
@@ -251,8 +251,39 @@ export function getCharState(testbed: SimulatorTestbed, varName: string, address
     return testbed.getContractMemoryValue(varName, address) ?? 0n;
 }
 
+// Reads the publicly-published progression sheet (level / skill points) from the
+// character's map — what the dApp and a future v2 (pull-migration) would read.
+export function getPublicLevel(testbed: SimulatorTestbed, address = Context.CharacterAddress): bigint {
+    return testbed.getContractMapValue(Context.Maps.Progression, Context.ProgressionKeys.Level, address) ?? 0n;
+}
+
+export function getPublicSkillPoints(testbed: SimulatorTestbed, address = Context.CharacterAddress): bigint {
+    return testbed.getContractMapValue(Context.Maps.Progression, Context.ProgressionKeys.SkillPoints, address) ?? 0n;
+}
+
 export function getAttr(testbed: SimulatorTestbed, attrKey2: bigint): bigint {
     return testbed.getContractMapValue(Context.Maps.Attributes, attrKey2);
+}
+
+// Advances the chain by `n` blocks (e.g. to let a timed status effect expire).
+export function forgeBlocks(testbed: SimulatorTestbed, n: number) {
+    for (let i = 0; i < n; i++) testbed.blockchain.forgeBlock();
+}
+
+// A benign owner activation that just re-runs main() — republishing the public
+// sheet/profile so lazily-expired status effects drop out of the read.
+export function pokeCharacter(testbed: SimulatorTestbed, address = Context.CharacterAddress) {
+    return testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount,
+        recipient: address,
+        amount: Context.ActivationFee,
+        messageArr: [0n, 0n, 0n, 0n],
+    }], address);
+}
+
+// Public combat profile (Maps.Combat) — the effective stats the construct reads.
+export function getPublicCombat(testbed: SimulatorTestbed, combatKey2: bigint, address = Context.CharacterAddress): bigint {
+    return testbed.getContractMapValue(Context.Maps.Combat, combatKey2, address) ?? 0n;
 }
 
 export function getAllAttrs(testbed: SimulatorTestbed) {
@@ -334,6 +365,28 @@ export function sendDeductHitpoints(testbed: SimulatorTestbed, opts: { sender: b
         amount: Context.ActivationFee,
         messageArr: [Context.ConstructMethods.DeductHitpoints, opts.hitpoints, 0n, 0n],
     }], characterAddress);
+}
+
+// COMBAT(rawDamage, effectId, duration): deduct HP and apply a timed status.
+export function sendCombat(testbed: SimulatorTestbed, opts: { sender: bigint; rawDamage: bigint; effectId?: bigint; duration?: bigint; characterAddress?: bigint }) {
+    const characterAddress = opts.characterAddress ?? Context.CharacterAddress;
+    return testbed.sendTransactionAndGetResponse([{
+        sender: opts.sender,
+        recipient: characterAddress,
+        amount: Context.ActivationFee,
+        messageArr: [Context.ConstructMethods.Combat, opts.rawDamage, opts.effectId ?? 0n, opts.duration ?? 0n],
+    }], characterAddress);
+}
+
+// Retries a pure-damage COMBAT past dodges and returns the landing hit's HP delta.
+export function landOneCombat(testbed: SimulatorTestbed, constructAddress: bigint, rawDamage: bigint, characterAddress = Context.CharacterAddress): bigint {
+    for (let i = 0; i < 64; i++) {
+        const before = getCharState(testbed, Context.Vars.CurrentHitpoints, characterAddress);
+        sendCombat(testbed, { sender: constructAddress, rawDamage, characterAddress });
+        const after = getCharState(testbed, Context.Vars.CurrentHitpoints, characterAddress);
+        if (after < before) return before - after;
+    }
+    throw new Error('landOneCombat: no hit landed after 64 tries');
 }
 
 // Funds the character with a token WITHOUT triggering anything — mirrors how
@@ -541,6 +594,45 @@ export function sendSeppuku(testbed: SimulatorTestbed, opts: {
 // Context.CharRegistryAddress (see deployCharacterWithCharRegistry).
 export function getCharRegistryValue(testbed: SimulatorTestbed, k1: bigint, k2: bigint): bigint {
     return testbed.getContractMapValue(k1, k2, Context.CharRegistryAddress);
+}
+
+// Opens a migration window by setting the gamemaster registry's
+// G_NEXT_CHARACTER_HASH — non-zero enables the Character's MIGRATE. The exact
+// value is irrelevant to migrate() (it liquidates to the owner and does not
+// validate a target), so any non-zero hash enables it.
+export function setNextCharacterHashOnGamemasterRegistry(testbed: SimulatorTestbed, hash: bigint) {
+    return testbed.sendTransactionAndGetResponse([{
+        sender: Context.OwnerAccount,
+        recipient: Context.GamemasterRegistryAddress,
+        amount: 1_0000_0000n,
+        messageArr: [Context.GamemasterMethods.SetNextCharacterHash, hash, 0n, 0n],
+    }], Context.GamemasterRegistryAddress);
+}
+
+export function sendMigrate(testbed: SimulatorTestbed, opts: {
+    sender?: bigint;
+    characterAddress?: bigint;
+} = {}) {
+    const characterAddress = opts.characterAddress ?? Context.CharacterAddress;
+    const response = testbed.sendTransactionAndGetResponse([{
+        sender: opts.sender ?? Context.OwnerAccount,
+        recipient: characterAddress,
+        amount: Context.ActivationFee,
+        messageArr: [Context.Methods.Migrate, 0n, 0n, 0n],
+    }], characterAddress);
+
+    // Nudge the char-account registry to consume the queued unregister message.
+    // Only meaningful when a char registry is actually deployed in this scenario
+    // — otherwise the target address isn't a contract and the send throws.
+    try {
+        testbed.sendTransactionAndGetResponse([{
+            sender: opts.sender ?? Context.OwnerAccount,
+            recipient: Context.CharRegistryAddress,
+            amount: 1_0000_0000n,
+        }], Context.CharRegistryAddress);
+    } catch { /* no char registry in this scenario */ }
+
+    return response;
 }
 
 export function setConstructHashOnGamemasterRegistry(testbed: SimulatorTestbed, hash: bigint) {

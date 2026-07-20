@@ -62,9 +62,14 @@ describe('rolling error log — each owner-action failure records a code', () =>
 
     test('reroll with the balance below the cost → ERR_REROLL_INSUFFICIENT', () => {
         const testbed = deployCharacter();
-        // Drain below REROLL_COSTS with two zero-attached rerolls.
+        // Deploy funds 200 SIGNA and each reroll burns REROLL_COSTS (100). Two
+        // successful rerolls take the balance below the cost. The second reroll
+        // carries a cushion so the balance lands comfortably in a healthy range
+        // (~60 SIGNA) rather than near-zero — a near-zero balance can't fund the
+        // next activation to completion. The third reroll then sees < 100 and is
+        // correctly rejected with plenty of gas to log the error.
         sendReroll(testbed, { signa: 0n });
-        sendReroll(testbed, { signa: 0n });
+        sendReroll(testbed, { signa: 60_0000_0000n });
         expect(getErrorCount(testbed)).toBe(0n);
 
         sendReroll(testbed, { signa: 0n });

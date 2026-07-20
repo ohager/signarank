@@ -65,8 +65,20 @@ export function setCharacterHash(testbed: SimulatorTestbed, hash: bigint) {
     return asGamemaster(testbed, [Context.Methods.SetCharacterHash, hash, 0n, 0n]);
 }
 
-export function setLevelThreshold(testbed: SimulatorTestbed, level: bigint, xp: bigint) {
-    return asGamemaster(testbed, [Context.Methods.SetLevelThreshold, level, xp, 0n]);
+export function setXpToken(testbed: SimulatorTestbed, xpTokenId: bigint) {
+    return asGamemaster(testbed, [Context.Methods.SetXpToken, xpTokenId, 0n, 0n]);
+}
+
+export function setConstructorAccount(testbed: SimulatorTestbed, account: bigint) {
+    return asGamemaster(testbed, [Context.Methods.SetConstructorAccount, account, 0n, 0n]);
+}
+
+export function setCharRegistry(testbed: SimulatorTestbed, charRegistry: bigint) {
+    return asGamemaster(testbed, [Context.Methods.SetCharRegistry, charRegistry, 0n, 0n]);
+}
+
+export function setNextCharacterHash(testbed: SimulatorTestbed, hash: bigint) {
+    return asGamemaster(testbed, [Context.Methods.SetNextCharacterHash, hash, 0n, 0n]);
 }
 
 export function registerItem(testbed: SimulatorTestbed, def: ItemDefinition) {

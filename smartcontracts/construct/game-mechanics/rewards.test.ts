@@ -1,19 +1,15 @@
 import {describe, expect, test} from "vitest";
-import {SimulatorTestbed} from "signum-smartc-testbed";
-import {attack, BootstrapScenario, DefaultRequiredInitializers, getCurrentHitpoints, timeLapse} from "../lib";
+import {attack, deployConstruct, getCurrentHitpoints, timeLapse} from "../lib";
 import {Context} from "../context";
 
 describe("Defeat and Victory Rewards", () => {
     test("should handle defeat correctly", async () => {
-        const testbed = new SimulatorTestbed(BootstrapScenario)
-            .loadContract(Context.ContractPath, { contractId: Context.ThisContract, initializers: {
-                ...DefaultRequiredInitializers,
-                maxHp: 100n, // maximal 1000 SIGNA
-                breachLimit: 100n,
-                firstBloodBonus: 50_0000_0000n,
-                finalBlowBonus: 100_0000_0000n,
-            } })
-            .runScenario();
+        const testbed = deployConstruct({
+            maxHp: 100n, // maximal 1000 SIGNA
+            breachLimit: 100n,
+            firstBloodBonus: 50_0000_0000n,
+            finalBlowBonus: 100_0000_0000n,
+        });
 
         // Attack to defeat
         attack({testbed, signa: 550n, sender: Context.SenderAccount1})

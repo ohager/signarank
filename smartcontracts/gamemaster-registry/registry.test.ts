@@ -6,7 +6,10 @@ import {
     effectK1,
     setConstructHash,
     setCharacterHash,
-    setLevelThreshold,
+    setXpToken,
+    setConstructorAccount,
+    setCharRegistry,
+    setNextCharacterHash,
     registerEffect,
     unregisterEffect,
     registerItem,
@@ -37,12 +40,43 @@ describe('Global Settings', () => {
         expect(getValue(testbed, Context.Globals.CharacterHash, 0n)).toBe(HASH);
     });
 
-    test('stores level threshold at (10, level)', () => {
+    // Registry-as-config: identities (xp token, constructor account, char
+    // registry) are sourced from here so a Character's codehash pins only the
+    // registry address, leaving no per-Character config to tamper with.
+    test('stores xp token id at (3, 0)', () => {
         const testbed = makeTestbed();
-        setLevelThreshold(testbed, 2n, 1000n);
-        setLevelThreshold(testbed, 5n, 8000n);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 2n)).toBe(1000n);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 5n)).toBe(8000n);
+        setXpToken(testbed, 2001n);
+        expect(getValue(testbed, Context.Globals.XpToken, 0n)).toBe(2001n);
+    });
+
+    test('stores constructor account at (4, 0)', () => {
+        const testbed = makeTestbed();
+        setConstructorAccount(testbed, 7777n);
+        expect(getValue(testbed, Context.Globals.ConstructorAccount, 0n)).toBe(7777n);
+    });
+
+    test('stores char registry address at (5, 0)', () => {
+        const testbed = makeTestbed();
+        setCharRegistry(testbed, 122344543655n);
+        expect(getValue(testbed, Context.Globals.CharRegistry, 0n)).toBe(122344543655n);
+    });
+
+    // Enables the Character's one-shot MIGRATE when non-zero (v2 codehash).
+    test('stores next character hash at (6, 0)', () => {
+        const testbed = makeTestbed();
+        setNextCharacterHash(testbed, 0xDEAD_BEEFn);
+        expect(getValue(testbed, Context.Globals.NextCharacterHash, 0n)).toBe(0xDEAD_BEEFn);
+    });
+
+    test('ignores identity setters from a non-creator sender', () => {
+        const testbed = makeTestbed();
+        testbed.sendTransactionAndGetResponse([{
+            sender: 999999n,
+            recipient: Context.ThisContract,
+            amount: 1_0000_0000n,
+            messageArr: [Context.Methods.SetXpToken, 2001n, 0n, 0n],
+        }]);
+        expect(getValue(testbed, Context.Globals.XpToken, 0n)).toBe(0n);
     });
 });
 
@@ -305,15 +339,16 @@ describe('Validation', () => {
 describe('Namespace Separation (high-end packing)', () => {
     test('registerEffect rejects effectId below MinEffectId (would land in Globals range)', () => {
         const testbed = makeTestbed();
-        setLevelThreshold(testbed, 1n, 500n);
-        // RegistryBase + 10 is the physical k1 of LevelThreshold — sending it as effectId
-        // would write (RegistryBase+10, EK_*) which collides with LevelThreshold rows
-        // at k2 = 1..5. The gate must reject it.
+        // RegistryBase + 10 sits in the Globals range, below MinEffectId — writing
+        // an effect there would corrupt reserved global rows, so the gate rejects it
+        // (nothing written, error logged).
+        const GLOBALS_RANGE_ID = Context.RegistryBase + 10n;
         registerEffect(testbed, {
-            effectId: Context.Globals.LevelThreshold, target: 1n, mode: 1n,
+            effectId: GLOBALS_RANGE_ID, target: 1n, mode: 1n,
             bonusAbs: 99n, bonusRel: 0n, duration: 0n,
         });
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 1n)).toBe(500n);
+        expect(getValue(testbed, GLOBALS_RANGE_ID, Context.EffectKeys.Mode)).toBe(0n);
+        expect(getErrorCodes(testbed)).toContain(Context.Errors.EffectIdInvalid);
     });
 
     test('registerEffect rejects effectId above MaxEffectId', () => {
@@ -393,34 +428,29 @@ describe('Namespace Separation (high-end packing)', () => {
         expect(getValue(testbed, TOKEN, Context.ItemKeys.Type)).toBe(2n);
     });
 
-    test('setItemEffect rejects tokenId in registry range (would corrupt LevelThreshold)', () => {
+    test('setItemEffect rejects tokenId in registry range (would corrupt Globals)', () => {
         const testbed = makeTestbed();
-        setLevelThreshold(testbed, 5n, 8000n);
-        // Sending LevelThreshold's k1 as tokenId would write (RegistryBase+10, IK_EFFECT_BASE+0=10),
-        // which is LevelThreshold for level 10.
-        setItemEffect(testbed, Context.Globals.LevelThreshold, 0n, 1234n);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 5n)).toBe(8000n);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 10n)).toBe(0n);
+        // A tokenId inside the registry range would write (RegistryBase+10,
+        // IK_EFFECT_BASE + slot) over reserved global rows — the gate rejects it.
+        const RANGE_ID = Context.RegistryBase + 10n;
+        setItemEffect(testbed, RANGE_ID, 0n, 1234n);
+        expect(getValue(testbed, RANGE_ID, Context.ItemKeys.EffectBase)).toBe(0n);
+        expect(getErrorCodes(testbed)).toContain(Context.Errors.TokenIdInvalid);
     });
 
     test('unregisterItem rejects tokenId in registry range', () => {
         const testbed = makeTestbed();
-        setLevelThreshold(testbed, 1n, 100n);
-        setLevelThreshold(testbed, 2n, 300n);
-        setLevelThreshold(testbed, 3n, 700n);
-        unregisterItem(testbed, Context.Globals.LevelThreshold);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 1n)).toBe(100n);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 2n)).toBe(300n);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 3n)).toBe(700n);
+        const RANGE_ID = Context.RegistryBase + 10n;
+        unregisterItem(testbed, RANGE_ID);
+        expect(getErrorCodes(testbed)).toContain(Context.Errors.TokenIdInvalid);
     });
 
     test('unregisterEffect rejects effectId outside effect range', () => {
         const testbed = makeTestbed();
-        setLevelThreshold(testbed, 1n, 111n);
-        setLevelThreshold(testbed, 5n, 555n);
-        unregisterEffect(testbed, Context.Globals.LevelThreshold);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 1n)).toBe(111n);
-        expect(getValue(testbed, Context.Globals.LevelThreshold, 5n)).toBe(555n);
+        // Below MinEffectId — in the Globals range, which unregisterEffect must not touch.
+        const RANGE_ID = Context.RegistryBase + 10n;
+        unregisterEffect(testbed, RANGE_ID);
+        expect(getErrorCodes(testbed)).toContain(Context.Errors.EffectIdInvalid);
     });
 });
 

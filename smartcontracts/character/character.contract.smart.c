@@ -4,16 +4,19 @@
 #pragma optimizationLevel 3
 #pragma verboseAssembly false
 #pragma maxAuxVars 3
+// Hoist the most-used numeric literals into reusable const slots instead of
+// re-emitting each immediate load. Purely a codegen/size win (semantics
+// unchanged); data-page count is unaffected up to this value.
+#pragma maxConstVars 10
 #pragma version 2.3.0
 
+// The gamemaster registry is the SINGLE source of truth and the only identity
+// baked into this contract's codehash (registry-as-config). Every genuine
+// Character therefore shares one codehash; a cheater who points at a different
+// registry gets a different codehash and is rejected by the dApp. See
+// docs/superpowers/specs/2026-07-12-registry-as-config-design.md.
 // FIXME: The value needs to be defined for SIM, TESTNET and MAINNET
-// It's the game master registry contract
 #define GAMEMASTER_REGISTRY 122344543654
-
-// FIXME: The value needs to be defined for SIM, TESTNET and MAINNET
-// It's the singleton character-account registry contract (discoverability +
-// per-account character cap) — distinct from GAMEMASTER_REGISTRY above.
-#define CHAR_REGISTRY 122344543655
 
 // Must mirror gamemaster-registry.contract.smart.c's REGISTRY_BASE exactly —
 // that contract stores Globals (incl. the trusted construct hash) at
@@ -23,6 +26,15 @@
 #define GAMEMASTER_MAP_KEY1_ITEMS 1
 #define GAMEMASTER_MAP_KEY1_CONSTRUCT_HASH (REGISTRY_BASE + 1)
 #define GAMEMASTER_MAP_KEY2_CHARACTER_HASH 3
+
+// Registry-as-config Global keys — mirror gamemaster-registry's G_* exactly.
+// init() reads these once to cache the Character's deployment identities.
+#define GAMEMASTER_G_XP_TOKEN            (REGISTRY_BASE + 3)
+#define GAMEMASTER_G_CONSTRUCTOR_ACCOUNT (REGISTRY_BASE + 4)
+#define GAMEMASTER_G_CHAR_REGISTRY       (REGISTRY_BASE + 5)
+// Codehash of the next Character version. Read live in migrate(): non-zero means
+// the Gamemaster has opened a migration window and MIGRATE is enabled.
+#define GAMEMASTER_G_NEXT_CHARACTER_HASH (REGISTRY_BASE + 6)
 
 // Must mirror character-account-registry.contract.smart.c's method codes exactly.
 #define CHAR_REGISTRY_M_REGISTER_CHARACTER   2
@@ -63,11 +75,18 @@
 #define REROLL 3
 #define TRANSFER_ITEM 4
 #define USE_ITEM 5
+// Terminal, one-shot: liquidate all tokens + SIGNA to the owner and retire the
+// character (see migrate()). Enabled only while the gamemaster registry's
+// G_NEXT_CHARACTER_HASH is set. Grouped with the other lifecycle-special codes.
+#define MIGRATE 77
 #define SEPPUKU 66
 #define REFUND 99
 
 // Construct Methods
 #define DEDUCT_HITPOINTS 13
+// COMBAT(rawDamage, effectId, duration): deduct HP + apply a timed status effect
+// for `duration` blocks (effectId 0 = pure damage, identical to DEDUCT_HITPOINTS).
+#define COMBAT 14
 #define REROLL_COSTS 100_0000_0000
 #define MAX_REROLLS 5
 
@@ -114,10 +133,44 @@
 // items themselves are registered globally on the gamemaster registry.
 #define MAP_KEY1_INVENTORY 2
 
+// ---- PUBLIC PROGRESSION SHEET (cross-contract readable) ----
+// Attributes already live in MAP_KEY1_ATTRIBUTES. Level and skill points are
+// republished here at the end of every activation (publishProgression()) so the
+// dApp and a future v2 (pull-migration) can read the full character sheet
+// without decoding contract memory. Cross-contract reads only see committed
+// state between activations, so an end-of-activation write is always current.
+#define MAP_KEY1_PROGRESSION           3
+#define MAP_KEY2_PROGRESSION_LEVEL     1
+#define MAP_KEY2_PROGRESSION_SKILL     2
+
+// ---- PUBLIC COMBAT PROFILE (cross-contract readable) ----
+// Effective offensive stats republished every activation so the construct can
+// compute character damage WITHOUT the weapon being attached/transferred.
+// Effective = base attribute + the equipment aggregate (EQUIP_BONUS_ABS[target]).
+#define MAP_KEY1_COMBAT                4
+#define MAP_KEY2_COMBAT_STRENGTH       1
+#define MAP_KEY2_COMBAT_LUCK           2
+#define MAP_KEY2_COMBAT_ATTACK_ABS     3
+#define MAP_KEY2_COMBAT_ATTACK_REL     4
+#define MAP_KEY2_COMBAT_ATTACK_EFFECT  5
+
+// Gamemaster-registry effect targets (mirror the registry's Target enum) used to
+// pull the right equipment aggregates.
+#define EQUIP_TARGET_ATTACK            0
+#define EQUIP_TARGET_STRENGTH          2
+#define EQUIP_TARGET_LUCK              5
+#define EQUIP_TARGET_DAMAGE_TAKEN      8
+
 // key2 = effect target (see gamemaster-registry-design.md's Effect Target enum)
 #define MAP_KEY1_EQUIP_BONUS_ABS 10
 #define MAP_KEY1_EQUIP_BONUS_REL 11
+// Timed status effects — one per target. STATUS_EFFECTS holds the expiry block;
+// STATUS_ABS/STATUS_REL hold the magnitude to fold in while active (lazy: only
+// applied when getCurrentBlockheight() < expiry). Applying a new effect to a
+// target overwrites the previous one.
 #define MAP_KEY1_STATUS_EFFECTS  12
+#define MAP_KEY1_STATUS_ABS      13
+#define MAP_KEY1_STATUS_REL      14
 
 // ---- ROLLING ERROR LOG ----
 // A ring buffer of the last ERROR_LOG_SIZE owner-action failures. Only the
@@ -151,17 +204,20 @@
 #define ERR_EQUIP_MULTI_UNIT        17
 // XP is bound to the character forever — it can never be transferred out.
 #define ERR_TRANSFER_XP             18
+// MIGRATE attempted while no migration window is open (G_NEXT_CHARACTER_HASH == 0).
+#define ERR_MIGRATE_DISABLED        19
 #define ERR_CHARACTER_DEAD          66
 
-// Initializable
-
-long constructorAccount; // the creator of constructs
-long xpTokenId;           // native Signum token paid out by Constructs on attack; XP = getAssetBalance(xpTokenId)
-
-#ifdef TESTBED
-    const constructorAccount = TESTBED_constructorAccount;
-    const xpTokenId = TESTBED_xpTokenId;
-#endif
+// ---- REGISTRY-SOURCED IDENTITIES ----
+// Cached ONCE at init() from the gamemaster registry (registry-as-config), not
+// initializable deploy data — so they don't vary the codehash and can't be
+// tampered with per-Character. A live re-read every activation would be wasteful
+// gas and would let a Character's identity change under it; a fixed cache is the
+// right semantics. (The construct hash stays live in senderIsConstruct(), by
+// contrast, so the Gamemaster can rotate trusted construct bytecode.)
+long constructorAccount;  // trusted construct issuer — getCreatorOf() a genuine construct
+long xpTokenId;           // token paid out by Constructs; XP = getAssetBalance(xpTokenId)
+long charRegistry;        // singleton character-account registry (discoverability + cap)
 
 
 // State variables
@@ -174,14 +230,22 @@ long deathPenaltyApplied;
 long skillPoints;
 long usedInventorySlots;
 long maxInventorySlots;
+// Set once by migrate(): the character has been liquidated to its owner and is
+// permanently retired. Every subsequent activation is inert (incoming value is
+// bounced back to the sender). There is no way back.
+long migrated;
 // Set on the first ATTACK. Locks REROLL and gates SEPPUKU.
 long committed;
 long rerollCount;
+// The effect id of the currently-equipped attack element (a weapon's AttackDamage
+// effect). Published in the combat profile so the construct can apply its
+// per-effect affinity. One weapon = one element; 0 = none.
+long primaryAttackEffectId;
 long level;
 // XP required to reach level+1. Advances only forward — a level, once
 // reached, is never lost even if the XP token balance later drops.
 long nextLevelXp;
-// Cached at init() via getActivationOf(CHAR_REGISTRY) — getNextTx() only
+// Cached at init() via getActivationOf(charRegistry) — getNextTx() only
 // surfaces incoming transactions carrying at least the recipient's own
 // activation fee, so registry messages must attach it.
 long charRegistryActivationFee;
@@ -223,7 +287,84 @@ void rollAttributes() {
     recalculateDerivedStats();
 }
 
+// Republish the parts of the character sheet that are otherwise memory-only, so
+// they are readable cross-contract (dApp + v2 pull-migration). Attributes are
+// already in MAP_KEY1_ATTRIBUTES; this covers level and skill points.
+void publishProgression() {
+    setMapValue(MAP_KEY1_PROGRESSION, MAP_KEY2_PROGRESSION_LEVEL, level);
+    setMapValue(MAP_KEY1_PROGRESSION, MAP_KEY2_PROGRESSION_SKILL, skillPoints);
+    publishCombatProfile();
+}
+
+// Effective offensive stats = base attribute + equipment aggregate. The construct
+// reads these to compute a character's attack damage; the weapon stays equipped.
+void publishCombatProfile() {
+    // Fully decomposed (no call inside arithmetic or setMapValue args) to stay
+    // within maxAuxVars 3. Effective = base attribute + equipment aggregate +
+    // active timed status effect (statusAbs/statusRel return 0 when expired).
+    long base;
+    long equip;
+
+    base = getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STRENGTH);
+    equip = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, EQUIP_TARGET_STRENGTH);
+    base = base + equip;
+    equip = statusAbs(EQUIP_TARGET_STRENGTH);
+    base = base + equip;
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_STRENGTH, base);
+
+    base = getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_LUCK);
+    equip = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, EQUIP_TARGET_LUCK);
+    base = base + equip;
+    equip = statusAbs(EQUIP_TARGET_LUCK);
+    base = base + equip;
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_LUCK, base);
+
+    base = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, EQUIP_TARGET_ATTACK);
+    equip = statusAbs(EQUIP_TARGET_ATTACK);
+    base = base + equip;
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_ATTACK_ABS, base);
+
+    base = getMapValue(MAP_KEY1_EQUIP_BONUS_REL, EQUIP_TARGET_ATTACK);
+    equip = statusRel(EQUIP_TARGET_ATTACK);
+    base = base + equip;
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_ATTACK_REL, base);
+
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_ATTACK_EFFECT, primaryAttackEffectId);
+}
+
+// Stores a timed status effect for a target (magnitude + expiry), overwriting any
+// prior effect on that target. duration is in blocks from now.
+void storeStatus(long target, long abs, long rel, long duration) {
+    setMapValue(MAP_KEY1_STATUS_EFFECTS, target, getCurrentBlockheight() + duration);
+    setMapValue(MAP_KEY1_STATUS_ABS, target, abs);
+    setMapValue(MAP_KEY1_STATUS_REL, target, rel);
+}
+
+// Active timed status contribution for a target, or 0 when none / expired
+// (lazy consumption — no AT timer).
+long statusAbs(long target) {
+    if(getMapValue(MAP_KEY1_STATUS_EFFECTS, target) > getCurrentBlockheight()){
+        return getMapValue(MAP_KEY1_STATUS_ABS, target);
+    }
+    return ZERO;
+}
+long statusRel(long target) {
+    if(getMapValue(MAP_KEY1_STATUS_EFFECTS, target) > getCurrentBlockheight()){
+        return getMapValue(MAP_KEY1_STATUS_REL, target);
+    }
+    return ZERO;
+}
+
 void init() {
+    // Registry-as-config: source the deployment identities from the gamemaster
+    // registry ONCE, at deploy. The registry MUST be configured before any
+    // Character is deployed (a procedural deploy-ordering guarantee — init()
+    // cannot reject its own deployment). If it isn't, these read 0 and the
+    // Character is inert: checkLevelUp() early-returns on xpTokenId == 0.
+    xpTokenId          = getExtMapValue(GAMEMASTER_G_XP_TOKEN,            ZERO, GAMEMASTER_REGISTRY);
+    constructorAccount = getExtMapValue(GAMEMASTER_G_CONSTRUCTOR_ACCOUNT, ZERO, GAMEMASTER_REGISTRY);
+    charRegistry       = getExtMapValue(GAMEMASTER_G_CHAR_REGISTRY,       ZERO, GAMEMASTER_REGISTRY);
+
     rollAttributes();
     currentHitpoints = maxHitpoints;
     usedInventorySlots = ZERO;
@@ -233,18 +374,21 @@ void init() {
     level = 1;
     nextLevelXp = LEVEL_XP_BASE;
     rerollCount = ZERO;
+    primaryAttackEffectId = ZERO;
     errorCount = ZERO;
+    migrated = FALSE;
+    publishProgression(); // seed the public sheet at deploy
 
     // Registers this character at the singleton character-account registry so
     // it is discoverable regardless of whether it is ever committed. The
     // registry silently drops the entry if the creator is already at its cap
     // — init() cannot reject the deployment itself.
-    charRegistryActivationFee = getActivationOf(CHAR_REGISTRY);
+    charRegistryActivationFee = getActivationOf(charRegistry);
     messageBuffer[0] = CHAR_REGISTRY_M_REGISTER_CHARACTER;
     messageBuffer[1] = ZERO;
     messageBuffer[2] = ZERO;
     messageBuffer[3] = ZERO;
-    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, CHAR_REGISTRY);
+    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, charRegistry);
 }
 
 init();
@@ -267,6 +411,14 @@ void main() {
     while ((currentTx.txId = getNextTx()) != 0) {
         currentTx.sender = getSender(currentTx.txId);
         readMessage(currentTx.txId, 0, currentTx.message);
+
+        // Retired: once migrated the character is permanently inert. Bounce any
+        // incoming SIGNA and assets straight back so nothing is stranded here,
+        // and process nothing else.
+        if(migrated == TRUE){
+            bounceTx();
+            continue;
+        }
 
         // Runs BEFORE dispatch, not after: an asset attached to the SAME
         // transaction as e.g. a USE_ITEM call is already visible via
@@ -316,6 +468,9 @@ void main() {
                         seppuku();
                     }
                 break;
+                case MIGRATE:
+                    migrate();
+                break;
                 case REFUND:
                     refundRequested = TRUE; // deferred to after the loop
                 break;
@@ -329,20 +484,33 @@ void main() {
                         deductHitpoints(currentTx.message[1]);
                     }
                     break;
+                case COMBAT:
+                    if(isDead == FALSE) {
+                        combat(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
+                    }
+                    break;
             }
        }
     }
-    if(isDead == TRUE && deathPenaltyApplied == FALSE){
-        handleDead();
+    // A migration this activation retires the character — skip the normal
+    // post-loop effects (it already liquidated everything to the owner).
+    if(migrated == FALSE){
+        if(isDead == TRUE && deathPenaltyApplied == FALSE){
+            handleDead();
+        }
+        if(isDead == FALSE) {
+            checkLevelUp();
+        }
+        // Refund last: the whole activation's attacks/rerolls/effects have
+        // settled, so this sends only the true remaining balance and can't
+        // strand a send.
+        if(refundRequested == TRUE) {
+            refund();
+        }
     }
-    if(isDead == FALSE) {
-        checkLevelUp();
-    }
-    // Refund last: the whole activation's attacks/rerolls/effects have settled,
-    // so this sends only the true remaining balance and can't strand a send.
-    if(refundRequested == TRUE) {
-        refund();
-    }
+    // Publish level/skill points (possibly changed this activation) to the
+    // public sheet. Cheap, and correct even after a migrate (values are frozen).
+    publishProgression();
 }
 
 void checkLevelUp() {
@@ -639,6 +807,17 @@ long applyEffect(long effectId, long sign) {
     long duration = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_DURATION, GAMEMASTER_REGISTRY);
     long current;
 
+    // Track the primary attack element for the construct's affinity lookup. One
+    // weapon = one element: last-equipped attack effect wins; cleared when that
+    // same effect is unequipped.
+    if(target == EQUIP_TARGET_ATTACK){
+        if(sign > ZERO){
+            primaryAttackEffectId = effectId;
+        } else if(primaryAttackEffectId == effectId){
+            primaryAttackEffectId = ZERO;
+        }
+    }
+
     if(mode == MODE_AGGREGATE_ABS){
         current = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target);
         setMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target, current + sign * bonusAbs);
@@ -665,7 +844,7 @@ long applyEffect(long effectId, long sign) {
         currentHitpoints = restored;
         return 1;
     } else if(mode == MODE_STATUS_EFFECT){
-        setMapValue(MAP_KEY1_STATUS_EFFECTS, target, getCurrentBlockheight() + duration);
+        storeStatus(target, bonusAbs, bonusRel, duration);
         return 1;
     }
     return ZERO; // unknown mode — silently ignored (forward-compatible)
@@ -707,6 +886,18 @@ void deductHitpoints(long rawDamage){
         long stamina = getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STAMINA);
         net = rawDamage - stamina * ARMOR_PER_STAMINA;
         if(net < ZERO){ net = ZERO; } // armor fully absorbed the hit
+
+        // Damage-taken modifier (equipment + active status): >0 = vulnerable,
+        // <0 = warded. Split into simple statements for maxAuxVars.
+        long dtRel = getMapValue(MAP_KEY1_EQUIP_BONUS_REL, EQUIP_TARGET_DAMAGE_TAKEN);
+        long dtStatus = statusRel(EQUIP_TARGET_DAMAGE_TAKEN);
+        dtRel = dtRel + dtStatus;
+        if(dtRel != ZERO){
+            long factor = 100 + dtRel;
+            net = net * factor;
+            net = net / 100;
+            if(net < ZERO){ net = ZERO; }
+        }
     }
 
     currentHitpoints -= net;
@@ -716,8 +907,83 @@ void deductHitpoints(long rawDamage){
     }
 }
 
+// COMBAT: deduct HP (normal mitigation) AND apply a bundled timed status effect
+// for the construct-chosen `duration`. effectId 0 = pure damage. The effect is
+// ALWAYS applied as a timed status (magnitude/target read from the registry),
+// regardless of its registry mode — so a construct can never heal, revive, or
+// permanently buff/debuff through COMBAT. Skipped if the hit was lethal.
+void combat(long rawDamage, long effectId, long duration) {
+    deductHitpoints(rawDamage);
+    if(effectId != ZERO && duration > ZERO && isDead == FALSE){
+        long target = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_TARGET,    GAMEMASTER_REGISTRY);
+        long abs    = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_BONUS_ABS, GAMEMASTER_REGISTRY);
+        long rel    = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_BONUS_REL, GAMEMASTER_REGISTRY);
+        storeStatus(target, abs, rel, duration);
+    }
+}
+
 void refund() {
     sendAmount(getCurrentBalance(), getCreator());
+}
+
+// Returns the current tx's SIGNA and every attached asset to its sender —
+// used to keep incoming value from being stranded on a retired (migrated)
+// character. rejectAsset() no-ops on empty (0) slots.
+void bounceTx() {
+    readAssets(currentTx.txId, currentTx.assetIds);
+    rejectAsset(currentTx.assetIds[0]);
+    rejectAsset(currentTx.assetIds[1]);
+    rejectAsset(currentTx.assetIds[2]);
+    rejectAsset(currentTx.assetIds[3]);
+    long amount = getAmount(currentTx.txId);
+    if(amount > ZERO){ sendAmount(amount, currentTx.sender); }
+}
+
+// Terminal, one-shot migration (see MIGRATE): liquidate everything the
+// character holds — all inventory items, all XP, and the SIGNA balance — back
+// to the OWNER's account, then retire the character forever. Sending to the
+// owner's EOA is deliberate: it sidesteps both the no-transfer-to-contract and
+// XP-lock guards (they only bind transferItem), hands the owner full trading
+// control, and lets them re-deposit into a v2 character themselves. v2 pulls the
+// build (attributes + published level/skill points) from this contract's map,
+// which is frozen from here on. Enabled only while the gamemaster has opened a
+// migration window (G_NEXT_CHARACTER_HASH != 0).
+void migrate() {
+    if(migrated == TRUE){ return; } // one-shot — no way back
+
+    long nextHash = getExtMapValue(GAMEMASTER_G_NEXT_CHARACTER_HASH, ZERO, GAMEMASTER_REGISTRY);
+    if(nextHash == ZERO){ registerError(ERR_MIGRATE_DISABLED); return; }
+
+    migrated = TRUE;
+
+    // Retire from the character-account registry — this character is done.
+    messageBuffer[0] = CHAR_REGISTRY_M_UNREGISTER_CHARACTER;
+    messageBuffer[1] = ZERO;
+    messageBuffer[2] = ZERO;
+    messageBuffer[3] = ZERO;
+    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, charRegistry);
+
+    long owner = getCreator();
+
+    // Sweep every held item to the owner. Inventory is enumerable (one slot per
+    // unit), and a stack occupies several slots holding the same token — so send
+    // each token's FULL balance once and let the balance check dedup: after the
+    // first send that token reads 0 and later slots skip it.
+    long i;
+    long tokenId;
+    long bal;
+    for(i = 0; i < usedInventorySlots; ++i){
+        tokenId = getMapValue(MAP_KEY1_INVENTORY, i);
+        bal = getAssetBalance(tokenId);
+        if(bal > ZERO){ sendQuantity(bal, tokenId, owner); }
+    }
+
+    // XP goes to the owner too (tradeable; the v2 will re-accept it on deposit).
+    long xp = getAssetBalance(xpTokenId);
+    if(xp > ZERO){ sendQuantity(xp, xpTokenId, owner); }
+
+    // SIGNA last (terminal, like refund) — the true remaining balance.
+    sendAmount(getCurrentBalance(), owner);
 }
 
 void attack(long constructId) {
@@ -730,11 +996,16 @@ void attack(long constructId) {
     long quantity = ZERO;
     if(firstAsset != ZERO){ quantity = getQuantity(currentTx.txId, firstAsset); }
 
-    // The construct is an AT that only runs if paid at least its activation
-    // amount. If the attached SIGNA can't cover that, the attack is impossible:
-    // refund BOTH the SIGNA and the forwarded asset, and leave the character
-    // uncommitted (so REROLL stays available). Slots 1-3 were refunded upstream.
-    if(amount <= ZERO || amount < getActivationOf(constructId)){
+    // The construct must be GENUINE — deployed by the trusted issuer
+    // (constructorAccount, sourced from the gamemaster registry) — and it is an
+    // AT that only runs if paid at least its activation amount. If the target is
+    // not a real construct, or the attached SIGNA can't cover activation, the
+    // attack is impossible: refund BOTH the SIGNA and the forwarded asset, and
+    // leave the character uncommitted (so REROLL stays available). Slots 1-3
+    // were refunded upstream.
+    if(amount <= ZERO
+        || getCreatorOf(constructId) != constructorAccount
+        || amount < getActivationOf(constructId)){
         if(amount > ZERO){ sendAmount(amount, currentTx.sender); }
         if(firstAsset != ZERO && quantity > ZERO){
             sendQuantity(quantity, firstAsset, currentTx.sender);
@@ -778,7 +1049,7 @@ void seppuku() {
     messageBuffer[1] = ZERO;
     messageBuffer[2] = ZERO;
     messageBuffer[3] = ZERO;
-    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, CHAR_REGISTRY);
+    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, charRegistry);
 }
 
 void transferItem(long itemId, long recipientId) {

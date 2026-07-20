@@ -1,7 +1,7 @@
 # Registry-as-Config & Codehash-Verifiable Character — Design Spec
 
 **Date:** 2026-07-12
-**Status:** Draft (pending user approval)
+**Status:** Implemented (2026-07-13)
 **Scope:** `character/character.contract.smart.c`, `gamemaster-registry/gamemaster-registry.contract.smart.c`, and both test suites
 **Related:** `2026-05-03-character-contract-design.md`, `2026-05-06-gamemaster-registry-design.md`, `2026-07-11-character-reroll-economy-design.md`
 
@@ -123,11 +123,15 @@ Larger than the contract change:
 
 ---
 
-## Open questions
+## Open questions — resolved at implementation (2026-07-13)
 
-1. **`senderIsConstruct`: codehash or creator?** Keep the current codehash check (works in the testbed, allows construct rotation) and use *creator* only for the attack target? Or unify both on `getCreatorOf == constructorAccount` (one definition, registry-independent, but hits the testbed bug and loses cheap rotation)? Leaning: keep construct hash live for `senderIsConstruct` (rotation), use creator-check for the attack target.
-2. **Inert-on-missing-config:** acceptable as a procedural guarantee, or add an explicit "is config loaded" self-check that gates player actions until healthy?
-3. **Migration:** this changes the Character codehash, so it only applies to the *next* Character deployment — no in-place upgrade of already-deployed Characters. Confirm that's fine (it is, for a not-yet-released contract).
+1. **`senderIsConstruct`: codehash or creator?** **Resolved:** `senderIsConstruct()` stays codehash-based (live-read, so the Gamemaster can rotate trusted construct bytecode); the Finding-5 attack-target check uses `getCreatorOf(constructId) == constructorAccount`. Contrary to the noted caveat, `getCreatorOf` resolves the real creator in the multi-contract testbed (the char-account registration path already relied on it), so the Finding-5 tests run for real — no `test.skip` needed.
+2. **Inert-on-missing-config:** **Resolved:** kept as a procedural guarantee (no self-check gate). If the registry is unconfigured, identities cache to 0 and the Character is inert (`checkLevelUp` early-returns on `xpTokenId == 0`).
+3. **Migration:** **Resolved:** accepted — this changes the Character codehash, so it applies only to the next deployment. Fine for a not-yet-released contract. The codehash is now *stable* (no initializer-injected variance): `11327639143853823412`.
+
+### Also folded in
+
+- **Retired `LEVEL_THRESHOLD`** from the gamemaster registry (setter `M_SET_LEVEL_THRESHOLD` / global `G_LEVEL_THRESHOLD`). No contract ever read it — leveling is a hardcoded triangular curve in the Character, not registry config. Method code `3` is left as a retired gap (setters `4/5/6` unchanged). The registry collision-protection tests that used it as a witness now assert the range gate directly (rejection + no write + error).
 
 ---
 
