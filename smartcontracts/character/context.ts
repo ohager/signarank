@@ -186,6 +186,9 @@ export const Context = {
         AttackAbs: 3n,  // flat attack bonus from equipment (EQUIP_BONUS_ABS[Attack])
         AttackRel: 4n,  // % attack bonus from equipment (EQUIP_BONUS_REL[Attack])
         AttackEffect: 5n, // primary attack effect id (element) for construct affinity
+        Stamina: 6n,      // effective stamina (base + equip + status)
+        Dexterity: 7n,    // effective dexterity
+        Willpower: 8n,    // effective willpower
     },
 
     // key2 sub-ids under Maps.Vitals — mirror MAP_KEY2_VITALS_* .

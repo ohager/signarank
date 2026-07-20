@@ -82,4 +82,24 @@ describe("Character Combat Profile", () => {
 
         expect(getPublicCombat(testbed, Context.CombatKeys.AttackEffect)).toBe(0n);
     });
+
+    describe("effective stamina/dexterity/willpower", () => {
+        const STAMINA_RING_ID = 5002n;
+
+        test("publishes effective stamina/dex/will = base + equipment aggregate", () => {
+            const testbed = deployCharacter();
+            // A ring granting +3 Stamina (AggregateAbs on target Stamina).
+            registerItemOnGamemasterRegistry(testbed, {tokenId: STAMINA_RING_ID, itemType: Context.ItemType.Equipment, stackLimit: 1n, effectCount: 1n});
+            registerEffectOnGamemasterRegistry(testbed, {logicalId: 1n, target: Context.EffectTarget.Stamina, mode: Context.EffectMode.AggregateAbs, bonusAbs: 3n});
+            setItemEffectOnGamemasterRegistry(testbed, {tokenId: STAMINA_RING_ID, slot: 0n, logicalEffectId: 1n});
+
+            const baseStamina = getAttr(testbed, Context.Attrs.Stamina);
+            fundCharacterWithToken(testbed, {tokenId: STAMINA_RING_ID});
+
+            expect(getPublicCombat(testbed, Context.CombatKeys.Stamina)).toBe(baseStamina + 3n);
+            // dex/will with no equipment == their base attribute value
+            expect(getPublicCombat(testbed, Context.CombatKeys.Dexterity)).toBe(getAttr(testbed, Context.Attrs.Dexterity));
+            expect(getPublicCombat(testbed, Context.CombatKeys.Willpower)).toBe(getAttr(testbed, Context.Attrs.Willpower));
+        });
+    });
 });

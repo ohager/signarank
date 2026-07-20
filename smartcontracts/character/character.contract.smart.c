@@ -153,12 +153,18 @@
 #define MAP_KEY2_COMBAT_ATTACK_ABS     3
 #define MAP_KEY2_COMBAT_ATTACK_REL     4
 #define MAP_KEY2_COMBAT_ATTACK_EFFECT  5
+#define MAP_KEY2_COMBAT_STAMINA        6
+#define MAP_KEY2_COMBAT_DEXTERITY      7
+#define MAP_KEY2_COMBAT_WILLPOWER      8
 
 // Gamemaster-registry effect targets (mirror the registry's Target enum) used to
 // pull the right equipment aggregates.
 #define EQUIP_TARGET_ATTACK            0
 #define EQUIP_TARGET_STRENGTH          2
+#define EQUIP_TARGET_STAMINA           3
+#define EQUIP_TARGET_DEXTERITY         4
 #define EQUIP_TARGET_LUCK              5
+#define EQUIP_TARGET_WILLPOWER         6
 #define EQUIP_TARGET_DAMAGE_TAKEN      8
 
 // key2 = effect target (see gamemaster-registry-design.md's Effect Target enum)
@@ -345,6 +351,27 @@ void publishCombatProfile() {
     equip = statusRel(EQUIP_TARGET_ATTACK);
     base = base + equip;
     setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_ATTACK_REL, base);
+
+    base = getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STAMINA);
+    equip = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, EQUIP_TARGET_STAMINA);
+    base = base + equip;
+    equip = statusAbs(EQUIP_TARGET_STAMINA);
+    base = base + equip;
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_STAMINA, base);
+
+    base = getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_DEXTERITY);
+    equip = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, EQUIP_TARGET_DEXTERITY);
+    base = base + equip;
+    equip = statusAbs(EQUIP_TARGET_DEXTERITY);
+    base = base + equip;
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_DEXTERITY, base);
+
+    base = getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_WILLPOWER);
+    equip = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, EQUIP_TARGET_WILLPOWER);
+    base = base + equip;
+    equip = statusAbs(EQUIP_TARGET_WILLPOWER);
+    base = base + equip;
+    setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_WILLPOWER, base);
 
     setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_ATTACK_EFFECT, primaryAttackEffectId);
 }
