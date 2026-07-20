@@ -291,6 +291,11 @@ export function getVitals(testbed: SimulatorTestbed, vitalsKey2: bigint, address
     return testbed.getContractMapValue(Context.Maps.Vitals, vitalsKey2, address) ?? 0n;
 }
 
+// Source effectId stored per active status target (Maps.StatusEffectId).
+export function getStatusEffectId(testbed: SimulatorTestbed, target: bigint, address = Context.CharacterAddress): bigint {
+    return testbed.getContractMapValue(Context.Maps.StatusEffectId, target, address) ?? 0n;
+}
+
 export function getAllAttrs(testbed: SimulatorTestbed) {
     return {
         strength: getAttr(testbed, Context.Attrs.Strength),

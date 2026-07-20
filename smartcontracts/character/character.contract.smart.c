@@ -177,6 +177,9 @@
 #define MAP_KEY1_STATUS_EFFECTS  12
 #define MAP_KEY1_STATUS_ABS      13
 #define MAP_KEY1_STATUS_REL      14
+// key2 = effect target — source effectId of each active status effect, so the
+// identity (not just magnitude) is cross-contract readable. See storeStatus().
+#define MAP_KEY1_STATUS_EFFECT_ID 15
 
 // ---- PUBLIC VITALS SHEET (cross-contract readable) ----
 // currentHitpoints is not derivable off-chain; maxHitpoints published for
@@ -376,10 +379,11 @@ void publishCombatProfile() {
     setMapValue(MAP_KEY1_COMBAT, MAP_KEY2_COMBAT_ATTACK_EFFECT, primaryAttackEffectId);
 }
 
-// Stores a timed status effect for a target (magnitude + expiry), overwriting any
-// prior effect on that target. duration is in blocks from now.
-void storeStatus(long target, long abs, long rel, long duration) {
+// Stores a timed status effect for a target (identity + magnitude + expiry),
+// overwriting any prior effect on that target. duration is in blocks from now.
+void storeStatus(long target, long effectId, long abs, long rel, long duration) {
     setMapValue(MAP_KEY1_STATUS_EFFECTS, target, getCurrentBlockheight() + duration);
+    setMapValue(MAP_KEY1_STATUS_EFFECT_ID, target, effectId);
     setMapValue(MAP_KEY1_STATUS_ABS, target, abs);
     setMapValue(MAP_KEY1_STATUS_REL, target, rel);
 }
@@ -888,7 +892,7 @@ long applyEffect(long effectId, long sign) {
         currentHitpoints = restored;
         return 1;
     } else if(mode == MODE_STATUS_EFFECT){
-        storeStatus(target, bonusAbs, bonusRel, duration);
+        storeStatus(target, effectId, bonusAbs, bonusRel, duration);
         return 1;
     }
     return ZERO; // unknown mode — silently ignored (forward-compatible)
@@ -962,7 +966,7 @@ void combat(long rawDamage, long effectId, long duration) {
         long target = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_TARGET,    GAMEMASTER_REGISTRY);
         long abs    = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_BONUS_ABS, GAMEMASTER_REGISTRY);
         long rel    = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_BONUS_REL, GAMEMASTER_REGISTRY);
-        storeStatus(target, abs, rel, duration);
+        storeStatus(target, effectId, abs, rel, duration);
     }
 }
 

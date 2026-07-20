@@ -12,6 +12,8 @@ import {
     sendUseItem,
     forgeBlocks,
     pokeCharacter,
+    getStatusEffectId,
+    effectId,
 } from "../lib";
 import {Context} from "../context";
 
@@ -83,5 +85,16 @@ describe("Character Status Effects", () => {
 
         // net would be 40 without the debuff; +50% damage taken → 60
         expect(landOneHit(testbed, constructAddress, armor + 40n)).toBe(60n);
+    });
+
+    test("stores the source effectId per target when a status effect is applied", () => {
+        const testbed = deployCharacter();
+        const logical = 3n;
+        registerStatusPotion(testbed, VULN, logical, Context.EffectTarget.DamageTaken, {bonusRel: 50n, duration: 20n});
+        fundCharacterWithToken(testbed, {tokenId: VULN, quantity: 1n});
+
+        sendUseItem(testbed, {tokenId: VULN});
+
+        expect(getStatusEffectId(testbed, Context.EffectTarget.DamageTaken)).toBe(effectId(logical));
     });
 });
