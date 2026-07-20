@@ -91,7 +91,10 @@ function activateCharacter(testbed: SimulatorTestbed, opts: DeployOpts = {}, nud
     testbed.sendTransactionAndGetResponse([{
         sender: Context.OwnerAccount,
         recipient: characterAddress,
-        amount: 200_0000_0000n,
+        // 210 SIGNA — the ~10 SIGNA headroom over the 200 baseline covers the
+        // higher per-activation cost of publishing the VITALS + combat sheets so
+        // the reroll balance-floor scenarios still hold deterministically.
+        amount: 210_0000_0000n,
     }], characterAddress);
     if (nudgeCharRegistry) {
         testbed.sendTransactionAndGetResponse([{
