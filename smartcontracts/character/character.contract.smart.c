@@ -257,6 +257,14 @@ long rerollCount;
 // effect). Published in the combat profile so the construct can apply its
 // per-effect affinity. One weapon = one element; 0 = none.
 long primaryAttackEffectId;
+// Combat-profile republish cache. The published profile (Maps.Combat) is a pure
+// function of attributes, equipment aggregates, active status effects and
+// primaryAttackEffectId. combatDirty is set whenever any of those change;
+// combatValidUntil holds the earliest active profile-status expiry (0 = none) so
+// a time-based lapse can force a republish without an explicit change.
+// publishCombatProfileIfNeeded() recomputes only when dirty or a status lapsed.
+long combatDirty;
+long combatValidUntil;
 long level;
 // XP required to reach level+1. Advances only forward — a level, once
 // reached, is never lost even if the XP token balance later drops.
@@ -301,6 +309,7 @@ void rollAttributes() {
     };
 
     recalculateDerivedStats();
+    combatDirty = TRUE; // attributes changed
 }
 
 // Republish the parts of the character sheet that are otherwise memory-only, so
@@ -309,8 +318,44 @@ void rollAttributes() {
 void publishProgression() {
     setMapValue(MAP_KEY1_PROGRESSION, MAP_KEY2_PROGRESSION_LEVEL, level);
     setMapValue(MAP_KEY1_PROGRESSION, MAP_KEY2_PROGRESSION_SKILL, skillPoints);
-    publishCombatProfile();
+    publishCombatProfileIfNeeded();
     publishVitals();
+}
+
+// Gate around the (API-heavy, ~34 map ops) combat-profile republish: recompute
+// only when an input changed (combatDirty) or a profile status effect has lapsed
+// (now >= combatValidUntil). getCurrentBlockheight() is only spent when a status
+// watermark is actually pending, so the common no-status path adds no API call.
+void publishCombatProfileIfNeeded() {
+    long dirty = combatDirty;
+    if(dirty == FALSE && combatValidUntil != ZERO){
+        if(getCurrentBlockheight() >= combatValidUntil){ dirty = TRUE; }
+    }
+    if(dirty == TRUE){
+        publishCombatProfile();
+        combatDirty = FALSE;
+        combatValidUntil = earliestProfileStatusExpiry();
+    }
+}
+
+// Earliest still-active expiry among the status targets that feed the combat
+// profile (attack/strength/luck/stamina/dexterity/willpower), or 0 when none is
+// active. Damage-taken/HP/inv-slot statuses don't affect the profile, so they are
+// intentionally excluded. Runs only on a republish, so its 6 reads are amortised.
+long earliestProfileStatusExpiry() {
+    long now = getCurrentBlockheight();
+    long best = ZERO;
+    long e;
+    long t;
+    // The stat targets are contiguous: STRENGTH=2, STAMINA=3, DEXTERITY=4,
+    // LUCK=5, WILLPOWER=6. ATTACK=0 is handled separately below.
+    for(t = EQUIP_TARGET_STRENGTH; t <= EQUIP_TARGET_WILLPOWER; ++t){
+        e = getMapValue(MAP_KEY1_STATUS_EFFECTS, t);
+        if(e > now){ if(best == ZERO || e < best){ best = e; } }
+    }
+    e = getMapValue(MAP_KEY1_STATUS_EFFECTS, EQUIP_TARGET_ATTACK);
+    if(e > now){ if(best == ZERO || e < best){ best = e; } }
+    return best;
 }
 
 // Live combat-state sheet (cross-contract readable). currentHitpoints is not
@@ -385,6 +430,7 @@ void storeStatus(long target, long effectId, long abs, long rel, long duration) 
     setMapValue(MAP_KEY1_STATUS_EFFECT_ID, target, effectId);
     setMapValue(MAP_KEY1_STATUS_ABS, target, abs);
     setMapValue(MAP_KEY1_STATUS_REL, target, rel);
+    combatDirty = TRUE; // magnitude/expiry changed — profile must be recomputed
 }
 
 // Active timed status contribution for a target, or 0 when none / expired
@@ -626,6 +672,7 @@ void handleDead() {
         attrValue = getMapValue(MAP_KEY1_ATTRIBUTES, rnd);
         if(attrValue > ZERO){
             setMapValue(MAP_KEY1_ATTRIBUTES, rnd, attrValue - 1);
+            combatDirty = TRUE; // death penalty reduced an attribute
             break;
         }
     }
@@ -853,6 +900,7 @@ long applyEffect(long effectId, long sign) {
     // weapon = one element: last-equipped attack effect wins; cleared when that
     // same effect is unequipped.
     if(target == EQUIP_TARGET_ATTACK){
+        combatDirty = TRUE; // primary attack element may change
         if(sign > ZERO){
             primaryAttackEffectId = effectId;
         } else if(primaryAttackEffectId == effectId){
@@ -863,10 +911,12 @@ long applyEffect(long effectId, long sign) {
     if(mode == MODE_AGGREGATE_ABS){
         current = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target);
         setMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target, current + sign * bonusAbs);
+        combatDirty = TRUE; // equipment aggregate changed
         return 1;
     } else if(mode == MODE_AGGREGATE_REL){
         current = getMapValue(MAP_KEY1_EQUIP_BONUS_REL, target);
         setMapValue(MAP_KEY1_EQUIP_BONUS_REL, target, current + sign * bonusRel);
+        combatDirty = TRUE; // equipment aggregate changed
         return 1;
     } else if(mode == MODE_HEAL){
         if(isDead == TRUE){ return ZERO; }
@@ -899,6 +949,7 @@ void allocateSkillPoint(long attrIndex) {
     long currentAttributeValue = getMapValue(MAP_KEY1_ATTRIBUTES, attrIndex);
     setMapValue(MAP_KEY1_ATTRIBUTES, attrIndex, currentAttributeValue + 1);
     --skillPoints;
+    combatDirty = TRUE; // an attribute changed
 
     // Carry over only the resulting HP delta (e.g. from a STAMINA point)
     // rather than a full heal — recalculateDerivedStats() alone would
