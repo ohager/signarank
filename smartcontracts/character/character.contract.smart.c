@@ -83,10 +83,9 @@
 #define REFUND 99
 
 // Construct Methods
-#define DEDUCT_HITPOINTS 13
-// COMBAT(rawDamage, effectId, duration): deduct HP + apply a timed status effect
-// for `duration` blocks (effectId 0 = pure damage, identical to DEDUCT_HITPOINTS).
-#define COMBAT 14
+// RECEIVE_ATTACK(rawDamage, effectId, duration): deduct HP + apply a timed status effect
+// for `duration` blocks
+#define RECEIVE_ATTACK 13
 #define REROLL_COSTS 100_0000_0000
 #define MAX_REROLLS 5
 
@@ -527,14 +526,9 @@ void main() {
         }
         else if (senderIsConstruct() == TRUE) {
             switch(currentTx.message[0]) {
-                case DEDUCT_HITPOINTS:
+                case RECEIVE_ATTACK:
                     if(isDead == FALSE) {
-                        deductHitpoints(currentTx.message[1]);
-                    }
-                    break;
-                case COMBAT:
-                    if(isDead == FALSE) {
-                        combat(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
+                        receiveAttack(currentTx.message[1], currentTx.message[2], currentTx.message[3]);
                     }
                     break;
             }
@@ -955,12 +949,12 @@ void deductHitpoints(long rawDamage){
     }
 }
 
-// COMBAT: deduct HP (normal mitigation) AND apply a bundled timed status effect
-// for the construct-chosen `duration`. effectId 0 = pure damage. The effect is
-// ALWAYS applied as a timed status (magnitude/target read from the registry),
+// RECEIVE_ATTACK: deduct HP (normal mitigation) AND apply a bundled timed status
+// effect for the construct-chosen `duration`. effectId 0 = pure damage. The effect
+// is ALWAYS applied as a timed status (magnitude/target read from the registry),
 // regardless of its registry mode — so a construct can never heal, revive, or
-// permanently buff/debuff through COMBAT. Skipped if the hit was lethal.
-void combat(long rawDamage, long effectId, long duration) {
+// permanently buff/debuff through a counter-attack. Skipped if the hit was lethal.
+void receiveAttack(long rawDamage, long effectId, long duration) {
     deductHitpoints(rawDamage);
     if(effectId != ZERO && duration > ZERO && isDead == FALSE){
         long target = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_TARGET,    GAMEMASTER_REGISTRY);

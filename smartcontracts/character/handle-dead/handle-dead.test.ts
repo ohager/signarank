@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { Context } from '../context';
-import { deployCharacterWithTrustedConstruct, getCharState, sumAttrs, sendDeductHitpoints, sendRefund, killCharacter } from '../lib';
+import { deployCharacterWithTrustedConstruct, getCharState, sumAttrs, sendReceiveAttack, sendRefund, killCharacter } from '../lib';
 
 // deathPenaltyApplied (character.contract.smart.c) gates handleDead() so its
 // random attribute penalty applies exactly once per death, regardless of how
@@ -25,7 +25,7 @@ describe('handleDead() — penalty applies exactly once per death', () => {
         const sumAfterDeath = sumAttrs(testbed);
 
         for (let i = 0; i < 10; i++) {
-            sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: 10n });
+            sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: 10n });
         }
 
         expect(sumAttrs(testbed)).toBe(sumAfterDeath);
@@ -37,7 +37,7 @@ describe('handleDead() — penalty applies exactly once per death', () => {
         const sumAfterDeath = sumAttrs(testbed);
 
         for (let i = 0; i < 10; i++) {
-            sendDeductHitpoints(testbed, { sender: 222222n + BigInt(i), hitpoints: 10n });
+            sendReceiveAttack(testbed, { sender: 222222n + BigInt(i), rawDamage: 10n });
         }
 
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress)).toBe(0n);

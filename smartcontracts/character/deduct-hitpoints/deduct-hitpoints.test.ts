@@ -6,7 +6,7 @@ import {
     deployCharacterWithTrustedConstruct,
     getCharState,
     getAttr,
-    sendDeductHitpoints,
+    sendReceiveAttack,
     setConstructHashOnGamemasterRegistry,
     killCharacter,
     landOneHit,
@@ -34,7 +34,7 @@ describe('deductHitpoints() — damage mitigation (net = raw reduced by the char
         const before = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
 
         for (let i = 0; i < 8; i++) {
-            sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: armor }); // net 0 (absorbed or dodged)
+            sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: armor }); // net 0 (absorbed or dodged)
         }
 
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress)).toBe(before);
@@ -50,7 +50,7 @@ describe('deductHitpoints() — damage mitigation (net = raw reduced by the char
         let lands = 0;
         for (let i = 0; i < 50; i++) {
             const before = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
-            sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: raw });
+            sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: raw });
             const after = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
             if (after === before) dodges++; else lands++;
         }
@@ -81,7 +81,7 @@ describe('deductHitpoints() — damage mitigation (net = raw reduced by the char
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
         const before = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
 
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: 0n });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: 0n });
 
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress)).toBe(before);
     });
@@ -92,11 +92,11 @@ describe('deductHitpoints() — damage mitigation (net = raw reduced by the char
     // be exercised end-to-end here.
     test.skip('negative raw damage is ignored (cannot be sent via the testbed — FIXME)', () => {});
 
-    test('ignores DEDUCT_HITPOINTS sent from the owner account itself (only construct-gated senders reach it)', () => {
+    test('ignores RECEIVE_ATTACK sent from the owner account itself (only construct-gated senders reach it)', () => {
         const testbed = deployCharacter();
         const before = getCharState(testbed, Context.Vars.CurrentHitpoints);
 
-        sendDeductHitpoints(testbed, { sender: Context.OwnerAccount, hitpoints: 10n });
+        sendReceiveAttack(testbed, { sender: Context.OwnerAccount, rawDamage: 10n });
 
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints)).toBe(before);
     });
@@ -111,7 +111,7 @@ describe('senderIsConstruct() security', () => {
         const testbed = deployCharacter();
         const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints);
 
-        sendDeductHitpoints(testbed, { sender: 999999999n, hitpoints: maxHp });
+        sendReceiveAttack(testbed, { sender: 999999999n, rawDamage: maxHp });
 
         expect(getCharState(testbed, Context.Vars.IsDead)).toBe(0n);
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints)).toBe(maxHp);
@@ -121,7 +121,7 @@ describe('senderIsConstruct() security', () => {
         const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
         const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
 
-        sendDeductHitpoints(testbed, { sender: 999999999n, hitpoints: maxHp * 4n });
+        sendReceiveAttack(testbed, { sender: 999999999n, rawDamage: maxHp * 4n });
 
         // Untrusted sender never reaches deductHitpoints, so HP is untouched.
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress)).toBe(maxHp);
@@ -140,7 +140,7 @@ describe('senderIsConstruct() security', () => {
         const { testbed, constructAddress } = deployCharacterWithGamemasterRegistry();
         const before = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
 
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: before * 4n });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: before * 4n });
 
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress)).toBe(before);
     });
@@ -150,7 +150,7 @@ describe('senderIsConstruct() security', () => {
         setConstructHashOnGamemasterRegistry(testbed, constructStandIn!.codeHashId + 1n);
         const before = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
 
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: before * 4n });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: before * 4n });
 
         expect(getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress)).toBe(before);
     });

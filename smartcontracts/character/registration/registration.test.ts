@@ -11,7 +11,7 @@ import {
     sendAttack,
     sendSeppuku,
     sendRefund,
-    sendDeductHitpoints,
+    sendReceiveAttack,
 } from '../lib';
 
 const CONSTRUCT_ID = 12345n;
@@ -23,7 +23,7 @@ function killCharacter(testbed: SimulatorTestbed, constructAddress: bigint) {
     for (let i = 0; i < 64; i++) {
         if (getCharState(testbed, Context.Vars.IsDead, Context.CharacterAddress) === 1n) return;
         const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp * 4n });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: maxHp * 4n });
     }
     throw new Error('killCharacter: character never died');
 }

@@ -125,10 +125,7 @@ export const Context = {
     },
 
     ConstructMethods: {
-        DeductHitpoints: 13n,
-        // COMBAT(rawDamage, effectId, duration): deduct HP + apply a timed status
-        // effect (effectId 0 = pure damage, == DeductHitpoints). Construct-only.
-        Combat: 14n,
+        ReceiveAttack: 13n,
     },
 
     // Contract memory variables — read via getContractMemoryValue(name)

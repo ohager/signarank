@@ -156,7 +156,7 @@ export function deployCharacterWithCharRegistry(opts: DeployOpts = {}) {
 // Deploys character-account-registry + gamemaster-registry + a construct
 // stand-in + the character, with BOTH registries' trust fully configured —
 // needed for scenarios that require a real death (via a trusted construct's
-// DEDUCT_HITPOINTS) AND registry-observable effects (e.g. seppuku, which now
+// RECEIVE_ATTACK) AND registry-observable effects (e.g. seppuku, which now
 // requires isDead == TRUE) in the same test.
 export function deployCharacterWithRegistries(opts: DeployOpts & { constructStandInAddress?: bigint } = {}) {
     const constructAddress = opts.constructStandInAddress ?? 888n;
@@ -210,7 +210,7 @@ export function tokensSentTo(testbed: SimulatorTestbed, recipient: bigint, asset
         .reduce((sum, tok) => sum + tok.quantity, 0n);
 }
 
-// Kills the Character via the trusted construct's DEDUCT_HITPOINTS (the only
+// Kills the Character via the trusted construct's RECEIVE_ATTACK (the only
 // authorized death path). Damage mitigation (dodge + armor) means a single
 // maxHp hit no longer reliably kills, so send overwhelming raw damage and retry
 // past dodges until dead. Overwhelming raw (4×maxHp) always overcomes armor.
@@ -218,19 +218,19 @@ export function killCharacter(testbed: SimulatorTestbed, constructAddress: bigin
     for (let i = 0; i < 64; i++) {
         if (getCharState(testbed, Context.Vars.IsDead, characterAddress) === 1n) return;
         const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, characterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp * 4n });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: maxHp * 4n });
     }
     throw new Error('killCharacter: character never died after 64 overwhelming hits');
 }
 
-// Sends raw DEDUCT_HITPOINTS hits until exactly one LANDS (dodge chance < 100%,
-// so this terminates quickly), returning that landing hit's HP delta. Lets a
-// test assert the deterministic armor math (delta === raw - stamina*armor)
+// Sends raw pure-damage RECEIVE_ATTACK hits until exactly one LANDS (dodge chance
+// < 100%, so this terminates quickly), returning that landing hit's HP delta. Lets
+// a test assert the deterministic armor math (delta === raw - stamina*armor)
 // without depending on which hits the RNG dodges.
 export function landOneHit(testbed: SimulatorTestbed, constructAddress: bigint, rawDamage: bigint, characterAddress = Context.CharacterAddress): bigint {
     for (let i = 0; i < 64; i++) {
         const before = getCharState(testbed, Context.Vars.CurrentHitpoints, characterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: rawDamage });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage });
         const after = getCharState(testbed, Context.Vars.CurrentHitpoints, characterAddress);
         if (after < before) return before - after;
     }
@@ -370,32 +370,24 @@ export function sendRefund(testbed: SimulatorTestbed, opts: { sender?: bigint } 
     }], characterAddress);
 }
 
-export function sendDeductHitpoints(testbed: SimulatorTestbed, opts: { sender: bigint; hitpoints: bigint }) {
-    const characterAddress = Context.CharacterAddress;
-    return testbed.sendTransactionAndGetResponse([{
-        sender: opts.sender,
-        recipient: characterAddress,
-        amount: Context.ActivationFee,
-        messageArr: [Context.ConstructMethods.DeductHitpoints, opts.hitpoints, 0n, 0n],
-    }], characterAddress);
-}
-
-// COMBAT(rawDamage, effectId, duration): deduct HP and apply a timed status.
-export function sendCombat(testbed: SimulatorTestbed, opts: { sender: bigint; rawDamage: bigint; effectId?: bigint; duration?: bigint; characterAddress?: bigint }) {
+// RECEIVE_ATTACK(rawDamage, effectId, duration): the single construct→character
+// counter-attack — deduct HP (with mitigation) and, when effectId != 0, apply a
+// timed status for `duration` blocks. effectId 0 = pure damage.
+export function sendReceiveAttack(testbed: SimulatorTestbed, opts: { sender: bigint; rawDamage: bigint; effectId?: bigint; duration?: bigint; characterAddress?: bigint }) {
     const characterAddress = opts.characterAddress ?? Context.CharacterAddress;
     return testbed.sendTransactionAndGetResponse([{
         sender: opts.sender,
         recipient: characterAddress,
         amount: Context.ActivationFee,
-        messageArr: [Context.ConstructMethods.Combat, opts.rawDamage, opts.effectId ?? 0n, opts.duration ?? 0n],
+        messageArr: [Context.ConstructMethods.ReceiveAttack, opts.rawDamage, opts.effectId ?? 0n, opts.duration ?? 0n],
     }], characterAddress);
 }
 
-// Retries a pure-damage COMBAT past dodges and returns the landing hit's HP delta.
+// Retries a pure-damage RECEIVE_ATTACK past dodges and returns the landing hit's HP delta.
 export function landOneCombat(testbed: SimulatorTestbed, constructAddress: bigint, rawDamage: bigint, characterAddress = Context.CharacterAddress): bigint {
     for (let i = 0; i < 64; i++) {
         const before = getCharState(testbed, Context.Vars.CurrentHitpoints, characterAddress);
-        sendCombat(testbed, { sender: constructAddress, rawDamage, characterAddress });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage, characterAddress });
         const after = getCharState(testbed, Context.Vars.CurrentHitpoints, characterAddress);
         if (after < before) return before - after;
     }

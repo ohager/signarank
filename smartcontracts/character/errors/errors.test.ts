@@ -10,7 +10,6 @@ import {
     sendTransferItem,
     sendUseItem,
     sendAllocateSkillpoint,
-    sendDeductHitpoints,
     fundCharacterWithToken,
     killCharacter,
     registerItemOnGamemasterRegistry,

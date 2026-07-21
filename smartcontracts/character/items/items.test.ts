@@ -12,7 +12,7 @@ import {
     setItemEffectOnGamemasterRegistry,
     sendUseItem,
     sendTransferItem,
-    sendDeductHitpoints,
+    sendReceiveAttack,
     sendAttack,
     fundCharacterWithToken,
     getAttr,
@@ -31,7 +31,7 @@ function kill(testbed: ReturnType<typeof deployCharacterWithTrustedConstruct>['t
     for (let i = 0; i < 64; i++) {
         if (getCharState(testbed, Context.Vars.IsDead, Context.CharacterAddress) === 1n) return;
         const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: maxHp * 4n });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: maxHp * 4n });
     }
     throw new Error('kill: character never died');
 }
@@ -473,7 +473,7 @@ describe('useItem() — consuming an already-held Consumable', () => {
         registerEffectOnGamemasterRegistry(testbed, { logicalId: 10n, target: Context.EffectTarget.Hp, mode: Context.EffectMode.Heal, bonusAbs: 1000000n });
         setItemEffectOnGamemasterRegistry(testbed, { tokenId: HEAL_POTION_ID, slot: 0n, logicalEffectId: 10n });
         fundCharacterWithToken(testbed, { tokenId: HEAL_POTION_ID });
-        sendDeductHitpoints(testbed, { sender: constructAddress, hitpoints: 10n });
+        sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: 10n });
         const maxHp = getCharState(testbed, Context.Vars.MaxHitpoints, Context.CharacterAddress);
 
         sendUseItem(testbed, { tokenId: HEAL_POTION_ID, characterAddress: Context.CharacterAddress });
