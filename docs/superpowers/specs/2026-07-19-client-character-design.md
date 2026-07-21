@@ -203,7 +203,7 @@ Invalid input (unknown attribute, `force` below minimums, transfer to a contract
 ## Deployment notes
 
 - The character codehash changes (Part 1). At deploy, update **`G_CHARACTER_HASH`** on the gamemaster registry and the **trusted character hash** on the char-account registry to the new value. Pre-launch, no live characters depend on the old layout.
-  - New character codehash after the publish-schema additions (VITALS + effective sta/dex/will in COMBAT + STATUS_EFFECT_ID): **`8336535780851164957`** (code size 9115/10240 bytes). This is the value to set as `G_CHARACTER_HASH` and the char-account-registry trusted character hash. Also feeds `CharacterDataFieldIndex` derivation in Part 2 Task 10.
+  - New character codehash after the publish-schema additions (VITALS + effective sta/dex/will in COMBAT + STATUS_EFFECT_ID) **and the DEDUCT_HITPOINTS/COMBAT → unified RECEIVE_ATTACK(13) consolidation**: **`1535226251089564205`** (code size 9058/10240 bytes). This is the value to set as `G_CHARACTER_HASH` and the char-account-registry trusted character hash. Also feeds `CharacterDataFieldIndex` derivation in Part 2 Task 10. (Supersedes the earlier `8336535780851164957`, which predated the RECEIVE_ATTACK consolidation.)
 - Work happens on the `signarank-constructor` **transition branch**; `main` (old code, tagged) is untouched until the transition is complete, so the latent construct-reader break is an acceptable mid-transition state.
 
 ## Testing approach (TDD)
