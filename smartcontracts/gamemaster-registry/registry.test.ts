@@ -183,12 +183,12 @@ describe('Items', () => {
         registerItem(testbed, {
             tokenId: LEHARIS, itemType: 1n, stackLimit: 1n, minLevel: 0n, effectCount: 0n,
         });
-        setItemEffect(testbed, LEHARIS, 0n, 1001n);
-        setItemEffect(testbed, LEHARIS, 1n, 1002n);
-        setItemEffect(testbed, LEHARIS, 2n, 1003n);
-        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 0n)).toBe(1001n);
-        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 1n)).toBe(1002n);
-        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 2n)).toBe(1003n);
+        setItemEffect(testbed, LEHARIS, 0n, effectK1(1001n));
+        setItemEffect(testbed, LEHARIS, 1n, effectK1(1002n));
+        setItemEffect(testbed, LEHARIS, 2n, effectK1(1003n));
+        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 0n)).toBe(effectK1(1001n));
+        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 1n)).toBe(effectK1(1002n));
+        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 2n)).toBe(effectK1(1003n));
     });
 
     test('setItemEffect bumps EffectCount when slot >= current count', () => {
@@ -196,9 +196,9 @@ describe('Items', () => {
         registerItem(testbed, {
             tokenId: LEHARIS, itemType: 1n, stackLimit: 1n, minLevel: 0n, effectCount: 0n,
         });
-        setItemEffect(testbed, LEHARIS, 0n, 1001n);
+        setItemEffect(testbed, LEHARIS, 0n, effectK1(1001n));
         expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectCount)).toBe(1n);
-        setItemEffect(testbed, LEHARIS, 2n, 1003n);
+        setItemEffect(testbed, LEHARIS, 2n, effectK1(1003n));
         expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectCount)).toBe(3n);
     });
 
@@ -207,9 +207,9 @@ describe('Items', () => {
         registerItem(testbed, {
             tokenId: LEHARIS, itemType: 1n, stackLimit: 1n, minLevel: 0n, effectCount: 3n,
         });
-        setItemEffect(testbed, LEHARIS, 1n, 9999n);
+        setItemEffect(testbed, LEHARIS, 1n, effectK1(9999n));
         expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectCount)).toBe(3n);
-        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 1n)).toBe(9999n);
+        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 1n)).toBe(effectK1(9999n));
     });
 
     test('re-registerItem with smaller effectCount clears stale effect slots above new count', () => {
@@ -217,19 +217,19 @@ describe('Items', () => {
         registerItem(testbed, {
             tokenId: LEHARIS, itemType: 1n, stackLimit: 1n, minLevel: 0n, effectCount: 5n,
         });
-        setItemEffect(testbed, LEHARIS, 0n, 1001n);
-        setItemEffect(testbed, LEHARIS, 1n, 1002n);
-        setItemEffect(testbed, LEHARIS, 2n, 1003n);
-        setItemEffect(testbed, LEHARIS, 3n, 1004n);
-        setItemEffect(testbed, LEHARIS, 4n, 1005n);
+        setItemEffect(testbed, LEHARIS, 0n, effectK1(1001n));
+        setItemEffect(testbed, LEHARIS, 1n, effectK1(1002n));
+        setItemEffect(testbed, LEHARIS, 2n, effectK1(1003n));
+        setItemEffect(testbed, LEHARIS, 3n, effectK1(1004n));
+        setItemEffect(testbed, LEHARIS, 4n, effectK1(1005n));
 
         registerItem(testbed, {
             tokenId: LEHARIS, itemType: 1n, stackLimit: 1n, minLevel: 0n, effectCount: 2n,
         });
 
         expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectCount)).toBe(2n);
-        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 0n)).toBe(1001n);
-        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 1n)).toBe(1002n);
+        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 0n)).toBe(effectK1(1001n));
+        expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 1n)).toBe(effectK1(1002n));
         expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 2n)).toBe(0n);
         expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 3n)).toBe(0n);
         expect(getValue(testbed, LEHARIS, Context.ItemKeys.EffectBase + 4n)).toBe(0n);
@@ -240,8 +240,8 @@ describe('Items', () => {
         registerItem(testbed, {
             tokenId: LEHARIS, itemType: 1n, stackLimit: 3n, minLevel: 5n, effectCount: 2n,
         });
-        setItemEffect(testbed, LEHARIS, 0n, 1001n);
-        setItemEffect(testbed, LEHARIS, 1n, 1002n);
+        setItemEffect(testbed, LEHARIS, 0n, effectK1(1001n));
+        setItemEffect(testbed, LEHARIS, 1n, effectK1(1002n));
 
         unregisterItem(testbed, LEHARIS);
 
@@ -333,6 +333,29 @@ describe('Validation', () => {
         setItemEffect(testbed, TOKEN, Context.MaxEffectSlotsPerItem, 1234n);
         expect(getValue(testbed, TOKEN, Context.ItemKeys.EffectBase + Context.MaxEffectSlotsPerItem)).toBe(0n);
         expect(getValue(testbed, TOKEN, Context.ItemKeys.EffectCount)).toBe(0n);
+    });
+
+    test('setItemEffect rejects effectId outside the effect range (no dangling ref)', () => {
+        const testbed = makeTestbed();
+        const TOKEN = 1_999_999_999n;
+        registerItem(testbed, {
+            tokenId: TOKEN, itemType: 1n, stackLimit: 1n, minLevel: 0n, effectCount: 0n,
+        });
+        // 1234n is below MinEffectId (would land in the item/globals namespace).
+        setItemEffect(testbed, TOKEN, 0n, 1234n);
+        expect(getValue(testbed, TOKEN, Context.ItemKeys.EffectBase + 0n)).toBe(0n);
+        expect(getValue(testbed, TOKEN, Context.ItemKeys.EffectCount)).toBe(0n);
+        expect(getErrorCodes(testbed)).toContain(Context.Errors.EffectIdInvalid);
+    });
+
+    test('setItemEffect rejects an unregistered item (no phantom item)', () => {
+        const testbed = makeTestbed();
+        const TOKEN = 1_999_999_999n;
+        // No registerItem — the token has no IK_TYPE.
+        setItemEffect(testbed, TOKEN, 0n, effectK1(1001n));
+        expect(getValue(testbed, TOKEN, Context.ItemKeys.EffectBase + 0n)).toBe(0n);
+        expect(getValue(testbed, TOKEN, Context.ItemKeys.EffectCount)).toBe(0n);
+        expect(getErrorCodes(testbed)).toContain(Context.Errors.ItemNotRegistered);
     });
 });
 

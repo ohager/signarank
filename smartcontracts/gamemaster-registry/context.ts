@@ -15,11 +15,10 @@ export const Context = {
     Methods: {
         SetConstructHash:      1n,
         SetCharacterHash:      2n,
-        // 3 retired (SetLevelThreshold — leveling is triangular, not registry config)
+        SetNextCharacterHash:  3n,
         SetXpToken:            4n,
         SetConstructorAccount: 5n,
         SetCharRegistry:       6n,
-        SetNextCharacterHash:  7n,
         RegisterItem:         10n,
         UnregisterItem:       11n,
         SetItemEffect:        12n,
@@ -45,6 +44,7 @@ export const Context = {
         InvalidMode:        4n,
         InvalidSlot:        5n,
         EffectCountInvalid: 6n,
+        ItemNotRegistered:  7n,
     },
 
     // Item Definition properties (k1 = tokenId, k2 = property-id)

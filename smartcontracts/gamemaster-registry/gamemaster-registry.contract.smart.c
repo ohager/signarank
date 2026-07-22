@@ -1,24 +1,34 @@
 #program name SrankReg
 #program description Signarank Gamemaster Registry (singleton)
-#program activationAmount 100000000
+#program activationAmount 60000000
 #pragma optimizationLevel 3
 #pragma verboseAssembly false
 #pragma maxAuxVars 3
 #pragma version 2.3.0
 
 // Method codes
+
+// set code hash from current construct contract
 #define M_SET_CONSTRUCT_HASH       1
+// set code hash from current character contract
 #define M_SET_CHARACTER_HASH       2
-// (3 retired: per-level XP thresholds are obsolete — leveling is a hardcoded
-//  triangular curve in the Character, not registry config.)
+// set code hash from upcoming character contract - used for migration
+#define M_SET_NEXT_CHARACTER_HASH  3
+// set token Id from current XP token
 #define M_SET_XP_TOKEN             4
+// set account Id from current constructor account
 #define M_SET_CONSTRUCTOR_ACCOUNT  5
+// set account Id from current character registry contract
 #define M_SET_CHAR_REGISTRY        6
-#define M_SET_NEXT_CHARACTER_HASH  7
+// register item
 #define M_REGISTER_ITEM       10
+// unregister item
 #define M_UNREGISTER_ITEM     11
+// set one or more effects per item
 #define M_SET_ITEM_EFFECT     12
+// register effect
 #define M_REGISTER_EFFECT     20
+// unregister effect
 #define M_UNREGISTER_EFFECT   21
 
 // Registry key namespace (k1):
@@ -53,6 +63,7 @@
 #define ERR_INVALID_MODE          4
 #define ERR_INVALID_SLOT          5
 #define ERR_EFFECT_COUNT_INVALID  6
+#define ERR_ITEM_NOT_REGISTERED   7
 
 // Item property keys (k2; k1 = tokenId)
 #define IK_TYPE         1
@@ -91,8 +102,9 @@ struct TX {
 void main() {
     while ((currentTx.txId = getNextTx()) != ZERO) {
         currentTx.sender = getSender(currentTx.txId);
-        readMessage(currentTx.txId, 0, currentTx.message);
         if (currentTx.sender != getCreator()) { continue; }
+
+        readMessage(currentTx.txId, 0, currentTx.message);
 
         switch (currentTx.message[0]) {
             case M_SET_CONSTRUCT_HASH:
@@ -254,6 +266,18 @@ void setItemEffect() {
     }
     if (slot < ZERO || slot >= MAX_EFFECT_SLOTS_PER_ITEM) {
         _registerError(ERR_INVALID_SLOT);
+        return;
+    }
+    // Reject dangling effect references: effectId must be a valid, in-range
+    // effect key (parity with registerEffect). Cheap comparisons first.
+    if (effectId < MIN_EFFECT_ID || effectId > MAX_EFFECT_ID) {
+        _registerError(ERR_EFFECT_ID_INVALID);
+        return;
+    }
+    // The item must already exist; a registered item always has a non-zero
+    // IK_TYPE. Blocks phantom items and effectCount gaps on unregistered tokens.
+    if (getMapValue(tokenId, IK_TYPE) == ZERO) {
+        _registerError(ERR_ITEM_NOT_REGISTERED);
         return;
     }
 
