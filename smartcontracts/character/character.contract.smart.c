@@ -250,6 +250,11 @@ long maxInventorySlots;
 // permanently retired. Every subsequent activation is inert (incoming value is
 // bounced back to the sender). There is no way back.
 long migrated;
+// TRUE while this character holds an entry in the singleton character-account
+// registry. Set at init() (registration) and cleared the first time the character
+// retires (seppuku/migrate), so the unregister message — and its fee — is sent
+// exactly once even if SEPPUKU is dispatched repeatedly on a dead character.
+long registered;
 // Set on the first ATTACK. Locks REROLL and gates SEPPUKU.
 long committed;
 long rerollCount;
@@ -470,6 +475,7 @@ void init() {
     primaryAttackEffectId = ZERO;
     errorCount = ZERO;
     migrated = FALSE;
+    registered = TRUE; // the registration send below enters this character in the registry
     publishProgression(); // seed the public sheet at deploy
 
     // Registers this character at the singleton character-account registry so
@@ -690,7 +696,7 @@ void handleDead() {
         if(dropChance > ZERO && ((getWeakRandomNumber() >> 1) % 100) < dropChance){
             long droppedToken = _inventoryDropRandom();
             long droppedType = getExtMapValue(droppedToken, GAMEMASTER_ITEM_KEY_TYPE, GAMEMASTER_REGISTRY);
-            if(droppedType == ITEM_TYPE_EQUIPMENT){ applyAllEffects(droppedToken, -1); }
+            if(droppedType == ITEM_TYPE_EQUIPMENT){ applyAllEffects(droppedToken, -1, FALSE); }
             sendQuantity(1, droppedToken, constructorAccount);
         }
     }
@@ -709,7 +715,7 @@ void useItem(long tokenId) {
     long itemType = getExtMapValue(tokenId, GAMEMASTER_ITEM_KEY_TYPE, GAMEMASTER_REGISTRY);
     if(itemType != ITEM_TYPE_CONSUMABLE){ registerError(ERR_USE_ITEM_NOT_CONSUMABLE); return; }
 
-    long applied = applyAllEffects(tokenId, 1);
+    long applied = applyAllEffects(tokenId, 1, TRUE); // consumable: transient effects only
     if(applied <= ZERO){
         // Every effect's precondition failed (e.g. a HEAL potion used while
         // dead) — leave it untouched in inventory rather than destroying it.
@@ -869,7 +875,7 @@ void receiveAsset(long tokenId) {
     _inventoryAdd(tokenId, accept);
 
     if(itemType == ITEM_TYPE_EQUIPMENT){
-        applyAllEffects(tokenId, 1); // auto-equip on arrival
+        applyAllEffects(tokenId, 1, FALSE); // auto-equip on arrival (persistent effects allowed)
     }
     // Consumables are accepted but not applied here — see useItem().
 }
@@ -877,7 +883,7 @@ void receiveAsset(long tokenId) {
 // Returns how many of the item's effect slots actually changed state —
 // callers use this to decide whether a consumable did anything before
 // burning it (see useItem()).
-long applyAllEffects(long tokenId, long sign) {
+long applyAllEffects(long tokenId, long sign, long transientOnly) {
     long effectCount = getExtMapValue(tokenId, GAMEMASTER_ITEM_KEY_EFFECT_COUNT, GAMEMASTER_REGISTRY);
     long slot;
     long effectId;
@@ -886,15 +892,24 @@ long applyAllEffects(long tokenId, long sign) {
     for(slot = 0; slot < effectCount; ++slot){
         effectId = getExtMapValue(tokenId, GAMEMASTER_ITEM_KEY_EFFECT_BASE + slot, GAMEMASTER_REGISTRY);
         if(effectId != ZERO){
-            appliedCount += applyEffect(effectId, sign);
+            appliedCount += applyEffect(effectId, sign, transientOnly);
         }
     }
     return appliedCount;
 }
 
 // Returns 1 if the effect changed state, 0 if its precondition failed (e.g.
-// HEAL while dead, REVIVE while alive) or its mode is unrecognized.
-long applyEffect(long effectId, long sign) {
+// HEAL while dead, REVIVE while alive), its mode is unrecognized, or it is an
+// equipment-only mode applied to a consumable.
+//
+// `transientOnly` is set when the effect is applied from a CONSUMABLE use. A
+// consumable is burned on use, so it must never leave a PERSISTENT mark — there is
+// no later -1 to reverse an AGGREGATE bonus or to clear a primary-attack element.
+// Those persistent outcomes are therefore restricted to equipment (equipped +1 /
+// unequipped -1); a consumable may only produce transient effects (HEAL/REVIVE/
+// STATUS). Without this a consumable carrying an AGGREGATE effect granted a
+// permanent, irreversible stat boost every time it was used.
+long applyEffect(long effectId, long sign, long transientOnly) {
     long target   = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_TARGET, GAMEMASTER_REGISTRY);
     long bonusAbs = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_BONUS_ABS, GAMEMASTER_REGISTRY);
     long bonusRel = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_BONUS_REL, GAMEMASTER_REGISTRY);
@@ -902,29 +917,36 @@ long applyEffect(long effectId, long sign) {
     long duration = getExtMapValue(effectId, GAMEMASTER_EFFECT_KEY_DURATION, GAMEMASTER_REGISTRY);
     long current;
 
-    // Track the primary attack element for the construct's affinity lookup. One
-    // weapon = one element: last-equipped attack effect wins; cleared when that
-    // same effect is unequipped.
-    if(target == EQUIP_TARGET_ATTACK){
-        combatDirty = TRUE; // primary attack element may change
-        if(sign > ZERO){
-            primaryAttackEffectId = effectId;
-        } else if(primaryAttackEffectId == effectId){
-            primaryAttackEffectId = ZERO;
+    // Persistent, equipment-only outcomes: the primary attack element and the
+    // AGGREGATE bonuses. Skipped entirely for a consumable (transientOnly) so it
+    // can never permanently buff/debuff via a mode it can never reverse.
+    if(transientOnly == FALSE){
+        // Track the primary attack element for the construct's affinity lookup. One
+        // weapon = one element: last-equipped attack effect wins; cleared when that
+        // same effect is unequipped.
+        if(target == EQUIP_TARGET_ATTACK){
+            combatDirty = TRUE; // primary attack element may change
+            if(sign > ZERO){
+                primaryAttackEffectId = effectId;
+            } else if(primaryAttackEffectId == effectId){
+                primaryAttackEffectId = ZERO;
+            }
+        }
+
+        if(mode == MODE_AGGREGATE_ABS){
+            current = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target);
+            setMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target, current + sign * bonusAbs);
+            combatDirty = TRUE; // equipment aggregate changed
+            return 1;
+        } else if(mode == MODE_AGGREGATE_REL){
+            current = getMapValue(MAP_KEY1_EQUIP_BONUS_REL, target);
+            setMapValue(MAP_KEY1_EQUIP_BONUS_REL, target, current + sign * bonusRel);
+            combatDirty = TRUE; // equipment aggregate changed
+            return 1;
         }
     }
 
-    if(mode == MODE_AGGREGATE_ABS){
-        current = getMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target);
-        setMapValue(MAP_KEY1_EQUIP_BONUS_ABS, target, current + sign * bonusAbs);
-        combatDirty = TRUE; // equipment aggregate changed
-        return 1;
-    } else if(mode == MODE_AGGREGATE_REL){
-        current = getMapValue(MAP_KEY1_EQUIP_BONUS_REL, target);
-        setMapValue(MAP_KEY1_EQUIP_BONUS_REL, target, current + sign * bonusRel);
-        combatDirty = TRUE; // equipment aggregate changed
-        return 1;
-    } else if(mode == MODE_HEAL){
+    if(mode == MODE_HEAL){
         if(isDead == TRUE){ return ZERO; }
         // Flat amount plus a percentage of max HP; either field may be 0.
         currentHitpoints += bonusAbs + (maxHitpoints * bonusRel) / 100;
@@ -945,7 +967,9 @@ long applyEffect(long effectId, long sign) {
         storeStatus(target, effectId, bonusAbs, bonusRel, duration);
         return 1;
     }
-    return ZERO; // unknown mode — silently ignored (forward-compatible)
+    // Unknown mode (forward-compatible), or an equipment-only mode (AGGREGATE)
+    // applied to a consumable — silently ignored, and the consumable is not burned.
+    return ZERO;
 }
 
 void allocateSkillPoint(long attrIndex) {
@@ -1047,6 +1071,20 @@ void bounceTx() {
 // build (attributes + published level/skill points) from this contract's map,
 // which is frozen from here on. Enabled only while the gamemaster has opened a
 // migration window (G_NEXT_CHARACTER_HASH != 0).
+// Sends the unregister message + fee to the singleton character-account registry
+// exactly once over the character's lifetime. Both retirement paths (SEPPUKU and
+// migrate) route through it; the `registered` guard stops a repeated SEPPUKU on a
+// dead character from re-sending the message and draining the fee each time.
+void unregisterFromCharRegistry() {
+    if(registered == FALSE){ return; }
+    registered = FALSE;
+    messageBuffer[0] = CHAR_REGISTRY_M_UNREGISTER_CHARACTER;
+    messageBuffer[1] = ZERO;
+    messageBuffer[2] = ZERO;
+    messageBuffer[3] = ZERO;
+    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, charRegistry);
+}
+
 void migrate() {
     if(migrated == TRUE){ return; } // one-shot — no way back
 
@@ -1056,11 +1094,7 @@ void migrate() {
     migrated = TRUE;
 
     // Retire from the character-account registry — this character is done.
-    messageBuffer[0] = CHAR_REGISTRY_M_UNREGISTER_CHARACTER;
-    messageBuffer[1] = ZERO;
-    messageBuffer[2] = ZERO;
-    messageBuffer[3] = ZERO;
-    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, charRegistry);
+    unregisterFromCharRegistry();
 
     long owner = getCreator();
 
@@ -1144,11 +1178,9 @@ void seppuku() {
     currentHitpoints = ZERO;
     isDead = TRUE;
 
-    messageBuffer[0] = CHAR_REGISTRY_M_UNREGISTER_CHARACTER;
-    messageBuffer[1] = ZERO;
-    messageBuffer[2] = ZERO;
-    messageBuffer[3] = ZERO;
-    sendAmountAndMessage(charRegistryActivationFee, messageBuffer, charRegistry);
+    // Retire from the registry once — repeated SEPPUKU on a dead character no-ops
+    // here instead of re-sending the message and draining the fee each time.
+    unregisterFromCharRegistry();
 }
 
 void transferItem(long itemId, long recipientId) {
@@ -1172,7 +1204,7 @@ void transferItem(long itemId, long recipientId) {
     // aggregate bonuses, so unequip those before it leaves.
     long itemType = getExtMapValue(itemId, GAMEMASTER_ITEM_KEY_TYPE, GAMEMASTER_REGISTRY);
     if(itemType == ITEM_TYPE_EQUIPMENT || itemType == ITEM_TYPE_CONSUMABLE){
-        if(itemType == ITEM_TYPE_EQUIPMENT){ applyAllEffects(itemId, -1); }
+        if(itemType == ITEM_TYPE_EQUIPMENT){ applyAllEffects(itemId, -1, FALSE); }
         _inventoryRemoveOne(itemId);
     }
     sendQuantity(1, itemId, recipientId);

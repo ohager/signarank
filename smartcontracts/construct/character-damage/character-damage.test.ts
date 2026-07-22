@@ -91,4 +91,21 @@ describe("Character Damage", () => {
         // base 10 + element-token addition 50 = 60
         expect(before - getCurrentHitpoints(testbed)!).toBe(60n);
     });
+
+    test("floors negative computed damage at zero (published attackRel below -100)", () => {
+        const {testbed, characterAddress} = deployConstructWithCharacter();
+        setCharacterDamage(testbed, 0n, 0n);
+        // (base 10) × (100 + (-200)) / 100 = -10. Without the floor this negative is
+        // added to totalDamageDealt and handed to the hp-token share sendQuantity();
+        // the fix clamps effectiveDamage to zero.
+        setCharacterStats(testbed, {attackRel: -200n});
+
+        const before = getCurrentHitpoints(testbed)!;
+        attack({testbed, sender: characterAddress, signa: 100n});
+
+        // No damage dealt: HP unchanged, and totalDamageDealt is 0 — not -10, which
+        // is what an unclamped negative effectiveDamage would have recorded.
+        expect(getCurrentHitpoints(testbed)!).toBe(before);
+        expect(testbed.getContractMemoryValue('totalDamageDealt', Context.ThisContract)).toBe(0n);
+    });
 });

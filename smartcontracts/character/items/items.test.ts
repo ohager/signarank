@@ -639,6 +639,46 @@ describe('useItem() — consuming an already-held Consumable', () => {
 
         expect(getCharState(testbed, Context.Vars.UsedInventorySlots, Context.CharacterAddress)).toBe(0n);
     });
+
+    test('a consumable carrying only an AGGREGATE effect grants no persistent bonus and is NOT consumed', () => {
+        const { testbed } = deployCharacterWithGamemasterRegistry();
+        const BUFF_POTION_ID = 5006n;
+        // A consumable whose sole effect is a persistent AGGREGATE_ABS (+5 STRENGTH).
+        // A consumable is burned on use with no -1 reversal, so applying an aggregate
+        // would be a permanent, irreversible boost — it must be ignored.
+        registerItemOnGamemasterRegistry(testbed, { tokenId: BUFF_POTION_ID, itemType: Context.ItemType.Consumable, stackLimit: 10n, effectCount: 1n });
+        registerEffectOnGamemasterRegistry(testbed, { logicalId: 20n, target: Context.EffectTarget.Strength, mode: Context.EffectMode.AggregateAbs, bonusAbs: 5n });
+        setItemEffectOnGamemasterRegistry(testbed, { tokenId: BUFF_POTION_ID, slot: 0n, logicalEffectId: 20n });
+        fundCharacterWithToken(testbed, { tokenId: BUFF_POTION_ID });
+
+        sendUseItem(testbed, { tokenId: BUFF_POTION_ID, characterAddress: Context.CharacterAddress });
+
+        // No persistent bonus applied…
+        expect(getEquipBonusAbs(testbed, Context.EffectTarget.Strength)).toBe(0n);
+        // …and since nothing changed, the potion is left in inventory (not burned).
+        expect(getCharState(testbed, Context.Vars.UsedInventorySlots, Context.CharacterAddress)).toBe(1n);
+        const character = testbed.getContract(Context.CharacterAddress);
+        expect(character.tokens.find(t => t.asset === BUFF_POTION_ID)?.quantity ?? 0n).toBe(1n);
+    });
+
+    test('a consumable with a HEAL and an AGGREGATE effect fires the heal and is consumed, but ignores the aggregate', () => {
+        const { testbed } = deployCharacterWithGamemasterRegistry();
+        const MIX_POTION_ID = 5007n;
+        registerItemOnGamemasterRegistry(testbed, { tokenId: MIX_POTION_ID, itemType: Context.ItemType.Consumable, stackLimit: 10n, effectCount: 2n });
+        registerEffectOnGamemasterRegistry(testbed, { logicalId: 21n, target: Context.EffectTarget.Hp, mode: Context.EffectMode.Heal, bonusAbs: 10n });
+        registerEffectOnGamemasterRegistry(testbed, { logicalId: 22n, target: Context.EffectTarget.Strength, mode: Context.EffectMode.AggregateAbs, bonusAbs: 5n });
+        setItemEffectOnGamemasterRegistry(testbed, { tokenId: MIX_POTION_ID, slot: 0n, logicalEffectId: 21n });
+        setItemEffectOnGamemasterRegistry(testbed, { tokenId: MIX_POTION_ID, slot: 1n, logicalEffectId: 22n });
+        fundCharacterWithToken(testbed, { tokenId: MIX_POTION_ID });
+
+        sendUseItem(testbed, { tokenId: MIX_POTION_ID, characterAddress: Context.CharacterAddress });
+
+        // The HEAL "applied" (alive) so the potion is consumed, but the aggregate is ignored.
+        expect(getEquipBonusAbs(testbed, Context.EffectTarget.Strength)).toBe(0n);
+        expect(getCharState(testbed, Context.Vars.UsedInventorySlots, Context.CharacterAddress)).toBe(0n);
+        const character = testbed.getContract(Context.CharacterAddress);
+        expect(character.tokens.find(t => t.asset === MIX_POTION_ID)?.quantity ?? 0n).toBe(0n);
+    });
 });
 
 describe('useItem() — status effects', () => {

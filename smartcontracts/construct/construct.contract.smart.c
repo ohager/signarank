@@ -464,6 +464,11 @@ void runAttackerRound() {
     if (effectiveDamage < preBreachDamage) {
         breachLimitHit = 1;
     }
+    // A debuff or a character's published attackRel below -100 can drive computed
+    // damage negative (applyBreachLimit only caps the top). Floor at zero so a
+    // negative can never be dealt as "damage": it would corrupt totalDamageDealt,
+    // be handed to the hp-token share sendQuantity(), and slip past the defeat check.
+    if (effectiveDamage < ZERO) { effectiveDamage = ZERO; }
 
     // Resolve the reward recipient once: for a character the owner EOA (it holds
     // the tradable receipts and all SIGNA bonuses), for an EOA the sender itself.

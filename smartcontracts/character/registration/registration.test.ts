@@ -109,6 +109,29 @@ describe('seppuku()', () => {
 
         expect(getCharRegistryValue(testbed, character.creator, character.contract)).toBe(character.codeHashId);
     });
+
+    test('a repeated seppuku on an already-retired character does not re-send the unregister (no fee drain)', () => {
+        const { testbed, constructAddress } = deployCharacterWithRegistries();
+        const character = testbed.getContract(Context.CharacterAddress);
+        sendAttack(testbed, { signa: 10n, constructId: CONSTRUCT_ID });
+        killCharacter(testbed, constructAddress);
+
+        // First seppuku unregisters the character.
+        sendSeppuku(testbed);
+        expect(getCharRegistryValue(testbed, character.creator, character.contract)).toBe(0n);
+
+        // Count messages the character has sent to the registry so far (one REGISTER
+        // at init + one UNREGISTER from the first seppuku).
+        const registryTxCount = () => testbed.getTransactions().filter(
+            (tx: any) => tx.sender === Context.CharacterAddress && tx.recipient === Context.CharRegistryAddress).length;
+        const before = registryTxCount();
+
+        // A second seppuku (still isDead && committed) must NOT re-send the unregister.
+        sendSeppuku(testbed);
+
+        expect(registryTxCount()).toBe(before);
+        expect(getCharRegistryValue(testbed, character.creator, character.contract)).toBe(0n);
+    });
 });
 
 describe('refund() — independent of registration and commitment', () => {
