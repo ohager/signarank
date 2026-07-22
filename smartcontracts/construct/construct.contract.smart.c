@@ -32,15 +32,23 @@
 #define SETCOUNTEREFFECT 20
 
 // The character contract's COMBAT method code — the construct SENDS this on a
-// counter (must mirror character.contract's code): COMBAT(rawDamage, effectId,
-// duration). effectId 0 = pure damage (== the character's DEDUCT_HITPOINTS).
-#define CHAR_COMBAT 14
+// counter (must mirror character.contract's code): RECEIVE_ATTACK(rawDamage, effectId,
+// duration).
+#define CHAR_COUNTER_ATTACK 13
 
 // ---- ITEM DROPS ----
 // A bounded drop table of MAX_DROP_SLOTS entries. One D100 roll per character hit
 // decides all slots at once (nested threshold bands). Drops go to the character
 // only, supply-guarded by the construct's own balance.
 #define MAX_DROP_SLOTS 5
+
+// Upper bound on the resistance-token stacking loop in applyTokenMultiplier().
+// Without a per-token limit an attacker could attach a huge quantity of a
+// resistance token purely to blow the per-activation step ceiling and freeze the
+// construct (DoS). Resistance (multiplier < 100) shrinks damage toward 0, so
+// anything past this many whole-token stacks is negligible — clamping the loop
+// count here is a safe, deterministic gas bound.
+#define MAX_RESISTANCE_STACKS 100
 
 // ---- CHARACTER PUBLIC PROFILE (read via getExtMapValue on the attacker) ----
 // The character publishes its EFFECTIVE offensive stats (base attribute +
@@ -138,13 +146,17 @@ struct REGENERATION {
     const rewardNftId = TESTBED_rewardNftId;
 #endif
 
-
-// derived/calculated state - not intended for initialization
+// derived/calculated  and publicly acessible state - not intended for initialization but readable outside
 long isDefeated;
 long firstBloodAccount;
 long finalBlowAccount;
-long hpTokenId;
+long hpTokenId; // determined on initialization
 long xpTokenId; // sourced from the gamemaster registry (G_XP_TOKEN) in init()
+
+
+
+// internal state  - although possible, not intended for reading outside the contract
+long defeatHandled;
 long totalDamageDealt;
 long attackerMode; // gamemaster-set gate; defaults 0 = ATTACKER_MODE_ANY
 long strDamageFactor; // character stat-damage tuning (per strength point)
@@ -229,6 +241,7 @@ void init(){
 
     isActive = 1;
     isDefeated = 0;
+    defeatHandled = 0;
 }
 
 void main() {
@@ -245,23 +258,29 @@ void main() {
         currentTx.sender = getSender(currentTx.txId);
         readMessage(currentTx.txId, 0, currentTx.message);
         readAssets(currentTx.txId, currentTx.assetIds);
-        if(currentTx.sender != getCreator() && isDefeated==ZERO){
-
-            if(isActive == 1 && justMinted == ZERO) {
-                if(getAssetBalance(xpTokenId) < getCurrentHitpoints()){
-                    // Can't cover the remaining HP with XP rewards — go dormant.
-                    handleXpShortage();
-                }else if(attackerAllowed()){
-                    runAttackerRound();
+        if(currentTx.sender != getCreator()){
+            if(isDefeated == ZERO){
+                if(isActive == 1 && justMinted == ZERO) {
+                    if(getAssetBalance(xpTokenId) < getCurrentHitpoints()){
+                        // Can't cover the remaining HP with XP rewards — go dormant.
+                        handleXpShortage();
+                    }else if(attackerAllowed()){
+                        runAttackerRound();
+                    }else{
+                        // wrong attacker type for the current mode — graceful refund
+                        refundRejectedAttacker();
+                    }
                 }else{
-                    // wrong attacker type for the current mode — graceful refund
-                    refundRejectedAttacker();
+                    refund();
                 }
             }else{
-                refund();
+                // Already defeated: bounce a straggler's SIGNA and assets back
+                // instead of keeping them — otherwise they are swept into a
+                // duplicate defeat payout on the next activation.
+                refundDefeated();
             }
         }
-        else if(currentTx.sender == getCreator()) {
+        else {
             switch(currentTx.message[0]) {
                 case SETACTIVE:
                     setActive(currentTx.message[1]);
@@ -325,7 +344,8 @@ void main() {
     }
 
     if(isDefeated == 1) {
-        handleDefeat();
+        // One-shot: never re-run the defeat distribution on a later activation.
+        if(defeatHandled == ZERO){ handleDefeat(); }
     } else {
         regenerate();
     }
@@ -350,6 +370,14 @@ void handleXpShortage(){
 // graceful full-refund path as refund() — nothing is burned.
 void refundRejectedAttacker(){
     messageBuffer[] = "Attacker type not allowed!";
+    returnFundsAndAssets();
+}
+
+// A straggler that reaches an already-defeated construct: return its full SIGNA
+// and assets instead of keeping them (they would otherwise be swept into a
+// duplicate defeat payout the next time handleDefeat() would run).
+void refundDefeated(){
+    messageBuffer[] = "Construct already defeated!";
     returnFundsAndAssets();
 }
 
@@ -437,10 +465,23 @@ void runAttackerRound() {
         breachLimitHit = 1;
     }
 
+    // Resolve the reward recipient once: for a character the owner EOA (it holds
+    // the tradable receipts and all SIGNA bonuses), for an EOA the sender itself.
+    // Computed BEFORE the defeat check so the final blow can be attributed at the
+    // exact moment HP reaches zero.
+    long shareRecipient = currentTx.sender;
+    if(isChar){
+        shareRecipient = getCreatorOf(currentTx.sender);
+    }
+
     long currentHP = getCurrentHitpoints();
     if (effectiveDamage >= currentHP) {
         isDefeated = 1;
         effectiveDamage = currentHP; // we cannot do more damage
+        // Capture the finisher HERE, at the kill — not from currentTx.sender in the
+        // post-loop handleDefeat(), which would be whatever tx was processed LAST
+        // this activation (a straggler could otherwise steal the victory bonus/NFT).
+        finalBlowAccount = shareRecipient;
     }
 
     totalDamageDealt += effectiveDamage;
@@ -451,12 +492,7 @@ void runAttackerRound() {
     }
     // The hpToken damage-share receipt goes to the owner for a character (it would
     // reject an unregistered token), so the human holds it and joins the defeat
-    // distribution. First/final-blood accounts store the owner for the same reason
-    // (all SIGNA bonuses accrue to the human).
-    long shareRecipient = currentTx.sender;
-    if(isChar){
-        shareRecipient = getCreatorOf(currentTx.sender);
-    }
+    // distribution.
     sendQuantity(effectiveDamage, hpTokenId, shareRecipient);
 
     long gotFirstBlood = 0;
@@ -479,7 +515,7 @@ void runAttackerRound() {
     // takes real HP damage (DEDUCT_HITPOINTS); an EOA gets a future-damage debuff.
     if(isChar){
         if(counterDamageBase > ZERO && counterFires(preBreachDamage)){
-            sendCharacterCounter();
+            executeCharacterCounterAttack();
         }
     } else if (shouldCounterAttack(preBreachDamage)) {
         executeCounterAttack();
@@ -659,6 +695,9 @@ long applyTokenMultiplier(long damage, long tokenId) {
   if (multiplier < 100) {
       // Resistance: Apply each token individually (exponential stacking)
       long quantityInt = quantity / pow10(decimals);
+      // Bound the loop so a large attached quantity (esp. when no tokenLimit is
+      // configured) can't exhaust the step ceiling — see MAX_RESISTANCE_STACKS.
+      if (quantityInt > MAX_RESISTANCE_STACKS) { quantityInt = MAX_RESISTANCE_STACKS; }
       long i = 0;
       while (i < quantityInt) {
           damage = (damage * multiplier) / 100;
@@ -724,13 +763,8 @@ inline long shouldCounterAttack(long rawDamage) {
     return counterFires(rawDamage);
 }
 
-// Sends DEDUCT_HITPOINTS to the character with its activation fee (so the message
-// is picked up). The character applies its own dodge/armor mitigation and may die.
-// Counter damage is the flat configured base — breach severity already scales the
-// counter *chance* (calculateCounterAttackChance), so it is not double-applied to
-// the magnitude here.
-void sendCharacterCounter() {
-    messageBuffer[0] = CHAR_COMBAT;
+void executeCharacterCounterAttack() {
+    messageBuffer[0] = CHAR_COUNTER_ATTACK;
     messageBuffer[1] = counterDamageBase;
     messageBuffer[2] = counterEffectId;       // 0 = pure damage
     messageBuffer[3] = counterEffectDuration;
@@ -775,17 +809,29 @@ void executeCounterAttack() {
 }
 
 void handleDefeat() {
-    // For a character final blow, the SIGNA victory bonus (and NFT trophy) accrue
-    // to the owner EOA, not the character contract.
-    finalBlowAccount = currentTx.sender;
-    if(senderIsCharacter()){
-        finalBlowAccount = getCreatorOf(currentTx.sender);
-    }
+    // One-shot guard: a defeated construct must never re-run this distribution on
+    // a later activation — that would re-pay the bonuses and, once the balance has
+    // been burned to 0, freeze the contract on the first bonus send.
+    defeatHandled = 1;
+
+    // finalBlowAccount was captured in runAttackerRound() at the moment HP reached
+    // zero (the actual finisher, already owner-resolved), so it is correct even when
+    // later transactions are processed in the same activation. The SIGNA victory
+    // bonus (and NFT trophy) accrue to that owner EOA, not the character contract.
     sendMsgDefeated(getCreator());
     sendMsgVictory(finalBlowAccount);
-    sendAmount(finalBlowBonus, finalBlowAccount);
+
+    // Bonuses are fixed amounts configured independently of the balance; clamp each
+    // to what is actually available so a bonus larger than the remaining pot can't
+    // freeze the contract mid-distribution.
+    long bonus = finalBlowBonus;
+    if(bonus > getCurrentBalance()){ bonus = getCurrentBalance(); }
+    if(bonus > ZERO){ sendAmount(bonus, finalBlowAccount); }
+
+    bonus = firstBloodBonus;
+    if(bonus > getCurrentBalance()){ bonus = getCurrentBalance(); }
     messageBuffer[] = "First Blood Bonus";
-    sendAmountAndMessage(firstBloodBonus, messageBuffer, firstBloodAccount);
+    sendAmountAndMessage(bonus, messageBuffer, firstBloodAccount);
 
     // Send NFT if configured
     if (rewardNftId != ZERO) {
@@ -807,7 +853,12 @@ void handleDefeat() {
     long playersCount = getAssetHoldersCount(1, hpTokenId);
     long distributionCosts = playersCount * 10_0000;
     long playersShare = ((totalSigna * rewardDistribution.players) / 100) - distributionCosts;
-    distributeToHolders(1, hpTokenId, playersShare, 0, 0);
+    // With many holders relative to a small pot, distributionCosts can exceed the
+    // players' share and drive playersShare negative — never hand a negative amount
+    // to distributeToHolders. The leftover balance is burned below either way.
+    if(playersShare > ZERO){
+        distributeToHolders(1, hpTokenId, playersShare, 0, 0);
+    }
 
     // Return any unused drop-token supply to the creator (gamemaster) who funded
     // it, rather than stranding it in the defeated construct.

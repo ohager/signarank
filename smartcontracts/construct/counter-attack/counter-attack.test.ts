@@ -13,21 +13,21 @@ import {Context} from "../context";
 // Deterministic fire: within the breach limit the chance is the raw debuff.chance
 // (no 90% cap), so chance 100 + a small hit always fires.
 
-const COMBAT = Context.CharCombat;
+const RECEIVE_ATTACK = Context.CharReceiveAttack;
 
 // Exact COMBAT(damage, effectId, duration) message to the character.
 function combatTo(testbed: any, recipient: bigint, damage: bigint, effectId = 0n, duration = 0n) {
-    const hex = asHexMessage([COMBAT, damage, effectId, duration]);
+    const hex = asHexMessage([RECEIVE_ATTACK, damage, effectId, duration]);
     return testbed.getTransactions().filter((tx: any) => tx.recipient === recipient && tx.messageHex === hex);
 }
 // Any COMBAT message to the recipient (matches the method regardless of args).
 function anyCombatTo(testbed: any, recipient: bigint) {
-    const prefix = asHexMessage([COMBAT]); // first long identifies the method
+    const prefix = asHexMessage([RECEIVE_ATTACK]); // first long identifies the method
     return testbed.getTransactions().filter((tx: any) => tx.recipient === recipient && tx.messageHex?.startsWith(prefix));
 }
 
 describe("Counter Attack", () => {
-    test("sends COMBAT (with the activation fee) to a countered character", () => {
+    test("sends R (with the activation fee) to a countered character", () => {
         const {testbed, characterAddress} = deployConstructWithCharacter();
         setDebuff(testbed, 100n, 0n, 0n);   // 100% counter chance
         setCounterDamage(testbed, 500n);

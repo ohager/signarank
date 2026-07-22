@@ -126,6 +126,29 @@ describe('receiveAssets() — automatic validation on arrival', () => {
         expect(character.tokens.find(t => t.asset === RING_ID)?.quantity ?? 0n).toBe(1n);
     });
 
+    test('equipment with an UNSET stackLimit defaults to one-per-token: a second copy is refunded and its bonus does not stack', () => {
+        const { testbed } = deployCharacterWithGamemasterRegistry();
+        // Equipment registered WITHOUT a stackLimit (0 = unset). Before the fix this
+        // let the aggregate bonus pile up once per deposited copy; the fix defaults
+        // equipment to one-per-token so extra copies are refunded.
+        registerItemOnGamemasterRegistry(testbed, { tokenId: RING_ID, itemType: Context.ItemType.Equipment, effectCount: 1n }); // stackLimit omitted → 0
+        registerEffectOnGamemasterRegistry(testbed, { logicalId: 1n, target: Context.EffectTarget.Strength, mode: Context.EffectMode.AggregateAbs, bonusAbs: 2n });
+        setItemEffectOnGamemasterRegistry(testbed, { tokenId: RING_ID, slot: 0n, logicalEffectId: 1n });
+
+        fundCharacterWithToken(testbed, { tokenId: RING_ID });
+        expect(getCharState(testbed, Context.Vars.UsedInventorySlots)).toBe(1n);
+        expect(getEquipBonusAbs(testbed, Context.EffectTarget.Strength)).toBe(2n);
+
+        // Second copy of the same equipment: refunded, slot count unchanged, and —
+        // the core of the fix — the strength bonus stays 2, it does NOT become 4.
+        fundCharacterWithToken(testbed, { tokenId: RING_ID });
+
+        expect(getCharState(testbed, Context.Vars.UsedInventorySlots)).toBe(1n);
+        expect(getEquipBonusAbs(testbed, Context.EffectTarget.Strength)).toBe(2n);
+        const character = testbed.getContract(Context.CharacterAddress);
+        expect(character.tokens.find(t => t.asset === RING_ID)?.quantity ?? 0n).toBe(1n);
+    });
+
     test('a deposit that would exceed max inventory slots is refunded', () => {
         const { testbed } = deployCharacterWithGamemasterRegistry();
         const maxSlots = getCharState(testbed, Context.Vars.MaxInventorySlots);

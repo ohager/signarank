@@ -308,6 +308,47 @@ describe('Attack Mechanics', () => {
                     expect(damage).toBe(2n);
                 })
 
+        test("a huge resistance-token quantity is gas-bounded (no DoS) and fully resisted", async () => {
+            const testbed = deployConstruct();
+            const ResistanceToken = 3000n;
+
+            // Resistance multiplier 0.5x with NO token limit (the DoS precondition:
+            // the per-token stacking loop would otherwise run once per attached unit).
+            testbed.sendTransactionAndGetResponse([{
+                sender: Context.CreatorAccount,
+                recipient: Context.ThisContract,
+                amount: Context.ActivationFee,
+                messageArr: [Context.Methods.SetDamageMultiplier, ResistanceToken, 50n, 0n],
+            }])
+            testbed.sendTransactionAndGetResponse([{
+                sender: Context.CreatorAccount,
+                recipient: Context.ThisContract,
+                amount: Context.ActivationFee,
+                messageArr: [Context.Methods.SetTokenDecimals, ResistanceToken, 0n],
+            }])
+
+            const initialHp = getCurrentHitpoints(testbed)!;
+
+            // Attach a billion resistance tokens. Before the fix this loops ~1e9
+            // times and blows the per-activation step ceiling (freeze/DoS); the fix
+            // clamps the loop to MAX_RESISTANCE_STACKS so the round completes.
+            attack({
+                testbed,
+                signa: 100n,
+                tokens: [{asset: ResistanceToken, quantity: 1_000_000_000n}],
+            })
+
+            // 0.5x stacked ~100× fully resists the 10-damage base → 0 damage dealt.
+            expect(initialHp - getCurrentHitpoints(testbed)!).toBe(0n);
+
+            // And the construct is still alive and functional afterwards (not frozen):
+            // a plain follow-up attack lands its normal 10 damage.
+            timeLapse({testbed, blocks: 20n});
+            const hpBefore = getCurrentHitpoints(testbed)!;
+            attack({testbed, signa: 100n});
+            expect(hpBefore - getCurrentHitpoints(testbed)!).toBe(10n);
+        })
+
         test("should apply damage addition from tokens", async () => {
             const testbed = deployConstruct();
 

@@ -95,7 +95,7 @@
 // more but never hit the exponential wall that doubling produced.
 // MAX_LEVELUPS_PER_ACTIVATION bounds the loop against a one-tx XP windfall.
 #define LEVEL_XP_BASE 1000
-#define MAX_LEVELUPS_PER_ACTIVATION 50
+#define MAX_LEVELUPS_PER_ACTIVATION 10
 
 // On death there is a chance that ONE random inventory item (uniform over held
 // units) is dropped and returned to constructorAccount. The chance starts at
@@ -841,6 +841,12 @@ void receiveAsset(long tokenId) {
     // stack check independent of whether the surplus refund below has settled.
     long priorHeld = getAssetBalance(tokenId) - incoming;
     long stackLimit = getExtMapValue(tokenId, GAMEMASTER_ITEM_KEY_STACK_LIMIT, GAMEMASTER_REGISTRY);
+    // Equipment aggregates its bonus per held unit (auto-equip on arrival), so an
+    // unset (0 = unlimited) stack limit would let a player pile up N copies across
+    // deposits for an N-times bonus. Default equipment to one-per-token; the
+    // gamemaster can still opt into more by setting an explicit stack limit.
+    // Consumables are unaffected (0 = unlimited, bounded by inventory slots).
+    if(itemType == ITEM_TYPE_EQUIPMENT && stackLimit <= ZERO){ stackLimit = 1; }
     if(stackLimit > ZERO && priorHeld + accept > stackLimit){
         sendQuantity(incoming, tokenId, currentTx.sender);
         registerError(ERR_ITEM_STACK_LIMIT);

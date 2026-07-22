@@ -45,9 +45,8 @@ export const Context = {
         SetCounterEffect: 20n,
     },
     MaxDropSlots: 5n,
-    // The character's COMBAT method code — the construct SENDS this on a counter:
-    // COMBAT(rawDamage, effectId, duration). effectId 0 = pure damage.
-    CharCombat: 14n,
+    // The character's ReceiveAttack method code — the construct SENDS this on a counter:
+    CharReceiveAttack: 13n,
     // attacker-mode gate values (mirror ATTACKER_MODE_* in the contract)
     AttackerMode: {
         Any: 0n,
