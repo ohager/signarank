@@ -4,8 +4,10 @@
 **Status:** Draft (approved in brainstorming; pending implementation-plan)
 **Scope (two repos, one spec):**
 - **Part 1 — this repo (`signarank`):** new `/character` routes, dashboard UI, creation wizard, avatar-upload API route.
-- **Part 2 — `signarank-constructor` monorepo (`@signarank/client` / `@signarank/services`):** new SDK surface this design depends on but does not implement (flagged as prerequisites).
+- **Part 2 — `signarank-constructor` monorepo (`@signarank/client` / `@signarank/services`):** one remaining new SDK method this design depends on (`Character.getActivity()`) — discovery and creation are already implemented (see Current State).
 **Related:** `2026-07-19-client-character-design.md`, `2026-05-06-gamemaster-registry-design.md`, `2026-07-12-registry-as-config-design.md`.
+
+**Update (2026-07-25, post-brainstorm):** the original draft of this spec flagged character discovery and creation as unbuilt SDK prerequisites. Between drafting and approval, `signarank-constructor` gained both (commits `13961d6`, `15fb4c1`, `ab7c6ea`, all 2026-07-25) — see Current State below for the real, current API surface. Only `getActivity()` remains to be built.
 
 ---
 
@@ -17,7 +19,6 @@ Give a connected wallet a way to discover, select, view, and act on its on-chain
 
 - Reroll-in-wizard UX (reroll stays a dashboard-only action; costs 100 SIGNA + activation, capped at 5 uses).
 - Bring-your-own-Pinata-key and paste-a-CID avatar sources (v1 ships server-proxied upload to the operator's Pinata account only).
-- Implementing the new SDK/contract surface this design depends on (`CharacterAccountRegistryReadService`, `Character.getActivity()`, a character-creation admin service) — flagged as prerequisites for whoever picks up the implementation plan.
 - Attack UX (lives on the existing construct page, this design only links out to it).
 
 ---
@@ -26,8 +27,12 @@ Give a connected wallet a way to discover, select, view, and act on its on-chain
 
 - `character.contract.smart.c` — registry-as-config AT, reads its identities (`constructorAccount`, `xpTokenId`, `charRegistry`) from the gamemaster registry at `init()`. Publishes Attributes, Combat (effective stats), Progression (level/skillPoints), Vitals, Inventory, Conditions (status effects), and a 50-slot rolling error log — all cross-contract readable via KKV maps.
 - `character-account-registry.contract.smart.c` — singleton registry storing `(creatorAccount, characterId) → codehash`, plus a per-creator counter at `(creator, 0)`, capped at `MAX_CHARACTERS_PER_ACCOUNT = 5`.
-- `@signarank/client`'s `Character` class (in `signarank-constructor`) — read methods (`getSheet`, `getAttributes`, `getCombatProfile`, `getProgression`, `getVitals`, `getInventory`, `getConditions`, `getErrorLog`, `getInternalState`) and owner-write methods (`allocateSkillPoint`, `attack`, `reroll`, `useItem`, `transferItem`, `seppuku`, `migrate`, `refund`). **No `create`/`deploy` method exists yet.**
-- `ConstructAdminService.createConstructInstance` (in `signarank-constructor`) — proven two-chained-transaction deploy pattern: `publishContractByReference` (deploy) → sign → get `fullHash` → second tx with `referencedTransactionFullHash` (funds the new contract). This design's creation flow follows the same pattern.
+- **`signarank-constructor`'s current Character SDK surface** (as of 2026-07-25, commits through `15fb4c1`) — restructured since the original draft of this spec:
+  - `@signarank/services/character` now owns the implementation: `CharacterInstanceReadService` (reads: `getSheet`, `getAttributes`, `getCombatProfile`, `getProgression` — now including `xpPoints`/`xpToNextLevel`, computed via the exported `xpRequiredForLevel`/`xpToNextLevel` triangular-curve helpers in `character.constants.ts` — `getVitals`, `getInventory`, `getConditions`, `getErrorLog` — now resolving human-readable messages via `CharacterErrorMessages`, `getInternalState`) and `CharacterInstanceService extends CharacterInstanceReadService` (writes: `allocateSkillPoint`, `attack`, `reroll`, `useItem`, `transferItem`, `seppuku`, `migrate`, `refund`).
+  - **`CharacterService`** (`@signarank/services/character/character.service.ts`) — registry-level: `.with(characterId)` returns a bound `CharacterInstanceService`; **`getCharacters(accountId): Promise<RegisteredCharacter[]>`** (`{characterId, codeHash}[]`) resolves the char registry via the gamemaster registry and queries it — this is the discovery method Part 3 needs, already built; **`createCharacterInstance({name, description?}): Promise<TransactionId>`** — the two-chained-tx deploy (`publishContractByReference` → sign → `referencedTransactionFullHash`-linked funding tx for `CharacterCreationCostsPlanck` = `"1000000000"` planck = 10 SIGNA) — this is the creation method Part 4 needs, already built. Requires `context.characterContractReference` (the Character contract's "green"/already-deployed reference tx hash) — **not yet resolved for this app**, see Part 2.
+  - `@signarank/services/character-registry` (`CharacterRegistryService`) — the underlying registry read wrapped by `CharacterService.getCharacters`.
+  - `@signarank/client`'s `Character` class is now a thin adapter: `class Character extends CharacterInstanceService`, translating the client's context shape into the service's constructor shape.
+  - **Still missing:** `getActivity()` — confirmed via search, no `getActivity`/`ActivityFeed`/`CharacterEvent` anywhere in the monorepo. This is Part 6 of this spec.
 - This repo has no character-related routes, nav item, or components yet. Precedent to follow: `pages/construct/[contractId].tsx` (SSR preview + client body split), `useConstruct.ts` (react-query + `ReadOnlyPlayer`), `WalletHandler.ts` (extension-wallet connect via redux), `AttackHistory.tsx` + `lib/narration/` (existing tx-decoding + flavor-text pattern for constructs, app-side).
 - `packages/services/src/media/media.upload.service.ts` (in `signarank-constructor`) — existing Pinata+R2 upload logic, but **Bun-specific** (`Bun`'s `S3Client`, local filesystem paths) and not installed in this repo. Decision: mirror/port this logic into this repo's own API route using Node-standard equivalents, not share it as a package — `@signarank/client` is a pure browser-side library and shouldn't gain server secrets or a Node/Bun runtime dependency for one caller.
 - `R2_CDN_BASE = 'https://r2.signarank.club'` (`lib/construct/constants.ts`) — the existing public CDN base; character avatars mirror into the same bucket, new object keys.
@@ -50,10 +55,10 @@ Give a connected wallet a way to discover, select, view, and act on its on-chain
 - `/character/create` — creation wizard.
 - New "Character" link in `Header.tsx`'s nav (desktop + mobile), gated on wallet connection like `ConnectButton`.
 
-**New SDK surface required (prerequisite work in `signarank-constructor`, not built by this spec):**
-- `CharacterAccountRegistryReadService.getCharactersOf(accountId): Promise<{characterId, codehash}[]>` — wraps `getContractMapValuesByFirstKey({contractId: charRegistry, key1: accountId})`, filtering out the reserved `(creator, 0)` counter slot.
-- A character-creation service (mirrors `ConstructAdminService.createConstructInstance`, player-signed instead of admin-signed) exposing the two-tx chained deploy — simpler than the construct's version since registry-as-config means no initializer data stack to build, just an SRC44 `description` string and a `publishContractByReference` call against the Character's own "green" (already-deployed) bytecode reference.
-- `Character.getActivity({limit}): Promise<CharacterEvent[]>` — see Part 5.
+**New SDK surface still required (prerequisite work in `signarank-constructor`):**
+- `Character.getActivity({limit}): Promise<CharacterEvent[]>` — the only remaining gap, see Part 6.
+
+**Config-only prerequisite (this repo, not SDK code):** `CharacterService`'s `createCharacterInstance` requires `context.characterContractReference` — the reference transaction hash of the Character contract's currently-deployed "green" bytecode (mirrors how `ConstructAdminService` needs a `greenContractReference` supplied by its caller). This needs to be resolved and added as a per-network constant/env var in this repo before Part 4 can call it — not a code gap, just a value that needs sourcing (likely the deploy tx hash of the currently-live reference Character contract on the target network).
 
 **New in this repo:**
 - `pages/api/character/upload-avatar.ts` — server-side proxy. Accepts an image, validates it, pins to the operator's Pinata account, mirrors to R2 (porting `MediaUploadService`'s logic to Node-standard APIs — `pinata` SDK works fine outside Bun; R2 write needs `@aws-sdk/client-s3` in place of Bun's `S3Client`), returns `{ipfsCid, mimeType, url}`. New server-only env vars: `PINATA_JWT`, `PINATA_GATEWAY`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`.
@@ -62,7 +67,7 @@ Give a connected wallet a way to discover, select, view, and act on its on-chain
 
 ## Part 3 — Discovery & Selection (`/character`)
 
-- On wallet connect, query the registry (`getCharactersOf`) for confirmed characters, and read `localStorage` for in-flight creations (see Part 4) — merge into one list, keyed by wallet account (a browser may see multiple wallets connect over time).
+- On wallet connect, query the registry (`CharacterService.getCharacters(accountId)`) for confirmed characters, and read `localStorage` for in-flight creations (see Part 4) — merge into one list, keyed by wallet account (a browser may see multiple wallets connect over time).
 - **Layout: card grid.** Every character (confirmed + pending) as an equal card in a responsive grid; click a confirmed card to enter its dashboard. Pending cards render dashed/muted with their current creation step, not clickable.
 - Zero total (confirmed + pending) → empty state, prominent "Create Character" CTA.
 - At the 5-character cap (confirmed + pending, since a pending one will consume a slot once it registers) → CTA becomes disabled with an explanatory tooltip rather than hidden.
@@ -77,7 +82,7 @@ Give a connected wallet a way to discover, select, view, and act on its on-chain
 1. **Name & Description** — matches SRC44 conventions already used for constructs (name length-capped similarly to the gamemaster CLI's 24-char limit; description free text).
 2. **Avatar** — image picker. Client-side validates dimensions (≤1024×1024) and size (≤2MiB) before any network call; if the image exceeds either bound, auto-resize/compress via canvas (with a crop-to-square helper, since avatars render circular) rather than hard-rejecting. The conforming image uploads immediately via `upload-avatar.ts` as soon as the crop is confirmed — before advancing to review — so upload problems fail fast, before any wallet interaction or money is at stake.
 3. **Review & Confirm** — shows the already-composed identity (name/description/avatar — no chain read needed, we built it), a cost breakdown (tx1 network fee + tx2 network fee + 10 SIGNA recharge, summed), and a wallet-balance check that warns on insufficient funds. "Create Character" button.
-4. **Creating…** — two sequential wallet prompts, explicitly labeled ("Step 1 of 2: Approve character deployment in your wallet" → "Step 2 of 2: Approve funding transaction"), since the extension wallet needs a separate approval per transaction (`ConstructAdminService`'s two-`signer.sign()` pattern). Once both are broadcast, the 4-state progress tracker takes over (below), with an elapsed-time counter against a "~4–8 min typical" estimate (2 blocks × ~240s/block).
+4. **Creating…** — calls `CharacterService.createCharacterInstance({name, description})`, which internally signs two sequential transactions (deploy, then the chained funding tx) — the wizard shows explicit step labels ("Step 1 of 2: Approve character deployment in your wallet" → "Step 2 of 2: Approve funding transaction") since the extension wallet needs a separate approval per transaction. Once both are broadcast, the 4-state progress tracker takes over (below), with an elapsed-time counter against a "~4–8 min typical" estimate (2 blocks × ~240s/block).
 5. **Live** — success state showing the full character sheet, "View Character" → dashboard.
 
 ### Progress tracking — 4-state model
@@ -118,7 +123,7 @@ Key: `signarank:pendingCharacters:${accountId}`, array of:
 Left rail (wide, ~260px) + tabbed main area:
 
 - **Left rail:** large circular avatar, name, level badge, HP bar, XP progress bar ("1,240 / 3,000 XP to Lvl 5" — both values fully derivable client-side: `xp = getAssetBalance(xpTokenId)` on the character's account, and the triangular curve `XP to reach level L = 1000 × L×(L−1)/2` needs only the published `level`, no extra contract read), then action buttons.
-- **Main area tabs:** Overview (Attributes + Effective Combat side by side, base-vs-equipment-delta shown per stat), Inventory (item grid, per-item Use/Transfer), Conditions (active timed status effects with countdown), Activity (merged event feed, see below).
+- **Main area tabs:** Overview (Attributes + Effective Combat side by side, base-vs-equipment-delta shown per stat), Inventory (item grid, per-item Use/Transfer), Conditions (active timed status effects with countdown), Activity (merged event feed, see Part 6).
 
 ### Rail action wiring
 
@@ -133,21 +138,28 @@ Left rail (wide, ~260px) + tabbed main area:
 
 **Per-item actions (Inventory tab):** Consumables get "Use" (`useItem(tokenId)`); both item types get "Transfer" (`transferItem(tokenId, recipientId)`, reusing the existing `AddressInput` component). Equipment shows as auto-equipped with no standalone action — removing it means transferring it out, which the contract already reverses the aggregate bonus for.
 
-### Activity feed architecture
+---
 
-The Activity tab shows a **merged, narrated feed** (not just the error log) — damage taken/dealt, items gained, level-ups, deaths/revives, *and* rejected actions, newest first, capped at the most recent 50. This requires reconciling three different on-chain sources, each needing different contract knowledge:
+## Part 6 — Activity Feed (SDK, `signarank-constructor`)
 
-1. **User-initiated actions** (allocate, reroll, useItem, transferItem, seppuku, refund) — decoded from the character's own incoming transactions, keyed by `message[0]`.
+The Activity tab shows a **merged, narrated feed** (not just the error log) — owner actions, damage taken, XP rewards, and rejected actions, newest first, capped at the most recent 50. This requires reconciling three different on-chain sources, each needing different contract knowledge:
+
+1. **User-initiated actions** (allocate, reroll, useItem, transferItem, seppuku, refund, migrate) — decoded from the character's own incoming transactions, keyed by `message[0]`.
 2. **Damage taken** — also an incoming tx (`RECEIVE_ATTACK` from a trusted construct), but the message only carries *raw* damage; actual HP lost after mitigation is only recoverable by diffing `currentHp` across the Vitals map between activations, or re-running the character's own published mitigation formula off-chain.
-3. **Damage dealt / rewards** — not visible in the character's own tx history directly; inferred from XP/HP-token asset transfers arriving *from* a construct (the same indirect pattern `useAttackHistory.ts` already uses on the construct side).
+3. **Rewards** — not visible in the character's own tx history directly; inferred from XP-token asset transfers arriving *from* a construct (the same indirect pattern `useAttackHistory.ts` already uses on the construct side).
 
 **Decision: this aggregation lives in the SDK, not this app.** `Character.getActivity({limit})` (new method, `@signarank/client`) decodes all three sources and returns one typed, chronologically-merged `CharacterEvent[]`. This app only maps each typed event to icon/copy — the same role `lib/narration/pickNarration.ts` already plays for constructs. This deliberately departs from the construct precedent (where `useAttackHistory.ts` decodes transactions directly in this app) because reconstructing character activity correctly requires message/error-code knowledge and mitigation math the SDK already owns or should own — duplicating it here risks drift, and the character's event vocabulary (damage, items, level-ups, deaths, rejections) is richer and more reusable across surfaces than construct's single-purpose attack log.
+
+**Scoped down during implementation planning** (see the linked plan below for full reasoning): `DamageTaken` events carry *raw* pre-mitigation damage, not net — historical mitigated-HP snapshots aren't reconstructible from the current map-only read API. Only XP-token receipts become `RewardReceived` events — a per-construct "damage dealt" figure would need a construct-registry lookup the character SDK doesn't have, so it's a follow-up, not part of this method.
+
+**Implementation plan:** `signarank-constructor/docs/superpowers/plans/2026-07-25-character-activity-feed.md` — fully speced (`CharacterEventType` enum, `CharacterEvent` discriminated union, message-hex decoder via `@signumjs/util`'s `convertHexEndianess`/`convertHexStringToDecString`, transaction/asset-transfer mappers, `getActivity()` orchestration, export wiring, changeset). Ready to execute.
 
 ---
 
 ## Follow-up / prerequisite tickets
 
-1. `CharacterAccountRegistryReadService` in `@signarank/services` — doesn't exist yet, needed for Part 3.
-2. Player-signed character-creation service in `@signarank/client` — doesn't exist yet, needed for Part 4.
-3. `Character.getActivity({limit})` in `@signarank/client` — doesn't exist yet, needed for Part 5.
-4. `signum-smartc-testbed` drift affecting combat-RNG helpers and cross-contract registry reads across the character test suite (17 files affected as of this session) — pre-existing, unrelated to this design, needs its own investigation.
+1. ~~`CharacterAccountRegistryReadService` in `@signarank/services`~~ — **done** (`CharacterRegistryService.getCharacters`, shipped 2026-07-25).
+2. ~~Player-signed character-creation service in `@signarank/client`~~ — **done** (`CharacterService.createCharacterInstance`, shipped 2026-07-25).
+3. `context.characterContractReference` needs a real value sourced for this app before Part 4's creation call can run (config, not code — see Part 2).
+4. `Character.getActivity({limit})` in `@signarank/client` — implementation plan written (Part 6), not yet executed.
+5. `signum-smartc-testbed` drift affecting combat-RNG helpers and cross-contract registry reads across the character test suite (17 files affected as of this session) — pre-existing, unrelated to this design, needs its own investigation.
