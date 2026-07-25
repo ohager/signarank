@@ -10,13 +10,42 @@
 #pragma maxConstVars 10
 #pragma version 2.3.0
 
+// ---- GAMEMASTER REGISTRY ADDRESS (network-selected) ----
 // The gamemaster registry is the SINGLE source of truth and the only identity
 // baked into this contract's codehash (registry-as-config). Every genuine
-// Character therefore shares one codehash; a cheater who points at a different
-// registry gets a different codehash and is rejected by the dApp. See
+// Character on a given network shares one codehash; a cheater who points at a
+// different registry gets a different codehash and is rejected by the dApp. See
 // docs/superpowers/specs/2026-07-12-registry-as-config-design.md.
-// FIXME: The value needs to be defined for SIM, TESTNET and MAINNET
-#define GAMEMASTER_REGISTRY 122344543654
+//
+// Pick the target by UNCOMMENTING exactly one of MAINNET / TESTNET below.
+// Gotchas that make the naive approach wrong:
+//   * SmartC's #ifdef tests whether a name is DEFINED, not its value — so
+//     `#define TESTNET 0` does NOT disable TESTNET. COMMENT the line out instead.
+//   * The testbed does NOT define TESTBED for registry-as-config contracts (they
+//     carry no initializers, by design — see lib.ts), so an `#ifdef TESTBED`
+//     branch never fires here. Tests fall through to the default below, which is
+//     why the default IS the testbed address (matches context.ts).
+//   * Each branch is #ifndef-guarded so GAMEMASTER_REGISTRY is defined EXACTLY
+//     once — never a stacked re-#define.
+// Default (nothing selected: tests + local dev) = the testbed registry address.
+//#define MAINNET
+#define TESTNET
+
+#ifdef MAINNET
+    // FIXME: set the real mainnet gamemaster-registry address before mainnet deploy
+    #define GAMEMASTER_REGISTRY 1234
+#endif
+#ifndef GAMEMASTER_REGISTRY
+#ifdef TESTNET
+    #define GAMEMASTER_REGISTRY 4404840052574487680
+#endif
+#endif
+#ifndef GAMEMASTER_REGISTRY
+    // Dev / testbed default. Must equal context.ts GamemasterRegistryAddress,
+    // the address the test suite deploys the mock gamemaster registry at.
+    #define GAMEMASTER_REGISTRY 0x0DE4C0FFEE
+#endif
+
 
 // Must mirror gamemaster-registry.contract.smart.c's REGISTRY_BASE exactly —
 // that contract stores Globals (incl. the trusted construct hash) at
@@ -222,6 +251,10 @@
 #define ERR_TRANSFER_XP             18
 // MIGRATE attempted while no migration window is open (G_NEXT_CHARACTER_HASH == 0).
 #define ERR_MIGRATE_DISABLED        19
+// An unhandled AT exception (div/0, memory fault, code-stack overflow) was
+// trapped by catch(). Should never occur in normal play — surfaces a contract
+// bug. Recorded to the error log and messaged to the gamemaster from catch().
+#define ERR_INTERNAL_EXCEPTION      90
 #define ERR_CHARACTER_DEAD          66
 
 // ---- REGISTRY-SOURCED IDENTITIES ----
@@ -605,6 +638,30 @@ void main() {
     // Publish level/skill points (possibly changed this activation) to the
     // public sheet. Cheap, and correct even after a migrate (values are frozen).
     publishProgression();
+}
+
+// ---- ERROR RECOVERY ----
+// The AT VM invokes catch() automatically on any unhandled exception (division
+// by zero, out-of-bounds memory access, code-stack overflow). WITHOUT it, such
+// an exception marks the contract Dead and forfeits its entire balance to the
+// block forger. WITH it, we instead record the failure, alert the gamemaster,
+// and return the remaining balance to the owner before stopping.
+//
+// A Character should never actually reach here in normal play, so a hit means a
+// contract bug worth investigating — hence the log entry + gamemaster message.
+//
+// Ordering matters: every send costs a fee, so the message steps run FIRST while
+// balance still exists and the SIGNA sweep is LAST (sendBalance halts the
+// contract after it), mirroring migrate()/refund(). catch() itself must never
+// throw or the contract dies anyway, so it stays minimal — no runtime division,
+// no map reads that can fault. (Caveat: if the original fault was a code-stack
+// overflow, the nested calls below could re-overflow; div/0 and memory faults
+// recover cleanly.)
+void catch() {
+    registerError(ERR_INTERNAL_EXCEPTION);
+    messageBuffer[] = "SignaRank: char exception";
+    sendMessage(messageBuffer, constructorAccount);
+    sendBalance(getCreator());
 }
 
 void checkLevelUp() {

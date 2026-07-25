@@ -1,6 +1,6 @@
 #program name CharAcctReg
 #program description Signarank Character-Account Registry (singleton)
-#program activationAmount 100000000
+#program activationAmount 40000000
 #pragma optimizationLevel 3
 #pragma verboseAssembly false
 #pragma maxAuxVars 3
@@ -31,7 +31,7 @@ struct TX {
     long sender;
     long message[4];
 } currentTx;
-
+long messageBuffer[4];
 void main() {
     while ((currentTx.txId = getNextTx()) != ZERO) {
         currentTx.sender = getSender(currentTx.txId);
@@ -56,6 +56,13 @@ void main() {
         }
     }
 }
+
+void catch() {
+    messageBuffer[] = "SignaRank: char reg exception";
+    sendMessage(messageBuffer, getCreator());
+    sendBalance(getCreator());
+}
+
 
 void registerCharacter() {
     long creator = getCreatorOf(currentTx.sender);

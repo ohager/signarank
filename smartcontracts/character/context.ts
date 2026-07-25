@@ -17,7 +17,7 @@ export const Context = {
     // Hardcoded in the contract as GAMEMASTER_REGISTRY — NOT a TESTBED-injectable
     // parameter. To exercise senderIsConstruct()/deductHitpoints gating, the
     // gamemaster-registry contract must be deployed at exactly this address.
-    GamemasterRegistryAddress: 122344543654n,
+    GamemasterRegistryAddress: 0x0DE4C0FFEEn,
 
     // Hardcoded in the contract as CHAR_REGISTRY — NOT a TESTBED-injectable
     // parameter. init() sends a registration message here unconditionally; to
