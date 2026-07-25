@@ -123,6 +123,9 @@ dist
 .idea
 .DS_Store
 
+# Superpowers brainstorm sessions
+.superpowers/
+
 # Vercel
 .vercel
 

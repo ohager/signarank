@@ -596,7 +596,7 @@ void main() {
                     useItem(currentTx.message[1]);
                 break;
                 case SEPPUKU:
-                    if(isDead == TRUE && committed == TRUE){
+                    if(isDead == FALSE && committed == TRUE){
                         seppuku();
                     }
                 break;
@@ -1130,8 +1130,9 @@ void bounceTx() {
 // migration window (G_NEXT_CHARACTER_HASH != 0).
 // Sends the unregister message + fee to the singleton character-account registry
 // exactly once over the character's lifetime. Both retirement paths (SEPPUKU and
-// migrate) route through it; the `registered` guard stops a repeated SEPPUKU on a
-// dead character from re-sending the message and draining the fee each time.
+// migrate) route through it; the `registered` guard stops a second retirement path
+// (e.g. migrate() called after an earlier SEPPUKU) from re-sending the message and
+// draining the fee again.
 void unregisterFromCharRegistry() {
     if(registered == FALSE){ return; }
     registered = FALSE;
@@ -1235,8 +1236,10 @@ void seppuku() {
     currentHitpoints = ZERO;
     isDead = TRUE;
 
-    // Retire from the registry once — repeated SEPPUKU on a dead character no-ops
-    // here instead of re-sending the message and draining the fee each time.
+    // Retire from the registry. The dispatch gate (isDead == FALSE) means SEPPUKU
+    // can only ever fire once — a second SEPPUKU message is rejected before it
+    // reaches here — but the `registered` guard still protects against migrate()
+    // being called afterward.
     unregisterFromCharRegistry();
 }
 
