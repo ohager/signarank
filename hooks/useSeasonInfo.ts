@@ -7,6 +7,7 @@ export type SeasonInfo = {
     isCurrent: boolean;
     description: string;
     "description-voice"?: string;
+    trailer?: string;
 }
 
 export const useSeasonInfo = () => {
