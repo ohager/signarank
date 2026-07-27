@@ -5,6 +5,7 @@ import {useConstruct} from '@hooks/useConstruct';
 import {getCurrentSeasonConstructs} from '@lib/construct/seasonConstructs';
 import Link from 'next/link';
 import VoicePlayButton from '@components/VoicePlayButton';
+import TrailerButton from '@components/TrailerButton';
 import {useAddressPrefix} from "@hooks/useAddressPrefix";
 import {Address} from "@signumjs/core";
 
@@ -50,6 +51,9 @@ const SeasonPage = () => {
                     <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
                         {seasonInfo["description-voice"] && (
                             <VoicePlayButton src={seasonInfo["description-voice"]} label="Listen" />
+                        )}
+                        {seasonInfo.trailer && (
+                            <TrailerButton variant="pill" src={seasonInfo.trailer} label="Watch Trailer" />
                         )}
                         <Link
                             href="/rules"
