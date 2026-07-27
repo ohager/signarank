@@ -3,6 +3,14 @@ import React, {useState, useEffect} from 'react';
 import {ConnectButton} from '@components/ConnectButton';
 import {SeasonBanner} from '@components/SeasonBanner';
 import {useRouter} from 'next/router';
+import {useAppSelector} from '@states/hooks';
+import {selectConnectedAccount} from '@states/appState';
+import {usePendingCharacters} from '@hooks/usePendingCharacters';
+import {CreationTracker} from '@components/Character/CreationTracker';
+import type {PendingCharacter, PendingCharacterState} from '@lib/character/pendingCharacters';
+
+const AUTO_PROGRESS_STATES: PendingCharacterState[] = ['pending', 'deployed', 'funding_settled'];
+const ACTIONABLE_STATES: PendingCharacterState[] = ['needs_funding', 'failed'];
 
 const Header = () => {
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -13,8 +21,33 @@ const Header = () => {
         setMobileOpen(false);
     }, [router.asPath]);
 
+    const connectedAccount = useAppSelector(selectConnectedAccount);
+    const { characters: pendingCharacters } = usePendingCharacters(connectedAccount);
+
+    // Characters whose progress query needs to stay alive site-wide (both tx
+    // ids exist, still resolving) — rendered as invisible trackers below.
+    const trackedCharacters = pendingCharacters.filter(c => AUTO_PROGRESS_STATES.includes(c.state));
+    // Everything the badge itself should represent, including states that
+    // need the user's attention rather than automatic on-chain progress.
+    const inProgressCharacters = pendingCharacters.filter(
+        c => AUTO_PROGRESS_STATES.includes(c.state) || ACTIONABLE_STATES.includes(c.state),
+    );
+    const needsAction = inProgressCharacters.some(c => ACTIONABLE_STATES.includes(c.state));
+    // Click target: prefer whichever character needs the user's action,
+    // otherwise the oldest still-auto-progressing one. Works identically
+    // whether there's exactly one in-progress character or several.
+    const badgeTarget: PendingCharacter | null =
+        inProgressCharacters.find(c => ACTIONABLE_STATES.includes(c.state)) ??
+        [...inProgressCharacters].sort((a, b) => a.submittedAt - b.submittedAt)[0] ??
+        null;
+
     return (
         <header className="sticky top-0 z-50 bg-[rgba(8,6,12,0.6)] backdrop-blur-[30px] saturate-[1.2] border-b border-[var(--glass-border)]">
+            {connectedAccount &&
+                trackedCharacters.map(c => (
+                    <CreationTracker key={c.contractId} accountId={connectedAccount} character={c} />
+                ))}
+
             <div className="max-w-[1300px] mx-auto px-4 md:px-8 h-[60px] md:h-[70px] flex items-center justify-between">
                 {/* Logo + Season Badge */}
                 <div className="flex items-center gap-3 md:gap-4">
@@ -39,7 +72,19 @@ const Header = () => {
                 </nav>
 
                 {/* Desktop Wallet */}
-                <div className="hidden md:block">
+                <div className="hidden md:flex items-center gap-2.5">
+                    {badgeTarget && (
+                        <Link
+                            href={`/character/${badgeTarget.contractId}`}
+                            aria-label={needsAction ? 'Character needs your attention' : 'Character creation in progress'}
+                            title={needsAction ? 'Character needs your attention' : 'Character creation in progress'}
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                                background: needsAction ? 'var(--ember)' : 'var(--gold)',
+                                animation: needsAction ? undefined : 'breathe 2s ease-in-out infinite',
+                            }}
+                        />
+                    )}
                     <ConnectButton/>
                 </div>
 
@@ -63,7 +108,18 @@ const Header = () => {
                         <Link href="/leaderboard" className="py-3 text-[0.75rem] font-semibold tracking-[0.15em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors border-b border-[var(--glass-border)]" style={{fontFamily: "'Cinzel', serif"}}>Leaderboard</Link>
                         <Link href="/rules" className="py-3 text-[0.75rem] font-semibold tracking-[0.15em] uppercase text-[var(--text-dim)] hover:text-[var(--gold)] transition-colors border-b border-[var(--glass-border)]" style={{fontFamily: "'Cinzel', serif"}}>Rules</Link>
                     </nav>
-                    <div className="px-4 py-4 border-t border-[var(--glass-border)] flex justify-center">
+                    <div className="px-4 py-4 border-t border-[var(--glass-border)] flex items-center justify-center gap-2.5">
+                        {badgeTarget && (
+                            <Link
+                                href={`/character/${badgeTarget.contractId}`}
+                                aria-label={needsAction ? 'Character needs your attention' : 'Character creation in progress'}
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{
+                                    background: needsAction ? 'var(--ember)' : 'var(--gold)',
+                                    animation: needsAction ? undefined : 'breathe 2s ease-in-out infinite',
+                                }}
+                            />
+                        )}
                         <ConnectButton/>
                     </div>
                 </div>
