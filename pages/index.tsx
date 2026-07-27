@@ -9,6 +9,8 @@ import {fetchLeaderboard} from './api/leaderboard/fetchLeaderboard';
 import {GetStaticProps} from 'next';
 import {ISR_REVALIDATE_SECONDS} from '@lib/cacheConfig';
 import {getExplorerBaseUrl} from '@lib/construct/constants';
+import {useSeasonInfo} from '@hooks/useSeasonInfo';
+import TrailerButton from '@components/TrailerButton';
 
 export const getStaticProps: GetStaticProps = async () => {
     const {leaderboard, latestScores} = await fetchLeaderboard();
@@ -41,6 +43,7 @@ interface HomeProps {
 const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
     const [leaders, setLeaders] = useState(JSON.parse(leaderboard))
     const [latestUsers, setLatestUsers] = useState(JSON.parse(latestScores))
+    const seasonInfo = useSeasonInfo()
 
     useEffect(() => {
         updateLeaderboardAccounts(leaders, latestUsers)
@@ -84,6 +87,12 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
                 <p className="text-lg md:text-2xl font-medium italic text-[var(--text)] max-w-[520px] leading-relaxed mb-8 md:mb-12 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" style={{fontFamily: "'Cormorant Garamond', serif"}}>
                     Track your Signum blockchain deeds, earn achievements, and rise through the ranks.
                 </p>
+
+                {seasonInfo.trailer && (
+                    <div className="mb-6 md:mb-8">
+                        <TrailerButton variant="link" src={seasonInfo.trailer} label="Watch the trailer" />
+                    </div>
+                )}
 
                 {/* Connect box */}
                 <div className="w-full max-w-[460px]">
