@@ -32,6 +32,7 @@ This design:
 - Converts `useCharacterCreationProgress` from manual polling to a `useQuery`-backed hook (`@tanstack/react-query`, already used throughout `hooks/` — see `useConstruct.ts`, `usePendingAttacks.ts` for the established pattern: `queryKey`, `refetchInterval`, `refetchOnWindowFocus: false`).
 - Adds `hooks/usePendingCharacters.ts`, a thin `useQuery` wrapper over `pendingCharacters.ts` that both the header and the new route consume.
 - Adds a badge to `components/Header.tsx`.
+- Adds `components/Character/CharacterSheetPreview.tsx` (shared attribute-placeholder preview card) and `hooks/useCharacterAttributes.ts` (reveals real attributes once live).
 
 ---
 
@@ -53,16 +54,30 @@ Single `glass-static` panel, `CharacterCreateForm.tsx`:
 - **Avatar** — dropzone/file input. On file pick: client-side constraint check + crop/resize (`avatarImage.ts`, unchanged) → immediate upload to `/api/character/upload-avatar` (unchanged endpoint) → on success, the dropzone becomes a circular preview with a small "change" affordance; on failure, inline error, user can retry without touching name/description.
 - **Cost & balance review** (merged from `ReviewStep`) — renders as soon as `signaBalance` is known (not gated on name/avatar being filled): recharge cost, estimated network fees, total, and an insufficient-funds warning if applicable. This *is* the "review" — always visible, not a separate confirmation screen.
 - **Create Character** button — disabled until: name non-empty and ≤24 chars, avatar upload succeeded, balance sufficient. No Back button; this is the only screen.
+- **Character-sheet preview** (see below) — renders alongside the fields, live, as the user types/uploads.
 
 On click: calls the existing `useCharacterCreation().create()` unchanged. While `creating`, the panel shows inline step copy in place of the button ("Step 1 of 2: Approve character deployment in your wallet" / "Step 2 of 2: Approve funding transaction in your wallet" — reused verbatim from today's `CreatingStep.STEP_LABEL`). Desktop/extension: both signatures resolve before `create()` returns, so on success the page immediately upserts the pending-character entry (via `usePendingCharacters`) and `router.push('/character/${contractId}')`. Mobile: `create()` returns after the deploy signature triggers a redirect away (unchanged SDK/hook behavior) — the redirect-back handling described below takes it from there.
+
+## Character-sheet preview (shared)
+
+**New:** `components/Character/CharacterSheetPreview.tsx`, rendered on both `/character/create` and `/character/[contractId]` — one component, two usage modes, addressing the fact that the 5 attributes (`Strength`/`Stamina`/`Dexterity`/`Luck`/`Willpower` — confirmed via `character.contract.smart.c`'s `init()` and `@signarank/client`'s `AttributeId` enum) are rolled randomly on-chain inside `init()` and are **not knowable client-side until the character reaches `live`**, no matter how early in the flow you are.
+
+Props: `{ name, description, avatarUrl, progress?: { state: PendingCharacterState; elapsedMs: number } }`. `progress` is the mode switch:
+
+- **Create-form usage** (`progress` omitted — no `contractId` exists yet): avatar/name/description reflect current form values live as the user types/uploads (placeholder copy — "Sir Reginald", "A wandering knight..." — shown when fields are empty, matching today's input placeholders). All 5 attribute rows render a static `?`, no shimmer, no stepper — nothing is "in progress" yet, so no progress chrome is shown, just an honest "unknown until creation" state.
+- **Character-page usage** (`progress` supplied): same avatar/name/description (from the cached `pendingCharacters` entry instead of live form state). A 4-dot stepper (Pending → Deployed → Funding settled → Live) plus the existing elapsed-time text renders below the attribute rows, reusing `ConfirmingStep`'s copy/thresholds. Each attribute row's `?` gets a subtle shimmer (reuse `@keyframes shimmer` from `globals.css`) for as long as `state !== 'live'`, signaling "still resolving" rather than "permanently unknown."
+
+**Reveal:** a new `hooks/useCharacterAttributes.ts` — `useQuery(['characterAttributes', contractId], () => new ReadOnlyPlayer({ ledger, accountId: '' }).character(contractId).getAttributes(), { enabled: !!contractId && !!ledger && state === 'live' })`, mirroring the existing `ReadOnlyPlayer`/`.character()` read pattern `useConstruct.ts` already uses for constructs. All 5 attributes resolve together from one call — there's no per-attribute reveal animation, since the contract has no notion of partial reveal (`init()` rolls and writes all 5 in one activation). The moment this query resolves, all five `?` flip to their real numbers at once.
+
+**Scope note:** only the 5 base attributes are previewed — not HP, Level, or XP. `maxHp` is stamina-derived (`Vitals`, a separate SDK read) and `Level`/`XP` are progression data properly belonging to the future dashboard (spec Part 5); pulling those in here would add scope (an extra `getVitals()`/`getProgression()` call and more UI surface) beyond what was asked for. `Level` could trivially be shown as a static "1" (always true post-`init()`), but since it's not a "revealed" stat it's left out to keep this component's contract simple — one preview concern (attributes), one data source (`getAttributes()`).
 
 ## `/character/[contractId]` (new route)
 
 `pages/character/[contractId].tsx`. Reads the matching entry from `usePendingCharacters()` by `contractId` (the URL param). Renders:
 
-- Circular avatar, name (from the cached entry — no chain read needed for identity, matching the original spec's Part 4 rationale).
-- Status copy per state, reusing `ConfirmingStep.STATE_COPY` verbatim (`pending`/`deployed`/`funding_settled`/`needs_funding`/`failed`; `live` becomes a distinct success view, see below).
-- Elapsed-time counter against the "~4–8 min typical" framing, reusing `ConfirmingStep`'s `WORST_CASE_MS` threshold and copy.
+- The shared `CharacterSheetPreview` (avatar/name/description from the cached entry — no chain read needed for identity, matching the original spec's Part 4 rationale — plus `progress={{ state, elapsedMs }}` from `useCharacterCreationProgress`), which itself carries the attribute placeholders, shimmer, and 4-dot stepper described above.
+- Status copy per state, reusing `ConfirmingStep.STATE_COPY` verbatim (`pending`/`deployed`/`funding_settled`/`needs_funding`/`failed`; `live` becomes a distinct success view, see below), shown alongside the preview's stepper.
+- Elapsed-time counter against the "~4–8 min typical" framing, reusing `ConfirmingStep`'s `WORST_CASE_MS` threshold and copy (surfaced through the preview's `progress` prop).
 - When `state === 'needs_funding'`: the "Continue: Fund Character" button, wired to the existing `useCharacterFunding().fund(contractId)` unchanged.
 - When `state === 'live'`: success framing ("`{name}` has awoken.") with a forward link. Since the dashboard (spec Part 5) doesn't exist yet, this link can point at a placeholder/disabled affordance for now — out of scope to build the full dashboard here; this route is deliberately structured so the dashboard can take over rendering for the `live` case later without changing the route or the pending-entry lookup.
 - If no matching entry exists in `usePendingCharacters()` for this `contractId` at all (e.g. direct link to an unknown id, or a `live` character that's aged out of localStorage) — show a simple "not found" state. Reconciling against the on-chain registry for already-live characters is dashboard/discovery work, out of scope here.
