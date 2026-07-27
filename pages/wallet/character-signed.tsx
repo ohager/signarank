@@ -4,15 +4,18 @@ import { useRouter } from 'next/router';
 import { MobileWallet } from '@signumjs/wallets';
 import Page from '@components/Page';
 
+const isSafeReturnUrl = (url: string): boolean => url.startsWith('/') && !url.startsWith('//');
+
 const CharacterSignedPage = () => {
     const router = useRouter();
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         if (!router.isReady) return;
+        const rawReturnUrl = router.query.returnUrl as string;
+        const returnUrl = rawReturnUrl && isSafeReturnUrl(rawReturnUrl) ? rawReturnUrl : '/character/create';
         try {
             const { status, transactionId } = MobileWallet.parseSignCallback();
-            const returnUrl = (router.query.returnUrl as string) || '/character/create';
             const step = (router.query.step as string) || 'deploy';
             const sep = returnUrl.includes('?') ? '&' : '?';
 
@@ -27,7 +30,6 @@ const CharacterSignedPage = () => {
             }
         } catch {
             setErrorMessage('Could not process wallet response. Redirecting...');
-            const returnUrl = (router.query.returnUrl as string) || '/character/create';
             setTimeout(() => router.replace(returnUrl), 3000);
         }
     }, [router.isReady]);
