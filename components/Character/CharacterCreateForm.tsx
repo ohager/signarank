@@ -181,61 +181,20 @@ export const CharacterCreateForm: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="glass-static overflow-hidden p-5">
-                <label className="block text-[var(--text-faint)] text-[0.65rem] uppercase tracking-[0.1em] mb-2">
-                    Character Name
-                    <span className="text-[var(--text-dim)] ml-2 normal-case tracking-normal">
-                        ({name.length}/{NAME_MAX_LENGTH})
-                    </span>
-                </label>
-                <input
-                    type="text"
-                    className="w-full py-2.5 px-3 bg-[rgba(8,6,12,0.4)] border border-[var(--glass-border)] rounded-sm text-[var(--text)] text-[0.85rem] mb-4 focus:outline-none focus:border-[var(--gold)]"
-                    value={name}
-                    maxLength={NAME_MAX_LENGTH}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Sir Reginald"
-                    disabled={creating}
-                />
-
-                <label className="block text-[var(--text-faint)] text-[0.65rem] uppercase tracking-[0.1em] mb-2">
-                    Description
-                </label>
-                <textarea
-                    className="w-full py-2.5 px-3 bg-[rgba(8,6,12,0.4)] border border-[var(--glass-border)] rounded-sm text-[var(--text)] text-[0.85rem] mb-4 focus:outline-none focus:border-[var(--gold)]"
-                    rows={3}
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder="A wandering knight seeking glory."
-                    disabled={creating}
-                />
-
-                <label className="block text-[var(--text-faint)] text-[0.65rem] uppercase tracking-[0.1em] mb-2">
-                    Avatar
-                </label>
-                {avatarNotice && <p className="text-[0.7rem] text-[var(--text-faint)] mb-2">{avatarNotice}</p>}
-                {avatarError && (
-                    <div
-                        className="mb-3 py-2.5 px-3 rounded-sm text-[0.8rem]"
-                        style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}
-                    >
-                        {avatarError}
-                    </div>
-                )}
-                <input
-                    type="file"
-                    accept="image/*"
-                    disabled={avatarUploading || creating}
-                    onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) void handleFile(file);
-                    }}
-                    className="block w-full text-[0.8rem] text-[var(--text-dim)] mb-1"
-                />
-                {avatarUploading && <p className="text-[0.75rem] text-[var(--text-dim)]">Uploading...</p>}
-            </div>
-
-            <CharacterSheetPreview name={name} description={description} avatarUrl={avatar?.url ?? previewUrl} />
+            <CharacterSheetPreview
+                name={name}
+                description={description}
+                avatarUrl={avatar?.url ?? previewUrl}
+                editable={{
+                    onNameChange: setName,
+                    onDescriptionChange: setDescription,
+                    onAvatarFile: file => void handleFile(file),
+                    avatarUploading,
+                    avatarError,
+                    avatarNotice,
+                    disabled: creating,
+                }}
+            />
 
             <div className="glass-static overflow-hidden p-5">
                 <div
