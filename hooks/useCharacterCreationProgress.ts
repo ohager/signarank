@@ -1,6 +1,9 @@
 // hooks/useCharacterCreationProgress.ts
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { Ledger } from '@signumjs/core';
 import { useSignumLedger } from '@hooks/useSignumLedger';
+import { deriveProgressState } from '@lib/character/creationProgress';
 import type { PendingCharacterState } from '@lib/character/pendingCharacters';
 
 export interface CreationProgress {
@@ -12,55 +15,37 @@ export interface CreationProgress {
 
 const POLL_INTERVAL_MS = 15 * 1000;
 
+async function fetchProgressState(ledger: Ledger, tx1Id: string, tx2Id: string): Promise<PendingCharacterState> {
+    const [tx1, tx2] = await Promise.all([
+        ledger.transaction.getTransaction(tx1Id),
+        ledger.transaction.getTransaction(tx2Id),
+    ]);
+    // Absent `confirmations` means still in the mempool (never included in a
+    // block yet); present means >= 0 confirmations.
+    return deriveProgressState(tx1.confirmations ?? -1, tx2.confirmations ?? -1);
+}
+
 export const useCharacterCreationProgress = (tx1Id: string | null, tx2Id: string | null): CreationProgress => {
     const ledger = useSignumLedger();
-    const [state, setState] = useState<PendingCharacterState>('pending');
-    const [elapsedMs, setElapsedMs] = useState(0);
     const startRef = useRef(Date.now());
+    const [elapsedMs, setElapsedMs] = useState(0);
+
+    const { data: state = 'pending' } = useQuery({
+        queryKey: ['characterProgress', tx1Id, tx2Id],
+        queryFn: () => {
+            if (!ledger || !tx1Id || !tx2Id) return Promise.resolve<PendingCharacterState>('pending');
+            return fetchProgressState(ledger, tx1Id, tx2Id);
+        },
+        enabled: !!ledger && !!tx1Id && !!tx2Id,
+        refetchInterval: query => (query.state.data === 'live' ? false : POLL_INTERVAL_MS),
+        refetchOnWindowFocus: false,
+    });
 
     useEffect(() => {
-        if (!tx1Id || !tx2Id || !ledger || state === 'live') return;
-
-        let cancelled = false;
-
-        const poll = async () => {
-            try {
-                const [tx1, tx2] = await Promise.all([
-                    ledger.transaction.getTransaction(tx1Id),
-                    ledger.transaction.getTransaction(tx2Id),
-                ]);
-                if (cancelled) return;
-
-                // Absent `confirmations` means still in the mempool (never
-                // included in a block yet); present means >= 0 confirmations.
-                const tx1Confirmations = tx1.confirmations ?? -1;
-                const tx2Confirmations = tx2.confirmations ?? -1;
-
-                if (tx2Confirmations >= 1) {
-                    setState('live');
-                } else if (tx2Confirmations >= 0) {
-                    setState('funding_settled');
-                } else if (tx1Confirmations >= 0) {
-                    setState('deployed');
-                } else {
-                    setState('pending');
-                }
-            } catch {
-                // Transient node error (e.g. tx not yet relayed to this
-                // node) — keep the previous state, try again next tick.
-            }
-        };
-
-        void poll();
-        const pollTimer = setInterval(poll, POLL_INTERVAL_MS);
-        const elapsedTimer = setInterval(() => setElapsedMs(Date.now() - startRef.current), 1000);
-
-        return () => {
-            cancelled = true;
-            clearInterval(pollTimer);
-            clearInterval(elapsedTimer);
-        };
-    }, [tx1Id, tx2Id, ledger, state]);
+        if (!tx1Id || !tx2Id || state === 'live') return;
+        const timer = setInterval(() => setElapsedMs(Date.now() - startRef.current), 1000);
+        return () => clearInterval(timer);
+    }, [tx1Id, tx2Id, state]);
 
     return { state, elapsedMs };
 };
