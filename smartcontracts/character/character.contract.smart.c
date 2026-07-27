@@ -29,7 +29,7 @@
 //     once — never a stacked re-#define.
 // Default (nothing selected: tests + local dev) = the testbed registry address.
 //#define MAINNET
-#define TESTNET
+//#define TESTNET
 
 #ifdef MAINNET
     // FIXME: set the real mainnet gamemaster-registry address before mainnet deploy

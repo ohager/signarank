@@ -28,6 +28,15 @@ export function registerCharacter(testbed: SimulatorTestbed, characterAddress: b
     }]);
 }
 
+export function unregisterCharacter(testbed: SimulatorTestbed, characterAddress: bigint) {
+    return testbed.sendTransactionAndGetResponse([{
+        sender:    characterAddress,
+        recipient: Context.ThisContract,
+        amount:    1_0000_0000n,
+        messageArr: [Context.Methods.UnregisterCharacter, 0n, 0n, 0n],
+    }]);
+}
+
 export function getValue(testbed: SimulatorTestbed, k1: bigint, k2: bigint): bigint {
     return testbed.getContractMapValue(k1, k2);
 }

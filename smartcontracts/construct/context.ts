@@ -16,7 +16,7 @@ export const Context = {
     CharacterOwnerAccount: 42n,
     ThisContract: 999n, // only if NFT Contract is not loaded
     XPTokenId: 1000n,
-    ActivationFee: 2_0000_0000n,
+    ActivationFee: 3_0000_0000n,
     // gamemaster-registry method codes used to seed identities in tests.
     GamemasterMethods: {
         SetCharacterHash: 2n,
@@ -43,6 +43,7 @@ export const Context = {
         SetLuckFactor: 18n,
         SetCounterDamage: 19n,
         SetCounterEffect: 20n,
+        SetDropDamageThreshold: 21n,
     },
     MaxDropSlots: 5n,
     // The character's ReceiveAttack method code — the construct SENDS this on a counter:

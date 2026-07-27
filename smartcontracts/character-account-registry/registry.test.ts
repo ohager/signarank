@@ -6,6 +6,7 @@ import {
     BootstrapScenario,
     setCharacterHash,
     registerCharacter,
+    unregisterCharacter,
     getValue,
 } from './lib';
 
@@ -32,6 +33,13 @@ function makeTestbedWithCharacter(opts: { creator?: bigint; address?: bigint } =
 function indexEntries(testbed: SimulatorTestbed, accountId: bigint) {
     return testbed.getContractMap().filter(({ k1, k2 }) => k1 === accountId && k2 !== 0n);
 }
+
+function counterOf(testbed: SimulatorTestbed, accountId: bigint): bigint {
+    return getValue(testbed, accountId, 0n);
+}
+
+// Mirrors MAX_CHARACTERS_PER_ACCOUNT in the contract source.
+const MAX_CHARACTERS_PER_ACCOUNT = 5;
 
 describe('Trusted character hash configuration', () => {
     test('gamemaster (creator) can set the trusted character hash', () => {
@@ -127,6 +135,136 @@ describe('Character registration', () => {
 
         expect(getValue(testbed, character.creator, character.contract)).toBe(character.codeHashId);
         expect(indexEntries(testbed, character.creator)).toHaveLength(1);
+    });
+});
+
+describe('Character unregistration', () => {
+    test('unregistering a registered character clears its index entry', () => {
+        const { testbed, character } = makeTestbedWithCharacter();
+        setCharacterHash(testbed, character.codeHashId);
+        registerCharacter(testbed, character.contract);
+
+        unregisterCharacter(testbed, character.contract);
+
+        expect(getValue(testbed, character.creator, character.contract)).toBe(0n);
+    });
+
+    test('unregistering decrements the per-creator counter', () => {
+        const { testbed, character } = makeTestbedWithCharacter();
+        setCharacterHash(testbed, character.codeHashId);
+        registerCharacter(testbed, character.contract);
+        expect(counterOf(testbed, character.creator)).toBe(1n);
+
+        unregisterCharacter(testbed, character.contract);
+
+        expect(counterOf(testbed, character.creator)).toBe(0n);
+    });
+
+    test('unregistering a character that was never registered is a no-op', () => {
+        const { testbed, character } = makeTestbedWithCharacter();
+        setCharacterHash(testbed, character.codeHashId);
+
+        unregisterCharacter(testbed, character.contract);
+
+        expect(getValue(testbed, character.creator, character.contract)).toBe(0n);
+        expect(counterOf(testbed, character.creator)).toBe(0n);
+    });
+
+    test('unregistering twice does not drive the counter negative', () => {
+        const { testbed, character } = makeTestbedWithCharacter();
+        setCharacterHash(testbed, character.codeHashId);
+        registerCharacter(testbed, character.contract);
+
+        unregisterCharacter(testbed, character.contract);
+        unregisterCharacter(testbed, character.contract);
+
+        expect(counterOf(testbed, character.creator)).toBe(0n);
+    });
+
+    test('gamemaster (creator) cannot use UNREGISTER_CHARACTER', () => {
+        const { testbed, character } = makeTestbedWithCharacter();
+        setCharacterHash(testbed, character.codeHashId);
+        registerCharacter(testbed, character.contract);
+
+        testbed.sendTransactionAndGetResponse([{
+            sender:    Context.GamemasterAccount,
+            recipient: Context.ThisContract,
+            amount:    1_0000_0000n,
+            messageArr: [Context.Methods.UnregisterCharacter, 0n, 0n, 0n],
+        }]);
+
+        expect(getValue(testbed, character.creator, character.contract)).toBe(character.codeHashId);
+        expect(counterOf(testbed, character.creator)).toBe(1n);
+    });
+
+    test('a sender no longer matching the trusted codehash cannot unregister', () => {
+        // Registered while trusted, then the gamemaster rotates the trusted
+        // hash. isSenderCharacter() now rejects the sender, so unregister must
+        // be refused just like register would be — the trust check gates both.
+        const { testbed, character } = makeTestbedWithCharacter();
+        setCharacterHash(testbed, character.codeHashId);
+        registerCharacter(testbed, character.contract);
+
+        setCharacterHash(testbed, character.codeHashId + 1n);
+        unregisterCharacter(testbed, character.contract);
+
+        expect(getValue(testbed, character.creator, character.contract)).toBe(character.codeHashId);
+        expect(counterOf(testbed, character.creator)).toBe(1n);
+    });
+
+    test('unregistering one character does not affect siblings of the same account', () => {
+        const PLAYER = 9999n;
+        const testbed = new SimulatorTestbed(BootstrapScenario)
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: PLAYER, contractId: 5001n })
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: PLAYER, contractId: 5002n })
+            .loadContract(CHARACTER_CONTRACT_PATH, { creator: PLAYER, contractId: 5003n })
+            .loadContract(Context.ContractPath);
+        const charA = testbed.getContract(5001n);
+        const charB = testbed.getContract(5002n);
+        const charC = testbed.getContract(5003n);
+        testbed.runScenario();
+        setCharacterHash(testbed, charA.codeHashId);
+        registerCharacter(testbed, charA.contract);
+        registerCharacter(testbed, charB.contract);
+        registerCharacter(testbed, charC.contract);
+
+        unregisterCharacter(testbed, charB.contract);
+
+        expect(getValue(testbed, PLAYER, charA.contract)).toBe(charA.codeHashId);
+        expect(getValue(testbed, PLAYER, charB.contract)).toBe(0n);
+        expect(getValue(testbed, PLAYER, charC.contract)).toBe(charC.codeHashId);
+        expect(counterOf(testbed, PLAYER)).toBe(2n);
+    });
+
+    test('unregistering frees a slot once an account is at MAX_CHARACTERS_PER_ACCOUNT', () => {
+        const PLAYER = 8888n;
+        const contractIds = Array.from({ length: MAX_CHARACTERS_PER_ACCOUNT + 1 }, (_, i) => 6001n + BigInt(i));
+        let testbed = new SimulatorTestbed(BootstrapScenario);
+        for (const contractId of contractIds) {
+            testbed = testbed.loadContract(CHARACTER_CONTRACT_PATH, { creator: PLAYER, contractId });
+        }
+        testbed = testbed.loadContract(Context.ContractPath);
+        const characters = contractIds.map(id => testbed.getContract(id));
+        testbed.runScenario();
+        setCharacterHash(testbed, characters[0].codeHashId);
+
+        // Fill all MAX_CHARACTERS_PER_ACCOUNT slots.
+        for (let i = 0; i < MAX_CHARACTERS_PER_ACCOUNT; i++) {
+            registerCharacter(testbed, characters[i].contract);
+        }
+        expect(counterOf(testbed, PLAYER)).toBe(BigInt(MAX_CHARACTERS_PER_ACCOUNT));
+
+        // The extra character is rejected — the account is at capacity.
+        const overflow = characters[MAX_CHARACTERS_PER_ACCOUNT];
+        registerCharacter(testbed, overflow.contract);
+        expect(getValue(testbed, PLAYER, overflow.contract)).toBe(0n);
+
+        // Freeing a slot lets the overflow character register.
+        unregisterCharacter(testbed, characters[0].contract);
+        registerCharacter(testbed, overflow.contract);
+
+        expect(getValue(testbed, PLAYER, overflow.contract)).toBe(overflow.codeHashId);
+        expect(counterOf(testbed, PLAYER)).toBe(BigInt(MAX_CHARACTERS_PER_ACCOUNT));
     });
 });
 

@@ -7,8 +7,9 @@ export const Context = {
     ThisContract:      999n,
 
     Methods: {
-        SetCharacterHash:  1n,
-        RegisterCharacter: 2n,
+        SetCharacterHash:    1n,
+        RegisterCharacter:   2n,
+        UnregisterCharacter: 3n,
     },
 
     // (0, 0) -> trusted character codehash configured by the gamemaster.

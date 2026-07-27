@@ -263,6 +263,17 @@ export function setLuckFactor(testbed: SimulatorTestbed, factor: bigint) {
     }], Context.ThisContract);
 }
 
+// Sets the minimum HP a hit must deal to qualify for an item-drop roll
+// (SETDROPDAMAGETHRESHOLD) — a final blow always qualifies regardless.
+export function setDropDamageThreshold(testbed: SimulatorTestbed, threshold: bigint) {
+    return testbed.sendTransactionAndGetResponse([{
+        sender: Context.CreatorAccount,
+        recipient: Context.ThisContract,
+        amount: Context.ActivationFee,
+        messageArr: [Context.Methods.SetDropDamageThreshold, threshold, 0n, 0n],
+    }], Context.ThisContract);
+}
+
 // Funds the construct with a token supply (e.g. drop loot) — a plain creator
 // token transfer with no message; the tokens accumulate in the construct.
 export function fundConstructWithToken(testbed: SimulatorTestbed, tokenId: bigint, quantity: bigint) {

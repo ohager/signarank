@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { Context } from '../context';
-import { deployCharacterWithTrustedConstruct, getCharState, sumAttrs, sendReceiveAttack, sendRefund, killCharacter } from '../lib';
+import { deployCharacterWithTrustedConstruct, getCharState, sumAttrs, sendReceiveAttack, sendRefund, killCharacter, withSeededRandom } from '../lib';
 
 // deathPenaltyApplied (character.contract.smart.c) gates handleDead() so its
 // random attribute penalty applies exactly once per death, regardless of how
@@ -8,15 +8,18 @@ import { deployCharacterWithTrustedConstruct, getCharState, sumAttrs, sendReceiv
 // transactions from unrelated accounts — occur while isDead stays TRUE.
 describe('handleDead() — penalty applies exactly once per death', () => {
     test('a death event applies at most one penalty point in that same activation', () => {
-        const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
-        const sumBefore = sumAttrs(testbed);
+        // Seeded for reproducibility — see withSeededRandom.
+        withSeededRandom(20260725, () => {
+            const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
+            const sumBefore = sumAttrs(testbed);
 
-        killCharacter(testbed, constructAddress);
-        expect(getCharState(testbed, Context.Vars.IsDead, Context.CharacterAddress)).toBe(1n);
+            killCharacter(testbed, constructAddress);
+            expect(getCharState(testbed, Context.Vars.IsDead, Context.CharacterAddress)).toBe(1n);
 
-        const sumAfter = sumAttrs(testbed);
-        expect(sumAfter).toBeGreaterThanOrEqual(sumBefore - 1n);
-        expect(sumAfter).toBeLessThanOrEqual(sumBefore);
+            const sumAfter = sumAttrs(testbed);
+            expect(sumAfter).toBeGreaterThanOrEqual(sumBefore - 1n);
+            expect(sumAfter).toBeLessThanOrEqual(sumBefore);
+        });
     });
 
     test('further damage from the trusted construct while already dead does NOT apply another penalty', () => {

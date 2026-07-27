@@ -11,6 +11,7 @@ import {
     killCharacter,
     landOneHit,
     grindSkillPointsInto,
+    withSeededRandom,
 } from '../lib';
 
 // Constructs send RAW damage; the Character mitigates it from its own defensive
@@ -41,22 +42,26 @@ describe('deductHitpoints() — damage mitigation (net = raw reduced by the char
     });
 
     test('a high-dexterity character dodges some hits entirely and takes others', () => {
-        const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
-        grindSkillPointsInto(testbed, Context.Attrs.Dexterity, 12); // dodge chance ≥ 24%, ≤ 60%
-        const armor = getAttr(testbed, Context.Attrs.Stamina) * Context.DamageMitigation.ArmorPerStamina;
-        const raw = armor + 1n; // a non-dodged hit removes exactly 1, so HP-unchanged ⟺ dodged
+        // Seeded so the dodge/land sequence is reproducible — a failure here is
+        // a pinnable regression, not one-off RNG flakiness (see withSeededRandom).
+        withSeededRandom(20260725, () => {
+            const { testbed, constructAddress } = deployCharacterWithTrustedConstruct();
+            grindSkillPointsInto(testbed, Context.Attrs.Dexterity, 12); // dodge chance ≥ 24%, ≤ 60%
+            const armor = getAttr(testbed, Context.Attrs.Stamina) * Context.DamageMitigation.ArmorPerStamina;
+            const raw = armor + 1n; // a non-dodged hit removes exactly 1, so HP-unchanged ⟺ dodged
 
-        let dodges = 0;
-        let lands = 0;
-        for (let i = 0; i < 50; i++) {
-            const before = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
-            sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: raw });
-            const after = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
-            if (after === before) dodges++; else lands++;
-        }
+            let dodges = 0;
+            let lands = 0;
+            for (let i = 0; i < 50; i++) {
+                const before = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
+                sendReceiveAttack(testbed, { sender: constructAddress, rawDamage: raw });
+                const after = getCharState(testbed, Context.Vars.CurrentHitpoints, Context.CharacterAddress);
+                if (after === before) dodges++; else lands++;
+            }
 
-        expect(dodges).toBeGreaterThan(0);
-        expect(lands).toBeGreaterThan(0);
+            expect(dodges).toBeGreaterThan(0);
+            expect(lands).toBeGreaterThan(0);
+        });
     });
 
     test('a hit large enough to overcome armor floors HP at 0 and sets isDead', () => {

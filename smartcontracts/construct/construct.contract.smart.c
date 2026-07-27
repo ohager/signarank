@@ -1,6 +1,6 @@
 #program name Construct
 #program description This is the base contract to spawn Constructs
-#program activationAmount 200000000
+#program activationAmount 3_0000_0000
 #pragma optimizationLevel 3
 #pragma verboseAssembly false
 #pragma maxAuxVars 3
@@ -30,6 +30,7 @@
 #define SETLUCKFACTOR 18
 #define SETCOUNTERDAMAGE 19
 #define SETCOUNTEREFFECT 20
+#define SETDROPDAMAGETHRESHOLD 21
 
 // The character contract's COMBAT method code — the construct SENDS this on a
 // counter (must mirror character.contract's code): RECEIVE_ATTACK(rawDamage, effectId,
@@ -37,9 +38,12 @@
 #define CHAR_COUNTER_ATTACK 13
 
 // ---- ITEM DROPS ----
-// A bounded drop table of MAX_DROP_SLOTS entries. One D100 roll per character hit
-// decides all slots at once (nested threshold bands). Drops go to the character
-// only, supply-guarded by the construct's own balance.
+// A bounded drop table of MAX_DROP_SLOTS entries. One D100 roll per qualifying
+// hit decides all slots at once (nested threshold bands) — characters and EOA
+// attackers both qualify, but only a character's luck stat shifts the roll, so
+// EOAs see lower drop chances. A hit must also deal at least dropDamageThreshold
+// HP (final blows always qualify) so looting has a real cost, not just
+// participation. Supply-guarded by the construct's own balance.
 #define MAX_DROP_SLOTS 5
 
 // Upper bound on the resistance-token stacking loop in applyTokenMultiplier().
@@ -169,6 +173,7 @@ long dropModNormal;    // effectiveRoll += this on a normal hit
 long dropModFirstBlood;
 long dropModFinalBlow;
 long luckFactor;       // effectiveRoll -= luck × luckFactor
+long dropDamageThreshold; // min HP a hit must deal to qualify for a drop roll (final blow always qualifies)
 long counterDamageBase;     // base HP damage a countered character takes (0 = off)
 long counterEffectId;       // registry effect applied on counter (0 = none)
 long counterEffectDuration; // blocks the counter effect lasts
@@ -231,6 +236,7 @@ void init(){
     dropModFirstBlood = 0;
     dropModFinalBlow = -15;
     luckFactor       = 1;
+    dropDamageThreshold = 10;
 
     if(rewardDistribution.players <= ZERO){
         rewardDistribution.players = 85;
@@ -338,6 +344,9 @@ void main() {
                 break;
                 case SETCOUNTEREFFECT:
                     setCounterEffect(currentTx.message[1], currentTx.message[2]);
+                break;
+                case SETDROPDAMAGETHRESHOLD:
+                    setDropDamageThreshold(currentTx.message[1]);
                 break;
             }
         }
@@ -480,6 +489,11 @@ void runAttackerRound() {
     }
 
     long currentHP = getCurrentHitpoints();
+    // Captured BEFORE the final-blow cap below: dropEligibleDamage measures what
+    // the hit actually dealt, not clipped down to whatever sliver of HP was left
+    // — otherwise a finishing blow on a near-dead construct could fail the drop
+    // threshold despite landing the kill.
+    long dropEligibleDamage = effectiveDamage;
     if (effectiveDamage >= currentHP) {
         isDefeated = 1;
         effectiveDamage = currentHP; // we cannot do more damage
@@ -507,9 +521,14 @@ void runAttackerRound() {
         sendMsgFirstBlood(firstBloodAccount);
     }
 
-    // Item drops: character-only, one luck-scaled D100 roll deciding all slots.
-    if(isChar){
-        rollItemDrops(isDefeated, gotFirstBlood);
+    // Item drops: one luck-scaled D100 roll deciding all slots. Looting has a
+    // real cost — a hit must clear dropDamageThreshold to qualify, except a
+    // final blow, which always qualifies (it's already the rarest, best-
+    // rewarded hit). EOA attackers qualify too — just without the luck bonus
+    // (a character-only combat stat) — so solo EOA play stays viable, with
+    // characters favoured via luck.
+    if(dropEligibleDamage >= dropDamageThreshold || isDefeated){
+        rollItemDrops(isDefeated, gotFirstBlood, shareRecipient, isChar);
     }
 
     if (breachLimitHit && !isDefeated) {
@@ -1078,6 +1097,10 @@ void setLuckFactor(long factor){
     if(factor >= ZERO){ luckFactor = factor; }
 }
 
+void setDropDamageThreshold(long threshold){
+    if(threshold >= ZERO){ dropDamageThreshold = threshold; }
+}
+
 void setCounterDamage(long base){
     if(base >= ZERO){ counterDamageBase = base; }
 }
@@ -1091,8 +1114,14 @@ void setCounterEffect(long effectId, long duration){
 
 // One D100 roll (luck- and attack-type-scaled) decides every slot at once. For
 // each configured slot, drop iff effectiveRoll < threshold, supply-guarded.
-// Drops go to the character (the attacker).
-void rollItemDrops(long isFinalBlow, long isFirstBlood){
+// Drops go to `recipient`: the owner EOA for a character (the character contract
+// only accepts registered items deposited by its own owner — see receiveAssets()
+// in character.contract — so sending straight to the character account would
+// just bounce the item back untouched), or the EOA itself when it attacked
+// directly. isChar gates the luck lookup: it's a character-only combat stat, so
+// an EOA attacker rolls at luck 0 (no cross-contract read wasted on an account
+// that has none).
+void rollItemDrops(long isFinalBlow, long isFirstBlood, long recipient, long isChar){
     long modifier = dropModNormal;
     if(isFinalBlow){
         modifier = dropModFinalBlow;
@@ -1100,7 +1129,10 @@ void rollItemDrops(long isFinalBlow, long isFirstBlood){
         modifier = dropModFirstBlood;
     }
 
-    long luck = getExtMapValue(CHAR_COMBAT_KEY1, CHAR_COMBAT_LUCK, currentTx.sender);
+    long luck = ZERO;
+    if(isChar){
+        luck = getExtMapValue(CHAR_COMBAT_KEY1, CHAR_COMBAT_LUCK, currentTx.sender);
+    }
     long roll = (getWeakRandomNumber() >> 1) % 100;
     long effectiveRoll = roll + modifier - luck * luckFactor;
 
@@ -1112,7 +1144,7 @@ void rollItemDrops(long isFinalBlow, long isFirstBlood){
         if(token != ZERO){
             if(effectiveRoll < threshold){
                 if(getAssetBalance(token) >= qty){
-                    sendQuantity(qty, token, currentTx.sender);
+                    sendQuantity(qty, token, recipient);
                 }
             }
         }

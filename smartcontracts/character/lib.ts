@@ -1,6 +1,7 @@
 import type { SimulatorTestbed } from 'signum-smartc-testbed';
 import { SimulatorTestbed as Testbed } from 'signum-smartc-testbed';
 import { join } from 'path';
+import { vi } from 'vitest';
 import { Context } from './context';
 
 const CONSTRUCT_STANDIN_PATH = join(__dirname, '..', 'character-account-registry', 'character-account-registry.contract.smart.c');
@@ -271,6 +272,38 @@ export function getAttr(testbed: SimulatorTestbed, attrKey2: bigint): bigint {
 // Advances the chain by `n` blocks (e.g. to let a timed status effect expire).
 export function forgeBlocks(testbed: SimulatorTestbed, n: number) {
     for (let i = 0; i < n; i++) testbed.blockchain.forgeBlock();
+}
+
+// Tiny seedable PRNG (mulberry32) — same seed always produces the same
+// sequence of [0, 1) floats, like Math.random but reproducible.
+function mulberry32(seed: number) {
+    let a = seed;
+    return () => {
+        a |= 0;
+        a = (a + 0x6d2b79f5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// Runs `fn` with Math.random replaced by a seeded PRNG, then restores it.
+// getWeakRandomNumber() in the simulator (smartc-signum-simulator's
+// get_Ticket_Id_for_Tx_in_A) has no notion of a block signature the way
+// mainnet does — it resolves straight to Math.random() via
+// utils.getRandom64bit(), and the same call also mints auto-generated
+// transaction ids (blockchain.ts addTransactions). Math.random is therefore
+// the actual seam: seeding it makes a same-seed run bit-for-bit reproducible
+// (an intermittent RNG-driven failure becomes a pinnable regression), while
+// still varying value-to-value within the run so auto-generated txids don't
+// collide the way they would behind a constant stub.
+export function withSeededRandom<T>(seed: number, fn: () => T): T {
+    const spy = vi.spyOn(Math, 'random').mockImplementation(mulberry32(seed));
+    try {
+        return fn();
+    } finally {
+        spy.mockRestore();
+    }
 }
 
 // A benign owner activation that just re-runs main() — republishing the public

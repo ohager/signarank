@@ -10,6 +10,7 @@ import {
     setItemEffectOnGamemasterRegistry,
     fundCharacterWithToken,
     sendUseItem,
+    withSeededRandom,
 } from '../lib';
 
 // Where a dead character's dropped item is returned (see #define constructorAccount).
@@ -37,42 +38,46 @@ describe('handleDead() — random item drop to constructorAccount', () => {
     // deaths cheaply (weak RNG ⇒ statistical), asserting drops actually occur AND
     // that every drop is well-formed (exactly one unit, one slot freed).
     test('over many deaths, items are dropped to constructorAccount and every drop frees exactly one slot', () => {
-        const { testbed, constructAddress } = deployCharacterWithTrustedConstruct({ constructorAccount: CONSTRUCTOR_ACCOUNT });
-        registerDroppableConsumable(testbed);
-        registerReviveConsumable(testbed);
+        // Seeded so the 64-death sample is reproducible — a failure here is a
+        // pinnable regression, not one-off RNG flakiness (see withSeededRandom).
+        withSeededRandom(20260725, () => {
+            const { testbed, constructAddress } = deployCharacterWithTrustedConstruct({ constructorAccount: CONSTRUCTOR_ACCOUNT });
+            registerDroppableConsumable(testbed);
+            registerReviveConsumable(testbed);
 
-        let totalDrops = 0n;
-        let prevSent = 0n;
-        const DEATHS = 64;
+            let totalDrops = 0n;
+            let prevSent = 0n;
+            const DEATHS = 64;
 
-        for (let i = 0; i < DEATHS; i++) {
-            if (heldQty(testbed, DROP_ITEM_ID) < 1n) {
-                fundCharacterWithToken(testbed, { tokenId: DROP_ITEM_ID, quantity: 1n });
+            for (let i = 0; i < DEATHS; i++) {
+                if (heldQty(testbed, DROP_ITEM_ID) < 1n) {
+                    fundCharacterWithToken(testbed, { tokenId: DROP_ITEM_ID, quantity: 1n });
+                }
+                const heldBefore = heldQty(testbed, DROP_ITEM_ID);
+                const slotsBefore = getCharState(testbed, Context.Vars.UsedInventorySlots);
+
+                killCharacter(testbed, constructAddress);
+
+                const droppedThisDeath = tokensSentTo(testbed, CONSTRUCTOR_ACCOUNT, DROP_ITEM_ID) - prevSent;
+                prevSent += droppedThisDeath;
+
+                // Mechanics hold on whichever deaths dropped: at most one unit left,
+                // it went to constructorAccount, and exactly one slot was freed.
+                expect(droppedThisDeath === 0n || droppedThisDeath === 1n).toBe(true);
+                expect(heldBefore - heldQty(testbed, DROP_ITEM_ID)).toBe(droppedThisDeath);
+                expect(slotsBefore - getCharState(testbed, Context.Vars.UsedInventorySlots)).toBe(droppedThisDeath);
+                totalDrops += droppedThisDeath;
+
+                // Resurrect for the next iteration.
+                fundCharacterWithToken(testbed, { tokenId: REVIVE_ID, quantity: 1n });
+                sendUseItem(testbed, { tokenId: REVIVE_ID });
+                expect(getCharState(testbed, Context.Vars.IsDead)).toBe(0n);
             }
-            const heldBefore = heldQty(testbed, DROP_ITEM_ID);
-            const slotsBefore = getCharState(testbed, Context.Vars.UsedInventorySlots);
 
-            killCharacter(testbed, constructAddress);
-
-            const droppedThisDeath = tokensSentTo(testbed, CONSTRUCTOR_ACCOUNT, DROP_ITEM_ID) - prevSent;
-            prevSent += droppedThisDeath;
-
-            // Mechanics hold on whichever deaths dropped: at most one unit left,
-            // it went to constructorAccount, and exactly one slot was freed.
-            expect(droppedThisDeath === 0n || droppedThisDeath === 1n).toBe(true);
-            expect(heldBefore - heldQty(testbed, DROP_ITEM_ID)).toBe(droppedThisDeath);
-            expect(slotsBefore - getCharState(testbed, Context.Vars.UsedInventorySlots)).toBe(droppedThisDeath);
-            totalDrops += droppedThisDeath;
-
-            // Resurrect for the next iteration.
-            fundCharacterWithToken(testbed, { tokenId: REVIVE_ID, quantity: 1n });
-            sendUseItem(testbed, { tokenId: REVIVE_ID });
-            expect(getCharState(testbed, Context.Vars.IsDead)).toBe(0n);
-        }
-
-        // At ~20% base chance over 64 deaths, zero drops is astronomically
-        // unlikely — a run with none means the drop is dead code.
-        expect(totalDrops).toBeGreaterThanOrEqual(1n);
+            // At ~20% base chance over 64 deaths, zero drops is astronomically
+            // unlikely — a run with none means the drop is dead code.
+            expect(totalDrops).toBeGreaterThanOrEqual(1n);
+        });
     });
 
     test('a death with an empty inventory drops nothing and does not touch slots', () => {
