@@ -22,6 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing required fields: dataUrl, fileName' });
     }
 
+    if (!/^data:.+;base64,.+$/.test(dataUrl)) {
+        return res.status(400).json({ error: 'Invalid data URL format' });
+    }
+
     const base64Length = dataUrl.length - dataUrl.indexOf(',') - 1;
     const approxBytes = base64Length * 0.75;
     if (approxBytes > AVATAR_MAX_BYTES) {
