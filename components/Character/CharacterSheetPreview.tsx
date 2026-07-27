@@ -25,6 +25,7 @@ const STEP_INDEX: Record<PendingCharacterState, number> = {
 };
 
 const NAME_MAX_LENGTH = 24;
+const DESCRIPTION_MAX_LENGTH = 300;
 
 export interface CharacterSheetProgress {
     contractId: string;
@@ -138,15 +139,24 @@ export const CharacterSheetPreview: React.FC<CharacterSheetPreviewProps> = ({
 
             <div className="text-center mb-5" style={fadeIn(110)}>
                 {editable ? (
-                    <textarea
-                        value={description}
-                        disabled={editable.disabled}
-                        onChange={e => editable.onDescriptionChange(e.target.value)}
-                        placeholder="A wandering knight seeking glory."
-                        rows={2}
-                        className="w-full text-center bg-transparent border-0 border-b border-transparent focus:border-[var(--gold-dim)] outline-none resize-none text-[0.8rem] text-[var(--text-dim)] italic pb-1 transition-colors duration-200 placeholder:text-[var(--text-faint)]"
-                        style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                    />
+                    <>
+                        <textarea
+                            value={description}
+                            maxLength={DESCRIPTION_MAX_LENGTH}
+                            disabled={editable.disabled}
+                            onChange={e => editable.onDescriptionChange(e.target.value)}
+                            placeholder="A wandering knight seeking glory."
+                            rows={2}
+                            className="w-full text-center bg-transparent border-0 border-b border-transparent focus:border-[var(--gold-dim)] outline-none resize-none text-[0.8rem] text-[var(--text-dim)] italic pb-1 transition-colors duration-200 placeholder:text-[var(--text-faint)]"
+                            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+                        />
+                        <span
+                            className="text-[0.6rem] text-[var(--text-faint)]"
+                            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                            {description.length}/{DESCRIPTION_MAX_LENGTH}
+                        </span>
+                    </>
                 ) : (
                     description && (
                         <p className="text-[0.8rem] text-[var(--text-dim)] italic m-0 line-clamp-2">{description}</p>
