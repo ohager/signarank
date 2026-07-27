@@ -9,6 +9,7 @@ import { useCharacterFunding } from '@hooks/useCharacterFunding';
 import {
     upsertPendingCharacter,
     updatePendingCharacter,
+    getPendingCharacters,
     loadDraft,
     clearDraft,
     type PendingCharacter,
@@ -91,15 +92,37 @@ export const CharacterCreateWizard: React.FC = () => {
             }
             setNeedsFundingAction(true);
             setStep('creating');
-        } else if (mobileCharacterStep === 'fund' && contractId) {
+        } else if (mobileCharacterStep === 'fund') {
             const fundTxId = mobileCharacterTxId as string;
-            updatePendingCharacter(connectedAccount, contractId, {
-                tx2Id: fundTxId,
-                state: 'deployed',
-            });
-            setTx2Id(fundTxId);
-            setNeedsFundingAction(false);
-            setStep('confirming');
+            let resolvedContractId = contractId;
+
+            if (!resolvedContractId) {
+                // Fresh mount after the second mobile redirect (funding) wipes
+                // React state entirely — recover which character we're
+                // funding from the localStorage entry the deploy step wrote.
+                const pending = getPendingCharacters(connectedAccount).find(c => c.state === 'needs_funding');
+                if (pending) {
+                    resolvedContractId = pending.contractId;
+                    setContractId(pending.contractId);
+                    setTx1Id(pending.tx1Id);
+                    setName(pending.name);
+                    setDescription(pending.description);
+                    setAvatar({ ipfsCid: pending.avatarCid, mimeType: pending.avatarMime, url: pending.avatarUrl });
+                }
+            }
+
+            if (resolvedContractId) {
+                updatePendingCharacter(connectedAccount, resolvedContractId, {
+                    tx2Id: fundTxId,
+                    state: 'deployed',
+                });
+                setTx2Id(fundTxId);
+                setNeedsFundingAction(false);
+                setStep('confirming');
+            } else {
+                setCreationError('Could not find the character being funded. Please check your pending characters and try again.');
+                setStep('name');
+            }
         }
 
         cleanQuery();
