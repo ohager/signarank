@@ -24,6 +24,15 @@ export interface CroppedImage {
     mimeType: string;
 }
 
+/** Shape returned by POST /api/character/upload-avatar. Lives here (not in a
+ * component) because both the create form and any future avatar-edit UI need
+ * it, and it's conceptually part of this module's avatar-handling contract. */
+export interface UploadedAvatar {
+    ipfsCid: string;
+    mimeType: string;
+    url: string;
+}
+
 /**
  * Browser-only: reads an image File, center-crops it to a square, resizes it
  * to fit within AVATAR_MAX_DIMENSION_PX, and re-encodes as JPEG at a quality
