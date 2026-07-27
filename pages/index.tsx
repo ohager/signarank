@@ -90,7 +90,7 @@ const Home = ({leaderboard, latestScores, explorerBaseUrl}: HomeProps) => {
 
                 {seasonInfo.trailer && (
                     <div className="mb-6 md:mb-8">
-                        <TrailerButton variant="link" src={seasonInfo.trailer} label="Watch the trailer" />
+                        <TrailerButton variant="link" src={seasonInfo.trailer} label="Watch Season Trailer" />
                     </div>
                 )}
 

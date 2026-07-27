@@ -34,6 +34,7 @@
     "name": "Coral Carnival",
     "background": "https://r2.signarank.club/seasons/coralcarnival/smExJxSipXrLPzEAgbacyJM5EC42AAvz.mp4",
     "atmo": "https://r2.signarank.club/seasons/coralcarnival/coralcarnival-atmo.mp3",
+    "trailer": "https://r2.signarank.club/seasons/coralcarnival/coral_carnival_trailer.mp4",
     "description-voice": "https://r2.signarank.club/seasons/coralcarnival/description-voice.mp3",
     "description": "The storm has broken over the pier and the sea has come to play... Coral Carnival has begun — a season of drowned revelry, glittering menace, and prizes clawed from the deep. Step right up — the tide always collects its toll!",
     "pastConstructs": {
@@ -44,7 +45,7 @@
       "testnet": [],
       "mainnet": ["17030784034047094760"]
     },
-    "futureConstructs": ["TBD_1","TBD_2", "TBD_3", "TBD_4"]
+    "futureConstructs": ["TBD_1","TBD_2", "TBD_3"]
   }
 }
 

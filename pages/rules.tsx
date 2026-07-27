@@ -349,8 +349,8 @@ const RulesPage = () => (
                     </p>
                     <div className="mt-3 flex flex-col gap-0 overflow-hidden rounded-sm border border-[var(--glass-border)]">
                         {[
-                            {pct: '85%', label: 'Players', desc: 'Distributed proportionally to all attackers based on the damage they dealt.', color: '#4ade80'},
-                            {pct: '10%', label: 'Burned', desc: 'Permanently removed from circulation — a deflationary, anti-inflation mechanism for SIGNA.', color: 'var(--ember)'},
+                            {pct: '90%', label: 'Players', desc: 'Distributed proportionally to all attackers based on the damage they dealt.', color: '#4ade80'},
+                            {pct: '5%', label: 'Burned', desc: 'Permanently removed from circulation — a deflationary, anti-inflation mechanism for SIGNA.', color: 'var(--ember)'},
                             {pct: '5%', label: 'Platform', desc: 'Funds ongoing development and future seasons.', color: 'var(--gold)'},
                         ].map(({pct, label, desc, color}, i) => (
                             <div
