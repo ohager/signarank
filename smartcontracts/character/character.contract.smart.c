@@ -257,6 +257,15 @@
 #define ERR_INTERNAL_EXCEPTION      90
 #define ERR_CHARACTER_DEAD          66
 
+// Constants — plain #define literals (not `const long`) so each use inlines to a
+// numeric literal that folds into the maxConstVars stack (1→n1, 5→n5), rather than
+// occupying a data slot that must be seeded at deploy. Zero inlines to the AT
+// compact zero-form, so ZERO/FALSE cost nothing.
+#define ZERO 0
+#define FALSE 0
+#define TRUE 1
+#define FIVE 5
+
 // ---- REGISTRY-SOURCED IDENTITIES ----
 // Cached ONCE at init() from the gamemaster registry (registry-as-config), not
 // initializable deploy data — so they don't vary the codehash and can't be
@@ -317,21 +326,9 @@ long errorCount;
 
 long messageBuffer[4];
 
-// Constants
-long ZERO;
-const ZERO = 0;
-long FIVE;
-const FIVE = 5;
-long FALSE;
-const FALSE = 0;
-long TRUE;
-const TRUE = 1;
-long HP_PER_STAMINA;
-const HP_PER_STAMINA = 10;
-
 
 void recalculateDerivedStats() {
-    maxHitpoints = 100 + (getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STAMINA) * HP_PER_STAMINA);
+    maxHitpoints = 100 + (getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STAMINA) * 10);
     maxInventorySlots = 10 + ((getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STRENGTH)));
 }
 
