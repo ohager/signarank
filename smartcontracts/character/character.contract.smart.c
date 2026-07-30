@@ -332,12 +332,35 @@ void recalculateDerivedStats() {
     maxInventorySlots = 10 + ((getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_STRENGTH)));
 }
 
+// Persistent xorshift64 state behind _random(). Seeded lazily on first use.
+long rngState;
+
+// Returns a pseudo-random value in [0, max] inclusive.
+//
+// AT has no true randomness, and getWeakRandomNumber() returns the SAME value on
+// every call within an activation, so it cannot be looped to draw several
+// independent values. _random() instead keeps a persistent xorshift64 state,
+// seeded once from the creator identity and the first transaction id (so two
+// characters diverge), folds the current transaction id in on every call, and
+// advances the state — so successive draws within one activation differ and each
+// new transaction mixes in fresh entropy.
+long _random(long max) {
+    if (rngState == ZERO) {
+        rngState = 0x2545F4914F6CDD1D ^ getCurrentBlockheight();
+    }
+    rngState ^= currentTx.txId;
+    rngState ^= rngState << 13;
+    rngState ^= rngState >> 7;
+    rngState ^= rngState << 17;
+    return (rngState >> 1) % (max + 1); // >> 1 clears the sign bit → non-negative
+}
+
 void rollAttributes() {
     skillPoints = FIVE;
     long index;
     long attrValue;
     while(skillPoints > ZERO){
-        index = ((getWeakRandomNumber() >> 1) % FIVE) + 1;
+        index = _random(FIVE - 1) + 1;
         attrValue = getMapValue(MAP_KEY1_ATTRIBUTES, index);
         setMapValue(MAP_KEY1_ATTRIBUTES, index, attrValue + 1);
         --skillPoints;
@@ -728,7 +751,7 @@ void handleDead() {
     long rnd;
     long attrValue;
     for(i=0; i< 10; ++i){ // try max ten times
-        rnd = ((getWeakRandomNumber() >> 1) % FIVE) + 1;
+        rnd = _random(FIVE - 1) + 1;
         attrValue = getMapValue(MAP_KEY1_ATTRIBUTES, rnd);
         if(attrValue > ZERO){
             setMapValue(MAP_KEY1_ATTRIBUTES, rnd, attrValue - 1);
@@ -747,7 +770,7 @@ void handleDead() {
     if(usedInventorySlots > ZERO){
         long luck = getMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_LUCK);
         long dropChance = DROP_BASE_CHANCE_PCT - luck * LUCK_DROP_REDUCTION_PCT;
-        if(dropChance > ZERO && ((getWeakRandomNumber() >> 1) % 100) < dropChance){
+        if(dropChance > ZERO && _random(99) < dropChance){
             long droppedToken = _inventoryDropRandom();
             long droppedType = getExtMapValue(droppedToken, GAMEMASTER_ITEM_KEY_TYPE, GAMEMASTER_REGISTRY);
             if(droppedType == ITEM_TYPE_EQUIPMENT){ applyAllEffects(droppedToken, -1, FALSE); }
@@ -863,7 +886,7 @@ void _inventoryRemoveOne(long tokenId) {
 // Caller is responsible for unequipping/sending the returned unit.
 long _inventoryDropRandom() {
     if(usedInventorySlots <= ZERO){ return ZERO; }
-    long idx = (getWeakRandomNumber() >> 1) % usedInventorySlots;
+    long idx = _random(usedInventorySlots - 1);
     long tokenId = getMapValue(MAP_KEY1_INVENTORY, idx);
     long last = usedInventorySlots - 1;
     setMapValue(MAP_KEY1_INVENTORY, idx, getMapValue(MAP_KEY1_INVENTORY, last));
@@ -1055,7 +1078,7 @@ void deductHitpoints(long rawDamage){
     long dodgeChance = (dexterity + luck) * DODGE_PCT_PER_POINT;
     if(dodgeChance > DODGE_MAX_PCT){ dodgeChance = DODGE_MAX_PCT; }
 
-    long roll = (getWeakRandomNumber() >> 1) % 100;
+    long roll = _random(99);
     long net;
     if(roll < dodgeChance){
         net = ZERO; // dodged — the hit is avoided entirely
@@ -1222,6 +1245,7 @@ void reroll() {
     setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_DEXTERITY, ZERO);
     setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_LUCK, ZERO);
     setMapValue(MAP_KEY1_ATTRIBUTES, MAP_KEY2_ATTRIBUTES_WILLPOWER, ZERO);
+    rngState ^= getWeakRandomNumber(); // seed rng with forger entropy
     rollAttributes();
     currentHitpoints = maxHitpoints;
     sendAmount(REROLL_COSTS, ZERO);
